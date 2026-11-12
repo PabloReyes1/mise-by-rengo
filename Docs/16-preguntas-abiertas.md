@@ -13,10 +13,13 @@ Al resolver una pregunta: muévela a la sección 3 con la respuesta y la fecha, 
 | ID | Pregunta | Prioridad | Dónde aparece | Opciones / recomendación |
 |---|---|:-:|---|---|
 | PA-021 | Modelos de impresoras, router y (si se usan) tablets del primer cliente | 🟡 | ADR-003, doc 06 §7, doc 14 §7 | **Propuesta de trabajo** (2026-11-12): kit de doc 06 §7, pensado para meseros con su propio celular (impresoras Epson con ePOS LAN, KDS opcional, router dual WAN con 4G). RENGO elige los equipos finales; ya no bloquea el inicio |
+| PA-055 | Si se cancelan **todos** los ítems de un pedido en `LISTO` (merma), ¿el pedido pasa a `CANCELADO`? El diagrama del ítem (doc 05 §5.4) permite cancelar ítems `LISTO` y `ENTREGADO`, pero el del pedido (§5.3) solo permite `CANCELADO` desde `ENVIADO` y `EN_PREPARACION` | 🟡 | doc 05 §5.3, `shared/domain/orders` | **Recomendación:** agregar `LISTO → CANCELADO` al pedido; `ENTREGADO` sigue siendo final (los ítems cancelados después de entregar se ven como merma, el pedido queda entregado). Lo decide Pablito (dueño de `orders`) antes de H2. Mientras, el código sigue el diagrama tal como está |
+| PA-056 | Logo e ícono de la app de Mise by Rengo (marca de RENGO) | 🟢 | `frontend/public/icons/` | Mientras tanto se usa un ícono **provisional** (una "M" blanca sobre `primary`). RENGO entrega el logo en SVG y se regeneran los PNG de la PWA |
+| PA-057 | Tres temas aprobados no cumplen dos combinaciones de doc 18 §4.1 que no se habían calculado: **Piedra y rosa** (texto `primary` sobre `accent` 2.93 y sobre `warning` 2.78), **Carbón y oro** (`primary` sobre `accent` 3.69) y **Cielo de medianoche** (`primary` sobre `accent` 2.30 y sobre `warning` 2.80). Mínimo: 4.5 | 🟡 | doc 18 §8.4, `shared/domain/theme/themes.ts` | **Recomendación:** tonos derivados ◆ como en PA-054 (un `accent` más claro y, donde falla, un `warning` más claro). Mientras tanto esos 3 temas **no se pueden elegir**; sí se pueden Botanical Graphite, Violeta medianoche y Uva y porcelana |
 
 ## 2. Supuestos
 
-RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 (todos los demás). Se dejan aquí para no perder el número. La marca `[SUPUESTO]` ya se quitó de los documentos. **Sigue abierto S-43 (duración de la Semana 0).**
+RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 (todos los demás). Se dejan aquí para no perder el número. La marca `[SUPUESTO]` ya se quitó de los documentos. **Siguen abiertos S-43 (duración de la Semana 0) y S-44 (contenido de la plantilla).**
 
 | ID | Supuesto | Documento |
 |---|---|---|
@@ -63,6 +66,41 @@ RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 
 | S-41 | **Confirmado:** Los 5 temas adicionales se cargan en H1, medio día cada uno | 18 §8.5 |
 | S-42 | **Confirmado:** Kit de hardware de trabajo (TM-m30III / TM-T20III Ethernet, TP-Link ER605 + router 4G) mientras RENGO elige | 06 §7 |
 | S-43 | La Semana 0 dura 5–8 días hábiles con una sola persona (Deniscito) haciendo los cimientos | 17 §2 |
+| S-44 | Contenido de la plantilla `restaurante-basico`: métodos de pago (Efectivo, Tarjeta y Transferencia; tarjeta y transferencia piden referencia), nombres de los motivos, pies de los tickets ("Esta no es una factura.", "Gracias por su visita."), papel de 80 mm, sucursal "Principal", estación "Cocina", la onza como unidad de masa, y el menú de ejemplo. Todo lo edita el cliente | `templates/restaurante-basico`, `templates/seed` |
+
+## 2b. Supuestos de implementación (asumidos por Claude)
+
+Detalles sencillos que los documentos no definían y que Claude asumió al programar, por indicación de Deniscito (2026-11-12): "asume las cosas sencillas, déjalas anotadas y evalúalas al final de cada hito". **Cada uno se revisa en la integración del hito indicado** (doc 17 §5): se confirma, se cambia (y se corrige el código) o se pasa a RENGO.
+
+Estado: ⏳ por revisar · ✅ confirmado · 🔁 cambiado
+
+| ID | Supuesto | Dónde | Revisar en | Estado |
+|---|---|---|---|:-:|
+| SC-01 | El dispositivo se identifica con las cabeceras `X-Device-Id` + `X-Device-Token` en login, PIN y lista de usuarios (el doc 08 decía "Dispositivo" sin la cabecera) | `shared/contracts/auth`, módulo auth | H1 | ⏳ |
+| SC-02 | Tabla nueva `pairing_codes` para los códigos de emparejamiento (se guarda el hash del código, un solo uso, 10 min) | doc 07 §4.2, `auth.prisma` | H1 | ⏳ |
+| SC-03 | argon2id con la librería `@node-rs/argon2` (binarios ya compilados; no necesita compilador en Windows ni en el servidor) | `backend/src/core/secrets.ts` | H1 | ⏳ |
+| SC-04 | Licencia inicial del seed: plan `MVP`, sin fecha de vencimiento, módulos `recipes` y `advancedReports` activos, límites 1 sucursal / 15 dispositivos / 100 preguntas de IA (valores de ejemplo del doc 07) | `backend/src/core/seed.ts` | H1 | ⏳ |
+| SC-05 | Carpeta `shared/contracts/common` para tipos comunes (ID, monto, color) | doc 19 §5 | H1 | ⏳ |
+| SC-06 | El administrador inicial se llama "Administrador", su contraseña temporal tiene 14 caracteres y el seed no carga el menú de ejemplo salvo con `--with-menu` | `seed-cli.ts` | H1 | ⏳ |
+| SC-07 | Endpoint nuevo `GET /api/auth/device-users`: usuarios activos con PIN de la sucursal del dispositivo, para elegir el nombre antes del PIN | doc 08 §2.2 | H1 | ⏳ |
+| SC-08 | Código de emparejamiento inválido, usado o vencido → `400 VALIDATION_ERROR` (no hay un código de error propio) | módulo auth | H1 | ⏳ |
+| SC-09 | Límite de intentos por IP: emparejar 10 por minuto; login, PIN y refresh 30 por minuto → `429 RATE_LIMITED` | `core/app.ts` | H1 | ⏳ |
+| SC-10 | Prefijo de folios sin conexión: letra por tipo (M mesero, C caja, K cocina, A admin) + número consecutivo, ej. `M3` | módulo auth | H4 (con Pablito, `sync`) | ⏳ |
+| SC-11 | Bloqueo por intentos: 5 fallos seguidos (contraseña o PIN, se suman) bloquean la cuenta 15 minutos → `423 ACCOUNT_LOCKED` | módulo auth | H1 | ⏳ |
+| SC-12 | `GET /api/auth/pin-cache` (PIN para 🔑 sin conexión) se hace en H4 junto con el modo sin internet | doc 08 §2.2 | H4 | ⏳ |
+| SC-13 | La sesión del dispositivo (tokens) se guarda en `localStorage` del navegador | frontend `core/session` | H1 | ⏳ |
+| SC-14 | El primer dispositivo se empareja con un código generado en el servidor: `pnpm --filter @mise/backend pairing-code` (lo usa el operador de RENGO al dar de alta el cliente) | `pairing-code-cli.ts`, doc 13 §2 | H1 | ⏳ |
+| SC-15 | Los días de la licencia se cuentan por fecha UTC (no por la zona horaria del cliente) | módulo config | H1 | ⏳ |
+| SC-16 | SKU repetido → `400 VALIDATION_ERROR` con el nombre del producto que ya lo usa | módulo catalog | H1 | ⏳ |
+| SC-17 | `GET /api/menu` trae todo (también lo inactivo y agotado); cada pantalla filtra lo que muestra | módulo catalog | H2 (con Pablito, `orders`) | ⏳ |
+| SC-18 | El aviso de "agotado" a los demás dispositivos en ≤ 2 s (RF-011) llega con `realtime` en H2; por ahora se ve al recargar el menú | módulo catalog | H2 | ⏳ |
+| SC-19 | Endpoint nuevo `GET /api/config/logo?v=` (público y con caché, igual que las fotos de productos) para mostrar el logo | doc 08 §2.3 | H1 | ⏳ |
+| SC-20 | Crear una sucursal le copia las plantillas de ticket de la primera y le crea su estación "Cocina". No se valida aún el límite de sucursales de la licencia | módulo config | H1 | ⏳ |
+| SC-21 | Los temas viven en `shared/domain/theme/themes.ts` (no en `frontend/src/styles/themes/`) porque el backend valida contra ellos el `primary` del cliente | doc 18 §8.1, doc 19 §5 | H1 | ⏳ |
+| SC-22 | Pantalla de entrar: en caja y cocina (compartidos) se elige el nombre y se escribe el PIN; en mesero y administración, usuario y contraseña. Siempre se puede cambiar de modo | frontend `modules/auth` | H1 | ⏳ |
+| SC-23 | El nombre del dispositivo ("Caja 1") se guarda solo en ese equipo; en el servidor queda el que se escribió al emparejar | frontend `core/session` | H1 | ⏳ |
+| SC-24 | En administración (H1) solo se generan códigos para emparejar; la lista de dispositivos y revocarlos desde la app llegan en H3 (la API ya existe: `DELETE /api/devices/:id`) | frontend `modules/admin` | H3 | ⏳ |
+| SC-25 | Los editores de producto y de modificadores se abren en la misma página (no en una ventana modal); "Se agotó" / "Hay de nuevo" cambia el estado con un toque | frontend `modules/admin` | H1 | ⏳ |
 
 ## 3. Resueltas
 

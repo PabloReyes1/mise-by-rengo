@@ -53,7 +53,7 @@ module.exports = {
   ],
   options: {
     doNotFollow: { path: 'node_modules' },
-    exclude: { path: '(^|/)(node_modules|dist|coverage)/' },
+    exclude: { path: '(^|/)(node_modules|dist|coverage|generated)/' },
     tsPreCompilationDeps: true,
     enhancedResolveOptions: {
       extensions: ['.ts', '.tsx', '.js', '.json'],

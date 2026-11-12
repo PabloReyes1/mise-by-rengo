@@ -39,6 +39,7 @@ Ejemplo: `nuevo-cliente.sh LaFonda 3005 pos.lafonda.com`
 | 5 | Crear esquema `semantic` y vistas; `GRANT` de solo lectura a `_ro` | Capa semántica |
 | 6 | Seed: catálogo de unidades, tipos de orden, permisos, plantilla elegida (roles por defecto, métodos de pago, motivos, plantillas de ticket, sucursal inicial, estación por defecto, menú de ejemplo opcional), `client_settings` con el nombre, `license` con plan y módulos | Datos iniciales |
 | 7 | Crear usuario administrador inicial con contraseña temporal (se imprime una sola vez; obligatorio cambiarla al primer ingreso) | Acceso inicial |
+| 7b | Generar el código del primer dispositivo: `pnpm --filter @mise/backend pairing-code` desde la carpeta del cliente (10 min, un solo uso, SC-14). Los demás dispositivos se emparejan desde Administración › Dispositivos | Primer dispositivo |
 | 8 | Agregar la app al `ecosystem.config.cjs` y `pm2 start` del cliente; `pm2 save` | Proceso `mise-<nombre>` |
 | 9 | Crear `/etc/caddy/clients/<nombre>.caddy` (ver §2.2); `caddy validate` y `systemctl reload caddy` | HTTPS y ruteo |
 | 10 | Esperar y verificar `https://<dominio>/api/health` → `status: ok` (reintentos hasta 60 s) | Verificación |
@@ -122,7 +123,7 @@ flowchart TD
 | 4 | `prisma migrate deploy` en cada base (recorriendo `registry.csv`, cargando el `DATABASE_URL` de cada `.env`) | Detener el despliegue; las bases ya migradas quedan con columnas nuevas que el código viejo ignora (por eso las migraciones solo agregan). Corregir y reintentar |
 | 5 | Recrear vistas `semantic` (`CREATE OR REPLACE VIEW`, solo agregando columnas) | Igual |
 | 6 | `prisma generate` | Abortar (nada reiniciado aún) |
-| 7 | `pnpm install --frozen-lockfile` + compilar backend (`tsc`) y frontend (`vite build`) **una vez**, en un directorio temporal; luego cambio atómico de `dist` (renombrar) | Abortar; se mantiene el `dist` anterior |
+| 7 | `pnpm install --frozen-lockfile` + `pnpm build` (compila `shared`, genera Prisma, compila el backend y el frontend con `vite build`) **una vez**, en un directorio temporal; luego cambio atómico de `dist` (renombrar) | Abortar; se mantiene el `dist` anterior |
 | 8 | `pm2 restart all` (o `pm2 reload` escalonado por cliente) | Revisar logs; `rollback` = volver al `dist` anterior y `pm2 restart all` (el esquema nuevo es compatible) |
 | 9 | Verificar `GET /api/health` de cada dominio | Alerta Telegram |
 | 10 | Registrar versión, fecha y operador en `/opt/mise/deploys.log` | — |

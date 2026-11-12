@@ -1,0 +1,121 @@
+// Módulo auth (Docs/07 §4.2, ADR-008). Dueño: Deniscito.
+// Las impresoras (printers, device_printer_routes) llegan con core/print después de la prueba de hardware.
+
+model User {
+  id             String    @id @db.Uuid
+  fullName       String    @map("full_name")
+  username       String    @unique
+  email          String?
+  passwordHash   String    @map("password_hash")
+  pinHash        String?   @map("pin_hash")
+  pinSetAt       DateTime? @map("pin_set_at") @db.Timestamptz(6)
+  active         Boolean   @default(true)
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until") @db.Timestamptz(6)
+  lastLoginAt    DateTime? @map("last_login_at") @db.Timestamptz(6)
+
+  roles    UserRole[]
+  branches UserBranch[]
+  sessions DeviceSession[]
+
+  @@map("users")
+}
+
+model Role {
+  id                String   @id @db.Uuid
+  name              String   @unique
+  description       String   @default("")
+  maxDiscountPct    Decimal? @map("max_discount_pct") @db.Decimal(5, 2)
+  maxDiscountAmount Decimal? @map("max_discount_amount") @db.Decimal(12, 2)
+  isSystem          Boolean  @default(false) @map("is_system")
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model RolePermission {
+  roleId         String @map("role_id") @db.Uuid
+  permissionCode String @map("permission_code")
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionCode])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  userId String @map("user_id") @db.Uuid
+  roleId String @map("role_id") @db.Uuid
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+}
+
+model UserBranch {
+  userId   String @map("user_id") @db.Uuid
+  branchId String @map("branch_id") @db.Uuid
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@id([userId, branchId])
+  @@map("user_branches")
+}
+
+model Device {
+  id              String    @id @db.Uuid
+  branchId        String    @map("branch_id") @db.Uuid
+  name            String
+  type            String
+  deviceTokenHash String    @unique @map("device_token_hash")
+  offlinePrefix   String    @unique @map("offline_prefix")
+  platform        String    @default("")
+  lastSeenAt      DateTime? @map("last_seen_at") @db.Timestamptz(6)
+  appVersion      String?   @map("app_version")
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  branch   Branch          @relation(fields: [branchId], references: [id])
+  sessions DeviceSession[]
+
+  @@index([branchId])
+  @@map("devices")
+}
+
+model DeviceSession {
+  id               String    @id @db.Uuid
+  deviceId         String    @map("device_id") @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @unique @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  ip               String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  device Device @relation(fields: [deviceId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([deviceId])
+  @@index([userId])
+  @@map("device_sessions")
+}
+
+/// Código de emparejamiento de 6 dígitos válido 10 min (ADR-008). Tabla agregada en H1 (SC-02).
+model PairingCode {
+  id        String    @id @db.Uuid
+  branchId  String    @map("branch_id") @db.Uuid
+  codeHash  String    @unique @map("code_hash")
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(6)
+  createdBy String    @map("created_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@map("pairing_codes")
+}

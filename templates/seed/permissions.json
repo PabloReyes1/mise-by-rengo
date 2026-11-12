@@ -1,0 +1,68 @@
+{
+  "$comment": "Catálogo de permisos del producto (Docs/03 §3). Los códigos son del producto, no del cliente.",
+  "permissions": [
+    {
+      "code": "config.restaurant",
+      "description": "Editar datos del cliente, sucursales, logo, colores, regionales, tickets."
+    },
+    {
+      "code": "config.menu",
+      "description": "Categorías, productos, modificadores, combos, precios, agotados."
+    },
+    {
+      "code": "menu.toggle_soldout",
+      "description": "Marcar producto como agotado/disponible (sin editar el resto)."
+    },
+    { "code": "config.tables", "description": "Zonas, mesas, mapa." },
+    { "code": "config.payments", "description": "Métodos de pago, propina, motivos." },
+    {
+      "code": "config.discounts",
+      "description": "Activar o desactivar descuentos, catálogo de motivos y límite por rol."
+    },
+    { "code": "config.users", "description": "Usuarios." },
+    { "code": "config.roles", "description": "Roles y permisos." },
+    { "code": "config.devices", "description": "Dispositivos e impresoras." },
+    { "code": "config.recipes", "description": "Insumos, recetas, costos, márgenes objetivo." },
+    { "code": "cash.open_shift", "description": "Abrir turno de caja." },
+    { "code": "cash.close_shift", "description": "Hacer corte de caja." },
+    { "code": "cash.movement", "description": "Retiros y depósitos." },
+    { "code": "cash.open_drawer", "description": "Abrir cajón sin venta." },
+    {
+      "code": "cash.view_expected",
+      "description": "Ver el efectivo esperado antes de contar (corte a ciegas si no lo tiene)."
+    },
+    { "code": "table.open", "description": "Abrir mesa / orden para llevar." },
+    { "code": "table.view_all", "description": "Ver y operar mesas de otros meseros." },
+    { "code": "table.merge", "description": "Unir mesas." },
+    { "code": "table.move", "description": "Cambiar ocupación de mesa." },
+    { "code": "table.transfer_waiter", "description": "Transferir mesa/cuenta a otro mesero." },
+    { "code": "order.create", "description": "Tomar pedido y enviar a cocina." },
+    { "code": "order.cancel_sent", "description": "Cancelar ítems ya enviados a cocina." },
+    { "code": "bill.split", "description": "Crear cuentas y mover ítems entre cuentas." },
+    { "code": "bill.print_precheck", "description": "Imprimir pre-cuenta." },
+    { "code": "bill.reprint", "description": "Reimprimir pre-cuenta o recibo." },
+    { "code": "discount.apply", "description": "Aplicar descuento dentro del tope del rol." },
+    { "code": "discount.apply_unlimited", "description": "Aplicar descuento sin tope." },
+    { "code": "tip.edit", "description": "Cambiar o quitar la propina sugerida." },
+    { "code": "payment.register", "description": "Registrar pagos y cerrar cuentas." },
+    { "code": "bill.reopen", "description": "Reabrir una cuenta pagada en efectivo (RF-069)." },
+    { "code": "kds.operate", "description": "Aceptar y marcar listo en KDS." },
+    { "code": "kds.recall", "description": "Regresar un pedido Listo a En preparación." },
+    { "code": "order.deliver", "description": "Marcar pedido entregado." },
+    {
+      "code": "sync.resolve_conflicts",
+      "description": "Revisar y resolver conflictos de sincronización."
+    },
+    { "code": "dashboard.view_own", "description": "Ver dashboard con sus propias ventas." },
+    { "code": "dashboard.view_all", "description": "Ver dashboard completo de la sucursal." },
+    { "code": "reports.view", "description": "Acceder a reportería." },
+    { "code": "reports.financial", "description": "Ver reportes de caja, rentabilidad y costos." },
+    { "code": "reports.export", "description": "Exportar reportes." },
+    { "code": "reports.audit", "description": "Ver bitácora de auditoría." },
+    { "code": "ai.chat", "description": "Usar el chatbot de reportes." },
+    {
+      "code": "branch.all",
+      "description": "Acceso a todas las sucursales (si no, solo las asignadas)."
+    }
+  ]
+}

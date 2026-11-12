@@ -1,0 +1,13 @@
+// Generador y conexión. Las tablas van en un archivo por módulo (floor.prisma, orders.prisma, ...),
+// cada uno editado solo por el dueño del módulo (Docs/17 §3, regla 3).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
