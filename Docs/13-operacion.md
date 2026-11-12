@@ -8,7 +8,7 @@
 
 | Paso | Detalle |
 |---|---|
-| VPS | Hetzner Cloud, Ubuntu LTS. Ubicación recomendada: **Ashburn (EE. UU.)** por latencia a Guatemala `[SUPUESTO — PA-022]`. Tamaño inicial: 4 vCPU / 8 GB RAM / 160 GB disco `[SUPUESTO]` |
+| VPS | Hetzner Cloud, Ubuntu LTS. Ubicación: **EE. UU.** (PA-022, resuelta) por latencia a Guatemala; se recomienda Ashburn (costa este, más cerca de Guatemala que Hillsboro) `[SUPUESTO]`. Tamaño inicial: lo **define RENGO** (S-16); referencia 4 vCPU / 8 GB RAM / 160 GB disco |
 | Usuarios | `mise` (servicio, sin login por contraseña) y usuarios de operadores con llave SSH; `PasswordAuthentication no`, `PermitRootLogin no` |
 | Firewall | `ufw`: permitir 22, 80, 443; denegar el resto. `fail2ban` para SSH |
 | Paquetes | Node.js LTS (vía repositorio oficial), pm2 (global), PostgreSQL (LTS), Caddy (repositorio oficial), `cron`, `jq`, `curl` |
@@ -26,7 +26,7 @@ Ejemplo: `nuevo-cliente.sh LaFonda 3005 pos.lafonda.com`
 **Validaciones previas:**
 1. `<Nombre>`: solo letras y números (`^[A-Za-z][A-Za-z0-9]{1,30}$`); no existe `clients/<Nombre>/`.
 2. `<puerto>`: rango 3001–3999, libre (no está en `registry.csv` ni escuchando).
-3. `<dominio>`: resuelve por DNS a la IP del servidor (si no, aborta con instrucciones para crear el registro A/AAAA).
+3. `<dominio>`: resuelve por DNS a la IP del servidor (si no, aborta con instrucciones para crear el registro A/AAAA). Puede ser un **subdominio de RENGO** o un **dominio propio del cliente**, según lo que quiera el cliente (PA-023); el script funciona igual con los dos. Con dominio propio, el cliente (o RENGO por él) crea el registro DNS antes del alta.
 4. Plantilla de configuración: `--plantilla <restaurante-basico|cafeteria|...>` (default `restaurante-basico`).
 
 **Pasos:**
@@ -57,7 +57,7 @@ Si un paso falla, el script revierte los pasos anteriores (borra proceso pm2, bl
 | `DATABASE_URL_RO` | Rol de solo lectura (chatbot) `?connection_limit=2` |
 | `JWT_SECRET` | 64 bytes aleatorios, distinto por cliente |
 | `LOG_LEVEL` | `warn` |
-| `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_MAX_TOKENS` | Chatbot (opcional) |
+| `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_MAX_TOKENS` | Chatbot (opcional). La llave es **de RENGO** (PA-030), la misma o una por cliente según decida RENGO; `AI_MODEL` lo define RENGO (PA-031) |
 | `PUBLIC_DOMAIN` | `pos.lafonda.com` (CORS/orígenes permitidos de Socket.IO) |
 | `MIN_FRONTEND_VERSION` | Versión mínima aceptada |
 

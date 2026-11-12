@@ -35,7 +35,7 @@ Los ejemplos de abajo usan Fuente A. Los textos largos se ajustan con salto de l
 
 ### 4.1 Comanda de cocina
 **Dispara:** enviar a cocina (cada ronda), cancelación de ítems enviados (comanda de cancelación), reimpresión.
-**Contenido:** número de orden (folio), mesa o "PARA LLEVAR" + nombre, mesero, hora de envío, comensales, "ADICIONAL" en rondas ≥ 2, ítems con cantidad en grande, modificadores sangrados, notas resaltadas, componentes de combo. **Sin precios.** Orden de los ítems: el del carrito (o por categoría si se configura). Sonido/zumbador de la impresora opcional.
+**Contenido:** número de orden (folio), mesa o "PARA LLEVAR" + nombre, mesero, hora de envío, comensales, "ADICIONAL" en rondas ≥ 2, ítems con cantidad en grande, modificadores sangrados, notas resaltadas, componentes de combo. **Sin precios.** Orden de los ítems: configurable (PA-043, `kitchen_ticket_order`); por defecto, el orden del carrito; opcionalmente, agrupados por categoría. Sonido/zumbador de la impresora opcional.
 
 **80 mm**
 ```
@@ -192,7 +192,7 @@ TOTAL C/PROPINA        Q282.15
 
 ### 4.3 Recibo
 **Dispara:** al confirmar el pago (automático según `auto_print_receipt`) o reimpresión (`bill.reprint`, marcado "REIMPRESIÓN").
-**Contenido:** encabezado, NIT del restaurante, folio del recibo, fecha/hora, mesa/para llevar, cajero, mesero, ítems, descuentos, total, propina, métodos de pago con referencia, efectivo recibido, cambio, NIT/nombre del cliente o "CF", leyenda configurable "Este documento no es factura" (mientras no exista FEL), pie.
+**Contenido:** encabezado, NIT del restaurante, folio del recibo, fecha/hora, mesa/para llevar, cajero, mesero, ítems, descuentos, total, propina, métodos de pago con referencia, efectivo recibido, cambio, NIT/nombre del cliente o "CF", leyenda configurable "Este documento no es factura" (no hay FEL ni IVA por ahora, PA-002), pie. Si la cuenta se reabrió y se volvió a cobrar, el recibo nuevo lleva la marca "CORREGIDO".
 
 **80 mm**
 ```
@@ -267,7 +267,9 @@ No es factura.
 
 ### 4.4 Corte de caja
 **Dispara:** al cerrar el turno; reimpresión desde Caja › Turnos.
-**Contenido:** caja, sucursal, cajero que abrió y que cerró, horas, fondo inicial, ventas por método, propinas, retiros, depósitos, anulaciones, efectivo esperado, contado, diferencia, conteo por denominación (si se hizo), número de cuentas, descuentos y cancelaciones del turno, firmas.
+**Contenido:** caja, sucursal, cajero que abrió y que cerró, horas, fondo inicial, ventas por método, propinas, retiros, depósitos, reaperturas, efectivo esperado, contado, diferencia, conteo por denominación (si se hizo), número de cuentas, descuentos y cancelaciones del turno, firmas. Los **reversos por reapertura** son las cuentas en efectivo reabiertas durante este turno, aunque se hayan cobrado en otro turno (RF-069); restan del esperado de este turno.
+
+**Corte provisional (sin conexión, PA-042):** se imprime igual, con un encabezado `*** PROVISIONAL — sin sincronizar ***` debajo del título y la nota "El esperado puede cambiar al sincronizar". Al sincronizar, el servidor cierra el turno y se puede reimprimir el corte definitivo desde Caja › Turnos.
 
 **80 mm**
 ```
@@ -293,7 +295,7 @@ Fondo inicial                          Q500.00
 + Cobros en efectivo (neto)          Q4,215.50
 + Depósitos (1)                        Q200.00
 - Retiros (2)                          Q650.00
-- Reversos por anulación (1)            Q85.00
+- Reversos por reapertura (1)          Q85.00
                                     ----------
 = Efectivo esperado                  Q4,180.50
   Efectivo contado                   Q4,170.00
@@ -307,7 +309,7 @@ Q100                           15  Q1,500.00
 Q50                            12    Q600.00
 ...
 ------------------------------------------------
-Cuentas pagadas: 69    Anuladas: 1 (Q85.00)
+Órdenes: 58    Cuentas pagadas: 69    Reabiertas: 1
 Descuentos: 6 (Q312.00)
 Cancelaciones de ítems: 4 (Q210.00)
 Ventas netas (sin propina): Q9,973.20
@@ -341,12 +343,13 @@ Fondo inicial          Q500.00
 + Efectivo           Q4,215.50
 + Depósitos            Q200.00
 - Retiros              Q650.00
-- Reversos              Q85.00
+- Reversos reap.        Q85.00
 = Esperado           Q4,180.50
   Contado            Q4,170.00
   DIFERENCIA           -Q10.50
 --------------------------------
-Cuentas: 69  Anuladas: 1
+Órdenes: 58  Cuentas: 69
+Reabiertas: 1
 Desc.: 6 (Q312.00)
 Cancel.: 4 (Q210.00)
 Ventas netas: Q9,973.20

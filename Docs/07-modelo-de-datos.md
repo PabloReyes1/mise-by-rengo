@@ -10,7 +10,7 @@
 - Montos `numeric(12,2)`; porcentajes `numeric(5,2)`; cantidades de receta `numeric(12,4)`.
 - Borrado lógico (`active boolean` o `deleted_at`) en catálogos; **nunca** se borran registros operativos.
 - Estados como `text` con `CHECK` (no `enum` de PostgreSQL) para poder **agregar** valores con migraciones aditivas.
-- Columnas pesadas (`bytea`, textos largos) en tablas separadas (`media`, `ai_messages`) para que las listas no las carguen.
+- Columnas pesadas (`bytea`, textos largos) en tablas separadas (`media`) para que las listas no las carguen.
 
 ## 2. Modelo conceptual de una mesa
 
@@ -78,7 +78,6 @@ erDiagram
     bills ||--o{ payments : ""
     payment_methods ||--o{ payments : ""
     shifts ||--o{ payments : "efectivo del turno"
-    bills ||--o{ invoice_events : "FEL (futuro)"
 ```
 
 ### 3.4 Caja
@@ -116,8 +115,7 @@ erDiagram
     sync_operations ||--o{ sync_conflicts : genera
     devices ||--o{ connectivity_logs : reporta
     devices ||--o{ folio_sequences : ""
-    users ||--o{ ai_conversations : ""
-    ai_conversations ||--o{ ai_messages : ""
+    users ||--o{ ai_queries : ""
 ```
 
 ## 4. Descripción de tablas
@@ -131,16 +129,24 @@ erDiagram
 | legal_name, trade_name | text | |
 | nit | text | |
 | logo_media_id | uuid FK media | |
-| color_primary, color_secondary | text | Hex |
+| color_primary, color_secondary | text | **Reemplazadas** por `theme_id` + `color_primary_override` (PA-048): los colores salen del tema; el cliente solo puede cambiar `primary` |
 | currency_code | text | Default `GTQ` |
 | currency_symbol | text | Default `Q` |
 | decimals | smallint | Default 2 |
 | locale | text | Default `es-GT` |
 | timezone | text | Default `America/Guatemala` |
 | business_day_cutoff | time | Hora de corte del día de negocio (default 04:00) |
-| tip_suggested_pct | numeric(5,2) | Ej. 10.00; null = sin sugerencia |
+| tips_enabled | boolean | Si el restaurante registra propinas (PA-046) |
+| tip_suggested_pct | numeric(5,2) | Ej. 10.00; null = sin sugerencia. La propina siempre es sugerida (S-10) |
 | tip_editable, tip_applies_takeaway | boolean | |
-| tip_base | text | `AFTER_DISCOUNT` / `BEFORE_DISCOUNT` |
+| tip_base | text | `AFTER_DISCOUNT` (default) / `BEFORE_DISCOUNT` |
+| tip_distribution | text | A quién le corresponde (PA-046): `WAITER` (mesero que atendió la mesa), `POOL` (se reparte entre todos los meseros; en partes iguales entre los que trabajaron ese día de negocio `[SUPUESTO]`), `HOUSE` (el establecimiento) |
+| discounts_enabled | boolean | El gerente decide si se permiten descuentos (S-05). Default `false` en la plantilla `[SUPUESTO]` |
+| soldout_on_send | text | Al enviar un borrador con un producto que se agotó (PA-041): `ANY_USER_CONFIRMS` (default), `MANAGER_AUTH`, `BLOCK` |
+| table_cleaning_state | boolean | Estado de mesa "Por limpiar" tras liberar (PA-040). Default `false` |
+| kitchen_ticket_order | text | Orden de la comanda (PA-043): `CART` (default) / `CATEGORY` |
+| theme_id | text | Tema visual elegido (doc 18 §8): `botanical-graphite` (default), `piedra-y-rosa`, `carbon-y-oro`, `violeta-medianoche`, `uva-y-porcelana`, `cielo-de-medianoche` (doc 18 §8.4) |
+| color_primary_override | text null | Hex; el único color que el cliente puede cambiar (PA-048). Se valida el contraste al guardarlo |
 | kds_thresholds | jsonb | `{ "warnMin": 10, "lateMin": 20, "from": "SENT" }` |
 | kds_sound | jsonb | `{ "tone": "bell", "volume": 0.8, "repeatSec": 30 }` |
 | cash_diff_threshold | numeric(12,2) | Diferencia que exige comentario |
@@ -155,7 +161,7 @@ erDiagram
 | plan | text | `BASICO`, `PRO`, ... `[PENDIENTE DE DEFINIR]` planes comerciales |
 | status | text | `ACTIVA`, `GRACIA`, `SOLO_LECTURA`, `SUSPENDIDA` |
 | modules | jsonb | `{ "recipes": true, "ai": false, "multiBranch": false, "advancedReports": true }` |
-| limits | jsonb | `{ "branches": 1, "devices": 15, "aiQuestionsPerDay": 50, "aiTokensPerMonth": 500000 }` |
+| limits | jsonb | `{ "branches": 1, "devices": 15, "aiQuestionsPerMonth": 100 }` — al llegar al límite de preguntas el chat se bloquea y pide contactar a RENGO (S-13) |
 | valid_until | date | |
 | grace_days | int | |
 | updated_by_platform_at | timestamptz | Solo la modifican scripts de plataforma |
@@ -164,12 +170,12 @@ erDiagram
 **`service_periods`**: id, branch_id, name ("Almuerzo"), weekday (0–6), start_time, end_time.
 **`ticket_templates`**: id, branch_id, doc_type (`COMANDA`, `PRECUENTA`, `RECIBO`, `CORTE`, `MOVIMIENTO`), header text, footer text, show_logo, paper_width (`58`/`80`), options jsonb.
 **`order_types`**: id, code (`MESA`, `PARA_LLEVAR`; extensible), name, requires_table boolean, active. Delivery **no** se crea; queda como valor posible futuro.
-**`reasons`**: id, type (`CANCEL_ITEM`, `VOID_BILL`, `DISCOUNT`, `CASH_WITHDRAWAL`, `CASH_DEPOSIT`, `CONFLICT`), name, active, sort.
+**`reasons`**: id, type (`CANCEL_ITEM`, `REOPEN_BILL`, `DISCOUNT`, `CASH_WITHDRAWAL`, `CASH_DEPOSIT`, `CONFLICT`), name, active, sort.
 
 ### 4.2 Usuarios, roles y dispositivos
 
 **`users`**: id, full_name, username (único), email (opcional), password_hash (argon2id), pin_hash (argon2id), pin_set_at, active, failed_attempts, locked_until, last_login_at.
-**`roles`**: id, name, description, max_discount_pct, max_discount_amount, is_system (no se puede borrar el de administrador).
+**`roles`**: id, name, description, max_discount_pct, max_discount_amount (los fija el gerente, S-05), is_system (no se puede borrar el de administrador).
 **`role_permissions`**: role_id, permission_code (catálogo en [03](03-actores-roles-permisos.md#3-catálogo-de-permisos); los códigos son del producto, no del cliente).
 **`user_roles`**: user_id, role_id. **`user_branches`**: user_id, branch_id.
 **`devices`**: id, branch_id, name, type (`WAITER`, `CASH`, `KDS`, `ADMIN`), device_token_hash, offline_prefix (ej. `M3`), platform (user agent resumido), last_seen_at, app_version, revoked_at.
@@ -248,6 +254,7 @@ erDiagram
 | note | text | Máx. 140 |
 | status | text | `ENVIADO`, `EN_PREPARACION`, `LISTO`, `ENTREGADO`, `CANCELADO` |
 | cancelled_at, cancelled_by, authorized_by, cancel_reason_id, cancel_after_ready | | |
+| split_from_id | uuid FK order_items null | Ítem del que se separó (RF-104, PA-001). Al separar, el original baja su cantidad y el nuevo nace con el mismo pedido, producto, modificadores, nota y precio unitario |
 | ready_at | timestamptz | Listo por ítem |
 | created_device_id, version | | |
 
@@ -260,28 +267,26 @@ erDiagram
 | id | uuid PK | |
 | occupancy_id | uuid FK | |
 | name | text | "Cuenta 1", "Ana" |
-| status | text | `ABIERTA`, `PRECUENTA`, `PAGADA`, `ANULADA`, `ELIMINADA` |
+| status | text | `ABIERTA`, `PRECUENTA`, `PAGADA`, `ELIMINADA` (no existe `ANULADA`, PA-012) |
 | folio | text | Folio de recibo |
 | subtotal, discount_total, tip_amount, total | numeric(12,2) | Calculados por el servidor |
 | tip_pct | numeric(5,2) | |
 | paid_at, paid_by, cash_register_id, shift_id | | |
-| voided_at, voided_by, void_authorized_by, void_reason_id | | |
+| reopen_count | int | Veces que se reabrió (RF-069). El detalle de cada reapertura (quién, autorizador, motivo, hora) va en `audit_log` |
 | precheck_count | int | Veces impresa la pre-cuenta |
-| customer_nit | text null | **FEL** — NIT o `CF` |
-| customer_tax_name | text null | **FEL** — nombre del receptor |
-| invoice_status | text | **FEL** — `NO_REQUERIDA` (default), `PENDIENTE`, `EN_PROCESO`, `EMITIDA`, `ERROR`, `ANULACION_PENDIENTE`, `ANULADA` |
-| invoice_number, invoice_uuid | text null | **FEL** — los llenará el RPA |
+| customer_nit | text null | NIT o `CF` (único punto de extensión FEL en el MVP) |
+| customer_tax_name | text null | Nombre del receptor |
 | owner_device_id, created_device_id, version | | |
 
 **`applied_discounts`**: id, bill_id null, order_item_id null (exactamente uno de los dos), kind (`PCT`, `AMOUNT`), value, amount (calculado), reason_id, applied_by, authorized_by, created_device_id.
 **`payment_methods`**: id, name, kind (`CASH`, `CARD`, `TRANSFER`, `OTHER`), gives_change, requires_reference, active, sort.
-**`payments`**: id, bill_id, method_id, amount (aplicado a la cuenta), tendered (entregado por el cliente, efectivo), change_given, reference, shift_id (obligatorio si `CASH`), status (`APLICADO`, `REVERTIDO`, `EN_CONFLICTO`), received_by, created_device_id, idempotency_key.
+**`payments`**: id, bill_id, method_id, amount (aplicado a la cuenta), tendered (entregado por el cliente, efectivo), change_given, reference, shift_id (obligatorio si `CASH`), status (`APLICADO`, `REVERTIDO`, `EN_CONFLICTO`), received_by (cajero o mesero que cobró; con `shift_id` permite saber cuánto efectivo debe entregar cada mesero, PA-052), created_device_id, idempotency_key.
 
 ### 4.5 Caja
 
-**`cash_registers`**: id, branch_id, name ("Caja 1"), device_id, active.
-**`shifts`**: id, cash_register_id, opened_by, opened_at, opening_float, status (`ABIERTO`, `EN_CORTE`, `CERRADO`), closed_by, closed_at, expected_cash, counted_cash, difference, comment, report_snapshot jsonb (totales congelados al cerrar). Índice único parcial: un `ABIERTO` por caja.
-**`cash_movements`**: id, shift_id, type (`DEPOSITO`, `RETIRO`, `REVERSO_ANULACION`), amount, reason_id, note, user_id, authorized_by.
+**`cash_registers`**: id, branch_id, name ("Caja 1"), device_id, active, opening_float_mode (`FIJO` / `VARIABLE`, PA-024), opening_float_amount numeric(12,2) (monto si es fijo), count_by_denomination (`OPCIONAL` / `OBLIGATORIO`, default `OPCIONAL`, PA-025), is_main boolean (caja principal de la sucursal: recibe el efectivo que cobran los meseros, PA-052; una sola por sucursal).
+**`shifts`**: id, cash_register_id, opened_by, opened_at, opening_float, status (`ABIERTO`, `EN_CORTE`, `CERRADO_PROVISIONAL`, `CERRADO`), closed_by, closed_at, closed_offline boolean, provisional_expected_cash (esperado calculado en el dispositivo sin conexión), expected_cash, counted_cash, difference, comment, report_snapshot jsonb (totales congelados al cerrar). Índice único parcial: un `ABIERTO` por caja.
+**`cash_movements`**: id, shift_id, type (`DEPOSITO`, `RETIRO`, `REVERSO_REAPERTURA`), bill_id null (para el reverso), payment_id null, amount, reason_id, note, user_id, authorized_by.
 **`shift_counts`**: shift_id, denomination numeric, quantity.
 
 ### 4.6 Recetas y costeo
@@ -292,7 +297,7 @@ erDiagram
 **`ingredient_costs`**: id, ingredient_id, unit_cost, valid_from, set_by. (Historial; sin compras ni existencias.)
 **`recipes`**: id, product_id null, modifier_id null, combo_option_id null, is_subrecipe, name, yield_qty, yield_unit_id, computed_cost, computed_at.
 **`recipe_lines`**: id, recipe_id, ingredient_id null, subrecipe_id null, quantity, unit_id, waste_pct.
-**`cost_targets`**: id, scope (`CLIENT`, `CATEGORY`, `PRODUCT`), category_id, product_id, target_food_cost_pct (ej. 30.00), rounding_step (ej. 0.50 o 1.00), rounding_mode (`UP`, `NEAREST`).
+**`cost_targets`**: id, scope (`CLIENT`, `CATEGORY`, `PRODUCT`), category_id, product_id, target_food_cost_pct (ej. 30.00), rounding_step (ej. 0.50, 1.00 o 5.00; default **1.00**, PA-045), rounding_mode (`UP` default, `NEAREST`).
 
 Fórmulas: `costo = Σ cantidad_convertida × (1 + merma%) × costo_unitario`; `precio_sugerido = redondeo(costo / food_cost_pct)`; `margen_real = (precio − costo) / precio`.
 
@@ -306,37 +311,25 @@ Fórmulas: `costo = Σ cantidad_convertida × (1 + merma%) × costo_unitario`; `
 | client_at | timestamptz | Hora del dispositivo (offline) |
 | branch_id, user_id, authorized_by, device_id | | |
 | ip | inet | |
-| action | text | `bill.void`, `item.cancel`, `discount.apply`, `config.menu.update`, `auth.login_failed`, ... |
+| action | text | `bill.reopen`, `item.cancel`, `item.split`, `discount.apply`, `config.menu.update`, `auth.login_failed`, ... |
 | entity, entity_id | text, uuid | |
 | before, after | jsonb | Solo campos cambiados |
 | reason_id, note | | |
 
 **`sync_operations`**: idempotency_key (PK, texto), device_id, op_type, entity_id, received_at, client_created_at, client_seq, status (`APLICADA`, `DUPLICADA`, `CONFLICTO`, `RECHAZADA`), result jsonb.
-**`sync_conflicts`**: id, branch_id, type (`PAGO_DUPLICADO`, `CANCELACION_SOBRE_PAGADA`, `MESA_DOBLE`, `TURNO_DOBLE`, `ITEM_EN_CUENTA_PAGADA`, `PRECIO_CAMBIADO`, ...), entities jsonb, detail jsonb, status (`ABIERTO`, `RESUELTO`), resolution, resolved_by, resolved_at.
+**`sync_conflicts`**: id, branch_id, type (`PAGO_DUPLICADO`, `CANCELACION_SOBRE_PAGADA`, `MESA_DOBLE`, `CORTE_DIFERENTE` (el esperado recalculado por el servidor no coincide con el del corte provisional), `ITEM_EN_CUENTA_PAGADA`, `PRECIO_CAMBIADO`, ...), entities jsonb, detail jsonb, status (`ABIERTO`, `RESUELTO`), resolution, resolved_by, resolved_at.
 **`folio_sequences`**: branch_id, doc_type (`ORDER`, `BILL`), last_value. Folio definitivo con `UPDATE ... RETURNING` en la transacción.
 **`connectivity_logs`**: id, device_id, offline_from, offline_to, duration_s, pending_ops_max, network_type, notes.
 **`realtime_events`**: seq bigserial, branch_id, event, payload jsonb, at (retención 24 h).
-**`ai_conversations`**: id, user_id, branch_scope, started_at.
-**`ai_messages`**: id, conversation_id, role, content text, tool_call jsonb, semantic_query jsonb, rows_returned, tokens_in, tokens_out, cost_usd, latency_ms, flagged.
-**`ai_usage_daily`**: date, questions, tokens_in, tokens_out, cost_usd.
+**`ai_queries`** (PA-032: **no** se guardan conversaciones ni respuestas): id, user_id, branch_scope, asked_at, question text (truncada a 300 caracteres), semantic_query jsonb (la consulta interpretada, para repetirla), rows_returned, tokens_in, tokens_out, cost_usd, latency_ms, flagged (fuera de alcance o bloqueada). Retención `[SUPUESTO]`: 12 meses.
+**`ai_usage_monthly`**: month, questions, tokens_in, tokens_out, cost_usd (para el límite de 100 preguntas al mes, S-13).
 
 ### 4.8 Punto de extensión FEL
 
-**`invoice_events`** — cola que consumirá el RPA (fuera de alcance; la tabla existe desde el MVP).
-| Columna | Tipo | Nota |
-|---|---|---|
-| id | uuid PK | |
-| bill_id | uuid FK | |
-| type | text | `EMITIR`, `ANULAR` |
-| status | text | `PENDIENTE`, `TOMADO`, `COMPLETADO`, `ERROR`, `DESCARTADO` |
-| attempts | int | |
-| next_attempt_at | timestamptz | Espera exponencial |
-| locked_by, locked_at | text, timestamptz | Para que el RPA tome eventos con `SELECT ... FOR UPDATE SKIP LOCKED` |
-| payload | jsonb | Snapshot de la cuenta: ítems, totales, NIT, nombre |
-| result | jsonb | Número de autorización, serie, UUID SAT |
-| last_error | text | |
-
-Reglas: pagar una cuenta con `customer_nit` → `invoice_status = PENDIENTE` + evento `EMITIR`. Anular cuenta con factura `EMITIDA` → `ANULACION_PENDIENTE` + evento `ANULAR`. **`[PENDIENTE DE DEFINIR]`** desglose de IVA incluido (PA-002): se agregará una columna o vista sin cambiar las existentes.
+**Por ahora no se maneja IVA ni FEL** (PA-002, PA-003). En el MVP solo existen `bills.customer_nit` y `bills.customer_tax_name`. Cuando se implemente FEL (Fase 3) se agregarán con migraciones aditivas, sin cambiar lo existente:
+- `bills.invoice_status`, `invoice_number`, `invoice_uuid`.
+- Una cola `invoice_events` (emitir, con errores y reintentos) que consumirá el RPA. Cómo se conecta el RPA (base o API) se decide entonces.
+- El desglose del IVA incluido en el precio.
 
 ## 5. Vistas de la capa semántica (esquema `semantic`)
 
@@ -345,10 +338,10 @@ Usadas por reportes y por el chatbot (rol de solo lectura). Detalle en [10-chatb
 | Vista | Granularidad | Columnas clave |
 |---|---|---|
 | `semantic.sales_items` | Ítem vendido (cuenta pagada, no cancelado) | business_date, hour, weekday, branch, category, product, waiter, order_type, quantity, net_amount, cost |
-| `semantic.bills_paid` | Cuenta pagada | business_date, branch, waiter, order_type, guests, subtotal, discount, tip, total |
+| `semantic.bills_paid` | Cuenta pagada | business_date, branch, occupancy_id (para contar órdenes, PA-011), waiter, order_type, guests, subtotal, discount, tip, total |
 | `semantic.payments` | Pago aplicado | business_date, branch, method, method_kind, amount, shift |
 | `semantic.kitchen_times` | Pedido | business_date, branch, wait_s, prep_s, delivery_s |
-| `semantic.cancellations` | Ítem cancelado / cuenta anulada | business_date, branch, user, reason, amount, after_ready |
+| `semantic.cancellations` | Ítem cancelado | business_date, branch, user, reason, amount, after_ready |
 | `semantic.discounts` | Descuento | business_date, branch, user, reason, amount |
 | `semantic.shifts` | Turno | branch, register, opened_at, expected, counted, difference |
 | `semantic.ingredient_usage` | Insumo × día | business_date, branch, ingredient, unit, theoretical_qty, theoretical_cost |
@@ -366,4 +359,3 @@ Las vistas **no** exponen nombres ni teléfonos de clientes, NIT ni datos de usu
 | payments | `(bill_id)`, `(shift_id)`, único `(idempotency_key)` |
 | audit_log | `(at)`, `(entity, entity_id)` |
 | sync_operations | PK `idempotency_key` |
-| invoice_events | `(status, next_attempt_at)` |

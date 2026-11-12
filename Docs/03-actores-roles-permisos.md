@@ -15,7 +15,7 @@
 | Comensal | Humano, externo | No usa el sistema; recibe pre-cuenta y recibo. | — |
 | Terminal de tarjeta | Sistema externo | Cobra tarjetas fuera del POS. El cajero registra el pago y la referencia manualmente. | Terminal del banco |
 | Proveedor de LLM | Sistema externo | Interpreta preguntas del chatbot. | — |
-| RPA de facturación | Sistema externo (futuro) | Leerá `invoice_events` para emitir FEL. | — |
+| RPA de facturación | Sistema externo (futuro, fuera de alcance por ahora: PA-002/PA-003) | Emitirá FEL. Cómo se conecta se decide cuando se implemente. | — |
 | Telegram | Sistema externo | Recibe alertas del monitor. | — |
 
 ## 2. Roles por defecto (plantilla)
@@ -41,7 +41,7 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 | `menu.toggle_soldout` | Marcar producto como agotado/disponible (sin editar el resto). |
 | `config.tables` | Zonas, mesas, mapa. |
 | `config.payments` | Métodos de pago, propina, motivos. |
-| `config.discounts` | Catálogo de descuentos y topes por rol. |
+| `config.discounts` | Activar o desactivar descuentos, catálogo de motivos y límite por rol (S-05). |
 | `config.users` | Usuarios. |
 | `config.roles` | Roles y permisos. |
 | `config.devices` | Dispositivos e impresoras. |
@@ -65,7 +65,7 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 | `discount.apply_unlimited` | Aplicar descuento sin tope. |
 | `tip.edit` | Cambiar o quitar la propina sugerida. |
 | `payment.register` | Registrar pagos y cerrar cuentas. |
-| `payment.void` | Anular cuenta pagada. |
+| `bill.reopen` | Reabrir una cuenta pagada en efectivo (RF-069). No existe permiso de anulación. |
 | `kds.operate` | Aceptar y marcar listo en KDS. |
 | `kds.recall` | Regresar un pedido "Listo" a "En preparación". |
 | `order.deliver` | Marcar pedido entregado. |
@@ -90,7 +90,7 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 | `menu.toggle_soldout` | ✅ | ✅ | ✅ | — | ✅ |
 | `config.tables` | ✅ | ✅ | — | — | — |
 | `config.payments` | ✅ | — | — | — | — |
-| `config.discounts` | ✅ | — | — | — | — |
+| `config.discounts` | ✅ | ✅ | — | — | — |
 | `config.users` | ✅ | ✅ | — | — | — |
 | `config.roles` | ✅ | — | — | — | — |
 | `config.devices` | ✅ | ✅ | — | — | — |
@@ -110,11 +110,11 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 | `bill.split` | ✅ | ✅ | ✅ | ✅ | — |
 | `bill.print_precheck` | ✅ | ✅ | ✅ | ✅ | — |
 | `bill.reprint` | ✅ | ✅ | ✅ | 🔑 | — |
-| `discount.apply` | ✅ | ✅ | ✅ (tope 10 %) | 🔑 | — |
+| `discount.apply` | ✅ | ✅ | ✅ (límite que fije el gerente) | 🔑 | — |
 | `discount.apply_unlimited` | ✅ | ✅ | 🔑 | 🔑 | — |
 | `tip.edit` | ✅ | ✅ | ✅ | ✅ | — |
-| `payment.register` | ✅ | ✅ | ✅ | — `[SUPUESTO]` | — |
-| `payment.void` | ✅ | ✅ | 🔑 | — | — |
+| `payment.register` | ✅ | ✅ | ✅ | ✅ (configurable) | — |
+| `bill.reopen` | ✅ | ✅ | 🔑 | — | — |
 | `kds.operate` | ✅ | ✅ | — | — | ✅ |
 | `kds.recall` | ✅ | ✅ | — | — | ✅ |
 | `order.deliver` | ✅ | ✅ | ✅ | ✅ | — |
@@ -128,12 +128,12 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 | `ai.chat` | ✅ | ✅ | — | — | — |
 | `branch.all` | ✅ | — | — | — | — |
 
-> `[SUPUESTO]` En el primer cliente el mesero **no** cobra (lo hace la caja). Si un cliente quiere que el mesero cobre en mesa, se le asigna `payment.register` al rol Mesero; no requiere código. Ver PA-010.
+> **Resuelto (PA-010, S-06):** que el mesero cobre es **configurable**. En la plantilla el mesero **sí cobra** y el pago queda registrado en el sistema en ese momento; la caja también puede cobrar. Si un cliente quiere que solo cobre la caja, se le quita `payment.register` al rol Mesero desde la configuración, sin código. El efectivo que cobra el mesero va al **turno abierto de la caja principal** de la sucursal (PA-052); el mesero entrega ese efectivo al cajero y el reporte RPT-034 muestra cuánto debe entregar cada mesero. Si la caja principal no tiene turno abierto, el mesero no puede cobrar en efectivo (sí con otros métodos).
 
 ## 5. Reglas de autorización
 
 1. **Mesas propias:** sin `table.view_all`, un usuario solo opera las ocupaciones donde es el mesero asignado.
-2. **Topes de descuento:** cada rol tiene `max_discount_pct` y `max_discount_amount`. Si el descuento los supera, se pide autorización (🔑) de un usuario con `discount.apply_unlimited` o con tope suficiente.
+2. **Descuentos:** el gerente decide si se permiten (`client_settings.discounts_enabled`) y el límite de cada rol (`max_discount_pct` y `max_discount_amount`). Si el descuento los supera, se pide autorización (🔑) de un usuario con `discount.apply_unlimited` o con tope suficiente.
 3. **Autorización 🔑:** el sistema pide el PIN de otro usuario presente; valida que ese usuario tenga el permiso y esté activo en la sucursal; registra en bitácora `requested_by` y `authorized_by`. La autorización vale para **una sola acción**.
 4. **Sucursal:** sin `branch.all`, toda consulta se filtra por las sucursales asignadas al usuario (backend).
 5. **Módulo/licencia:** si el módulo está desactivado en la licencia, el permiso no tiene efecto (`403 MODULE_DISABLED`).
@@ -141,9 +141,11 @@ Un usuario puede tener varios roles; sus permisos son la unión. Los permisos se
 
 ## 6. Sesiones por tipo de dispositivo
 
-| Tipo de dispositivo | Inicio de sesión | Bloqueo por inactividad | Cambio de usuario |
+**No hay bloqueo por inactividad** (S-04). El token de acceso dura poco (15 min) y se refresca solo mientras se usa la app; la sesión **vence después de 12 horas sin actividad**.
+
+| Tipo de dispositivo | Inicio de sesión | Vencimiento de la sesión | Cambio de usuario |
 |---|---|---|---|
-| Celular personal de mesero | Usuario + contraseña la primera vez; luego PIN | 15 min `[SUPUESTO]` | No (dispositivo personal) |
-| Caja (compartido) | Dispositivo registrado por admin; usuarios con PIN | 5 min | Sí, con PIN |
-| KDS (compartido) | Dispositivo registrado; sesión de rol Cocina | Nunca (pantalla siempre activa) | Con PIN para acciones con autor |
-| Administración | Usuario + contraseña | 30 min | — |
+| Celular personal de mesero | Usuario + contraseña la primera vez; luego PIN | 12 h sin actividad | No (dispositivo personal) |
+| Caja (compartido) | Dispositivo registrado por admin; usuarios con PIN | 12 h sin actividad | Sí, con PIN |
+| KDS (compartido) | Dispositivo registrado; sesión de rol Cocina | 12 h sin actividad (la pantalla queda siempre encendida) | Con PIN para acciones con autor |
+| Administración | Usuario + contraseña | 12 h sin actividad | — |

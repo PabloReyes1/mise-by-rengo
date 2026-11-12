@@ -30,7 +30,7 @@
 | 402 | `LICENSE_SUSPENDED`, `LICENSE_READ_ONLY` |
 | 403 | `FORBIDDEN`, `AUTHORIZATION_REQUIRED` (pide 🔑), `MODULE_DISABLED`, `BRANCH_FORBIDDEN`, `DEVICE_REVOKED` |
 | 404 | `NOT_FOUND` |
-| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED` |
+| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED` |
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
@@ -126,22 +126,23 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/occupancies/:id/bills` | `{ id, name }` crea cuenta | `bill.split` |
 | PATCH | `/api/bills/:id` | `{ name, customerNit, customerTaxName, version }` | `bill.split` |
 | POST | `/api/bills/move-items` | `{ itemIds:[], targetBillId, versions }` | `bill.split` |
+| POST | `/api/order-items/:id/split` | `{ newItemId, quantity, targetBillId?, version }` — separa `quantity` unidades en un ítem nuevo (RF-104) y, si se indica, lo pasa a otra cuenta. `409` si el ítem tiene descuento de ítem o está en una cuenta pagada | `bill.split` |
 | POST | `/api/bills/:id/precheck` | Registra impresión de pre-cuenta, devuelve datos del impreso | `bill.print_precheck` |
 | POST | `/api/bills/:id/discounts` | `{ id, target: "BILL"|"ITEM", itemId?, kind, value, reasonId, authorization? }` | `discount.apply` |
 | DELETE | `/api/discounts/:id` | Quita descuento (registrado en bitácora) | `discount.apply` |
 | POST | `/api/bills/:id/pay` | `{ tipAmount, payments:[{ id, methodId, amount, tendered?, reference? }], cashRegisterId, version }` → cuenta pagada, cambio, datos del recibo | `payment.register` |
-| POST | `/api/bills/:id/void` | `{ reasonId, note, authorization? }` — **solo en línea** | `payment.void` |
+| POST | `/api/bills/:id/reopen` | `{ reasonId, note, authorization?, version }` — **solo en línea**. Rechaza con `409 REOPEN_NOT_ALLOWED` si algún pago no fue en efectivo (PA-051) o si el cobro es de otro día de negocio `[SUPUESTO]`. Se puede reabrir desde otro turno (S-28) y sin importar si la mesa está ocupada (S-29); requiere un turno **abierto** en la caja que reabre, donde se registra el movimiento `REVERSO_REAPERTURA` (RF-069). No existe `/void` (PA-012) | `bill.reopen` |
 | GET | `/api/bills/:id/receipt` | Datos para reimprimir recibo | `bill.reprint` |
 
 ### 2.8 Caja
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
 | GET | `/api/cash-registers` | Cajas de la sucursal y turno abierto | Autenticado |
-| POST | `/api/shifts` | `{ id, cashRegisterId, openingFloat, counts? }` | `cash.open_shift` |
+| POST | `/api/shifts` | `{ id, cashRegisterId, openingFloat, counts? }` — **solo en línea** (PA-042); no se acepta por `sync/push` | `cash.open_shift` |
 | GET | `/api/shifts/:id` | Resumen (el esperado solo con `cash.view_expected`) | `cash.open_shift` |
 | POST | `/api/shifts/:id/movements` | `{ id, type, amount, reasonId, note, authorization? }` | `cash.movement` |
 | POST | `/api/shifts/:id/start-close` | Pasa a `EN_CORTE`; rechaza si hay operaciones de esa caja sin sincronizar | `cash.close_shift` |
-| POST | `/api/shifts/:id/close` | `{ countedCash, counts?, comment? }` → reporte de corte | `cash.close_shift` |
+| POST | `/api/shifts/:id/close` | `{ countedCash, counts?, comment?, provisional?: { expectedCash, closedAt } }` → reporte de corte. Si llega por `sync/push` con `provisional` (corte hecho sin conexión), el servidor recalcula el esperado con todas las operaciones, cierra el turno y, si difiere, crea el conflicto `CORTE_DIFERENTE` | `cash.close_shift` |
 | POST | `/api/cash-registers/:id/open-drawer` | Registro de apertura sin venta | `cash.open_drawer` |
 
 ### 2.9 Recetas y costeo
@@ -174,14 +175,13 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.12 Chatbot de IA
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| POST | `/api/ai/chat` | `{ conversationId?, message, branchId? }` → `{ answer, table?, chart?, query, reportLink }` | `ai.chat` + módulo `ai` |
-| GET | `/api/ai/usage` | Uso y costo del mes | `config.restaurant` |
-| GET | `/api/ai/conversations` | Historial del usuario | `ai.chat` |
+| POST | `/api/ai/chat` | `{ message, context: [{role, content}] (máx. 6, solo de la sesión; el servidor no guarda la conversación, PA-032), branchId? }` → `429 AI_QUOTA_EXCEEDED` al llegar a 100 preguntas al mes; si no, `{ answer, table?, chart?, query, reportLink }` | `ai.chat` + módulo `ai` |
+| GET | `/api/ai/usage` | Preguntas usadas / límite del mes y costo | `ai.chat` (solo conteo) · `config.restaurant` (costo) |
+| GET | `/api/ai/queries` | Consultas recientes del usuario (pregunta + consulta interpretada, sin respuestas) | `ai.chat` |
+| POST | `/api/ai/queries/:id/run` | Vuelve a ejecutar la consulta guardada con datos actuales, sin LLM | `ai.chat` |
 
-### 2.13 Extensión FEL (para el futuro RPA)
-| Método | Ruta | Descripción | Permiso |
-|---|---|---|---|
-| — | — | El RPA leerá directamente `invoice_events` con un rol de base dedicado **o** por API con un token de servicio. `[PENDIENTE DE DEFINIR]` (PA-003). Se reservan las rutas `/api/fel/events/next`, `/api/fel/events/:id/complete`, `/api/fel/events/:id/fail` | Token de servicio |
+### 2.13 Extensión FEL
+No hay endpoints de FEL en el MVP (PA-002, PA-003). Se reserva el prefijo `/api/fel/` para cuando se implemente.
 
 ## 3. Tiempo real (Socket.IO)
 
@@ -208,7 +208,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | `order.delivered` | `branch` | id | |
 | `order.item_cancelled` | `:kds`, `branch` | itemId, reason | KDS: ítem tachado "CANCELADO" |
 | `occupancy.opened` / `.updated` / `.closed` / `.merged` / `.moved` / `.transferred` | `branch` | resumen | Actualiza mapa de mesas |
-| `bill.updated` / `bill.paid` / `bill.voided` | `branch` | resumen | Totales y estado |
+| `bill.updated` / `bill.paid` / `bill.reopened` | `branch` | resumen | Totales y estado |
 | `menu.product_status` | `branch` | productId, status | Agotado/disponible |
 | `menu.changed` / `config.changed` | `branch` | settingsVersion | Recargar `/api/bootstrap` |
 | `print.request` | `device:<hub>` | docType, payload | El hub imprime (transporte delegado) |

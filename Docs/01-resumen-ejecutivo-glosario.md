@@ -29,7 +29,7 @@ El primer cliente es un restaurante pequeño en Guatemala que lleva sus cuentas 
 3. **Mobile first.** El mesero trabaja en su celular; la caja y el KDS en tablet o PC.
 4. **Offline-first sin servidor local.** Si se va el internet, cada dispositivo sigue operando lo esencial y sincroniza al volver.
 5. **Ligero.** Fastify, sin Docker, poco consumo de RAM por cliente para que un VPS pequeño aloje varios restaurantes.
-6. **Auditable.** Cada acción sensible (descuento, cancelación, anulación, apertura de cajón) queda en la bitácora con usuario, hora y dispositivo.
+6. **Auditable.** Cada acción sensible (descuento, cancelación, reapertura de cuenta, apertura de cajón) queda en la bitácora con usuario, hora y dispositivo.
 7. **Solo agregar.** Las migraciones de base solo agregan; las operaciones offline solo agregan.
 
 ### 1.5 Alcance resumido
@@ -75,7 +75,7 @@ VPS Hetzner → Caddy (HTTPS, estáticos del frontend PWA, `/api/*` por dominio)
 | **Fondo inicial** | Efectivo con que se abre la caja. |
 | **Corte de caja** | Cierre de turno: efectivo esperado contra contado, diferencias, retiros y depósitos. |
 | **Retiro / Depósito** | Salida o entrada de efectivo de la caja durante el turno, con motivo. |
-| **Anulación** | Revertir una cuenta ya pagada. Requiere permiso y motivo. |
+| **Reapertura** | Volver a abrir una cuenta ya pagada para corregirla y cobrarla de nuevo. Solo si se pagó toda en efectivo y su turno de caja sigue abierto. Requiere permiso y motivo. **No existe la anulación de cuentas** (PA-012). |
 | **Cancelación** | Quitar un ítem o pedido antes del pago. Requiere permiso (si ya se envió a cocina) y motivo. |
 | **Tiempo de espera** | Enviado a cocina → aceptado por cocina. |
 | **Tiempo de preparación** | Aceptado → listo. |
@@ -94,7 +94,7 @@ VPS Hetzner → Caddy (HTTPS, estáticos del frontend PWA, `/api/*` por dominio)
 | **Service worker** | Script del navegador que guarda archivos en caché para uso sin conexión. |
 | **ESC/POS** | Lenguaje de comandos de impresoras térmicas. |
 | **Capa semántica** | Conjunto de vistas y métricas definidas que el chatbot puede consultar, en lugar de las tablas. |
-| **FEL** | Factura Electrónica en Línea (SAT Guatemala). Fuera de alcance; se integrará vía RPA. |
+| **FEL** | Factura Electrónica en Línea (SAT Guatemala). Fuera de alcance, igual que el IVA (PA-002); se integrará vía RPA en el futuro. En el MVP solo se captura NIT/CF por cuenta. |
 | **NIT / CF** | Número de Identificación Tributaria / "Consumidor Final". |
 | **RPA** | *Robotic Process Automation*: robot de software que hará la facturación FEL en el futuro. |
 | **Caddy** | Servidor web que da HTTPS y enruta cada dominio a su backend. |

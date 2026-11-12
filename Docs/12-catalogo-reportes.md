@@ -9,15 +9,16 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | Término | Definición |
 |---|---|
 | Día de negocio | Fecha local de la sucursal con hora de corte `business_day_cutoff` (ej. una venta a las 01:30 del día 12 con corte 04:00 pertenece al día 11) |
-| Cuenta válida | `bills.status = 'PAGADA'` (excluye `ANULADA`, `ABIERTA`, `ELIMINADA`). La fecha de una cuenta es la de su `paid_at` |
+| Cuenta válida | `bills.status = 'PAGADA'` (excluye `ABIERTA`, `PRECUENTA`, `ELIMINADA`; no existen cuentas anuladas). La fecha de una cuenta es la de su `paid_at` (si se reabrió y volvió a cobrar, la del último cobro) |
 | Ítem vendido | Ítem no `CANCELADO` de una cuenta válida |
 | Venta bruta (ítems) | Σ `line_total` de ítems vendidos |
 | Descuentos | Σ `applied_discounts.amount` de cuentas válidas (de ítem y de cuenta) |
 | **Ventas netas** | Venta bruta − descuentos = Σ (`bills.total − bills.tip_amount`) de cuentas válidas. **No** incluye propina. Incluye impuestos (los precios los incluyen) |
 | Propinas | Σ `bills.tip_amount` de cuentas válidas |
 | Total cobrado | Ventas netas + propinas = Σ `payments.amount` con estado `APLICADO` de cuentas válidas |
-| Órdenes | Nº de cuentas válidas `[SUPUESTO]` (alternativa: Nº de ocupaciones cerradas — PA-011) |
-| Ticket promedio | Ventas netas / órdenes |
+| Órdenes | Nº de **ocupaciones** distintas con al menos una cuenta válida (PA-011): una mesa dividida en 3 cuentas = 1 orden; una orden para llevar = 1 orden. Se cuenta en el día de negocio de su última cuenta pagada `[SUPUESTO]` |
+| Cuentas pagadas | Nº de cuentas válidas (se sigue mostrando en el corte de caja y en RPT-012) |
+| Ticket promedio | Ventas netas / órdenes (es decir, por mesa o pedido para llevar, no por cuenta) |
 | Comensales | Σ `occupancies.guests` de ocupaciones con al menos una cuenta válida (para llevar cuenta 1 por defecto o lo que se capture) |
 | Venta por comensal | Ventas netas / comensales |
 | Tiempo de espera | `accepted_at − sent_at` |
@@ -39,7 +40,7 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | Indicador | Fórmula | Comparación |
 |---|---|---|
 | Ventas del día | Ventas netas del día de negocio actual hasta ahora | Mismo día de la semana anterior hasta la misma hora: `(hoy − anterior) / anterior` |
-| Órdenes | Nº cuentas válidas | Igual |
+| Órdenes | Nº de ocupaciones con cuenta válida | Igual |
 | Ticket promedio | Ventas netas / órdenes | Igual |
 | Comensales | Σ comensales | Igual |
 | Ventas por método de pago | Σ pagos aplicados agrupados por método | — |
@@ -49,7 +50,8 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | Tiempo promedio de preparación | Promedio del día | Semana anterior |
 | Tiempo promedio de entrega | Promedio del día | Semana anterior |
 | Top 5 productos del día | Por unidades (y monto) | — |
-| Cancelaciones del día | Nº y monto de ítems cancelados + cuentas anuladas | Semana anterior |
+| Cancelaciones del día | Nº y monto de ítems cancelados | Semana anterior |
+| Reaperturas del día | Nº de cuentas reabiertas | — |
 | Descuentos del día | Nº y monto | Semana anterior |
 | Propinas del día | Σ propinas | — |
 
@@ -83,16 +85,17 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 ### 3.3 Caja 💰
 | ID | Reporte | Columnas | Filtros | Fórmula |
 |---|---|---|---|---|
-| RPT-030 | Cortes de caja | Turno, caja, cajero, apertura, cierre, fondo, cobros por método, depósitos, retiros, reversos, esperado, contado, diferencia, comentario | Periodo, sucursal, caja, cajero | **Esperado = fondo + Σ pagos efectivo aplicados (netos de cambio) + depósitos − retiros − reversos por anulación en efectivo.** Diferencia = contado − esperado |
+| RPT-030 | Cortes de caja | Turno, caja, cajero, apertura, cierre, fondo, cobros por método, depósitos, retiros, reaperturas, esperado, contado, diferencia, comentario | Periodo, sucursal, caja, cajero | **Esperado = fondo + Σ pagos en efectivo cobrados en el turno (netos de cambio, incluidos los que después se revirtieron) + depósitos − retiros − reversos por reapertura registrados en el turno.** Así un turno cerrado nunca cambia: la reapertura resta en el turno abierto donde se hace. Diferencia = contado − esperado. Los cortes provisionales (sin conexión) se marcan y muestran el esperado provisional y el recalculado |
 | RPT-031 | Movimientos de caja | Fecha, turno, tipo, monto, motivo, usuario, autorizador | Periodo, sucursal, tipo, motivo | |
 | RPT-032 | Diferencias de caja | Cajero, turnos, Σ diferencias, nº turnos con faltante/sobrante | Periodo, sucursal | |
-| RPT-033 | Propinas | Mesero, cuentas, Σ propinas, propina promedio %, por método | Periodo, sucursal | Propina % = tip / (total − tip) |
+| RPT-033 | Propinas | Mesero, cuentas, Σ propinas, propina promedio %, por método, **a quién le corresponde** | Periodo, sucursal | Propina % = tip / (total − tip). Reparto según `tip_distribution` (PA-046): `WAITER` → al mesero de la ocupación; `POOL` → Σ propinas del día de negocio / meseros que trabajaron ese día, en partes iguales `[SUPUESTO]`; `HOUSE` → al establecimiento. Si el restaurante no registra propinas, el reporte no aparece |
+| RPT-034 | Efectivo cobrado por meseros | Mesero, turno de la caja principal, nº de cobros en efectivo, Σ efectivo (neto de cambio) | Periodo, sucursal, mesero | Sirve para cuadrar lo que cada mesero entrega al cajero (PA-052). Solo pagos `APLICADO` con `received_by` sin rol de caja |
 
 ### 3.4 Control 🔒
 | ID | Reporte | Columnas | Filtros | Fórmula |
 |---|---|---|---|---|
 | RPT-040 | Cancelaciones de ítems | Fecha, folio, producto, cantidad, monto, motivo, solicitó, autorizó, después de listo (merma) | Periodo, sucursal, motivo, usuario | Monto = `line_total` del ítem cancelado |
-| RPT-041 | Anulaciones de cuentas | Fecha, folio, total, métodos, motivo, solicitó, autorizó | Periodo, sucursal | |
+| RPT-041 | Reaperturas de cuentas | Fecha, folio, total original, total nuevo, diferencia, motivo, solicitó, autorizó | Periodo, sucursal, usuario | Desde `audit_log` (`bill.reopen`). No existen anulaciones (PA-012) |
 | RPT-042 | Descuentos | Fecha, folio, tipo (ítem/cuenta), %/monto, monto, motivo, aplicó, autorizó | Periodo, sucursal, motivo, usuario | |
 | RPT-043 | Bitácora de auditoría | Fecha, usuario, autorizador, dispositivo, IP, acción, entidad, antes/después | Periodo, usuario, acción, entidad | `audit_log` |
 | RPT-044 | Reimpresiones | Fecha, documento, folio, usuario, dispositivo | Periodo, sucursal | |
@@ -113,12 +116,12 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | RPT-060 | Conflictos de sincronización | Fecha, tipo, mesa/folio, dispositivos, estado, resolución, resolvió | Periodo, estado |
 | RPT-061 | Cortes de conexión | Dispositivo, sucursal, inicio, fin, duración, operaciones pendientes máx. | Periodo, sucursal, dispositivo |
 | RPT-062 | Capturas de contingencia (papel) | Nº talonario, fecha real, capturó, folio asignado, total | Periodo, sucursal |
-| RPT-063 | Uso del chatbot | Usuario, preguntas, tokens, costo estimado, % fuera de alcance | Periodo |
+| RPT-063 | Uso del chatbot | Usuario, preguntas usadas / límite del mes (100, S-13), tokens, costo estimado, % fuera de alcance | Periodo |
 
 ## 4. Reglas de cálculo y consistencia
 1. Montos con `numeric`; redondeo *half-up* a 2 decimales solo al presentar.
 2. Los reportes leen de las vistas del esquema `semantic` (las mismas del chatbot) para que los números coincidan.
 3. Ventas offline sincronizadas tarde se reportan en su **día de negocio real** (`paid_at` corregido con `clockOffsetMs`).
-4. Cuentas anuladas en un día distinto al de su pago: la venta se resta en el día de la **anulación** en caja (RPT-030), pero se excluye del día original en reportes de ventas `[SUPUESTO — validar con contador, PA-012]`.
+4. No existen anulaciones (PA-012). Una cuenta pagada en efectivo se puede reabrir desde **otro turno** (S-28), dentro del mismo día de negocio `[SUPUESTO]`. Las ventas quedan en el día de negocio del último cobro; el dinero devuelto se registra como `REVERSO_REAPERTURA` en el turno donde se reabrió.
 5. Las variaciones % con base 0 se muestran como "—" (no infinito).
 6. Rango "histórico" y rangos > 92 días se calculan en segundo plano (F2) y pueden usar tablas resumen diarias (`daily_sales_summary`) materializadas cada noche.

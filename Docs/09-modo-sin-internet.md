@@ -31,7 +31,7 @@ Si la capa 1 funciona (el caso esperado), el personal ni se entera del corte. La
 | Requisito | Valor |
 |---|---|
 | Ancho de banda | ≥ 10 Mbps bajada, ≥ 2 Mbps subida por sucursal |
-| Latencia al VPS (Hetzner) | < 250 ms `[SUPUESTO]` (Guatemala → Alemania/Finlandia ~150–200 ms; Hetzner Ashburn/Hillsboro en EE. UU. reduce a ~60–90 ms — ver PA-022) |
+| Latencia al VPS (Hetzner) | < 250 ms. El VPS va en **EE. UU.** (PA-022), lo que deja ~60–90 ms desde Guatemala `[SUPUESTO]` (en Europa serían ~150–200 ms) |
 | Wi-Fi | 5 GHz para dispositivos + 2.4 GHz para impresoras si lo requieren; cobertura en cocina, salón, terraza y caja (≥ −67 dBm) |
 | IP de impresoras | **Fija** (reservada por DHCP en el router) |
 | Aislamiento de clientes Wi-Fi | **Desactivado** en la red del personal (si no, los celulares no ven la impresora) |
@@ -110,13 +110,13 @@ El estado no se basa solo en `navigator.onLine` (poco fiable):
 |---|:-:|---|
 | Abrir mesa / para llevar | ✅ | Queda a cargo del dispositivo |
 | Agregar ítems y enviar a cocina | ✅ | Folio temporal + impresión local |
-| Crear cuentas y mover ítems | ✅ | Solo en ocupaciones a cargo del dispositivo |
+| Crear cuentas, mover ítems y separar unidades de una línea | ✅ | Solo en ocupaciones a cargo del dispositivo |
 | Cancelar ítem enviado | ✅ con 🔑 local | Revalidado al sincronizar |
 | Aplicar descuento | ✅ dentro del tope del rol; 🔑 local si lo supera | |
 | Imprimir pre-cuenta | ✅ | Impresión local |
-| Registrar pago | ✅ | Solo en cuentas a cargo del dispositivo (ver §6.2) |
-| Abrir turno de caja | ✅ `[SUPUESTO]` | Conflicto si ya había uno |
+| Registrar pago (caja o mesero con `payment.register`, S-06) | ✅ | Solo en cuentas a cargo del dispositivo (ver §6.2) |
 | Retiros/depósitos | ✅ | |
+| Corte de caja | ✅ **provisional** (PA-042) | El turno queda `CERRADO_PROVISIONAL` con el esperado calculado con lo que conoce el dispositivo. Al sincronizar, el servidor recalcula el esperado con las operaciones de todos los dispositivos y cierra el turno (`CERRADO`). Si el esperado cambia, se crea el conflicto `CORTE_DIFERENTE` y el gerente lo revisa. El recibo de corte offline dice "PROVISIONAL — sin sincronizar" |
 | Marcar entregado | ✅ | |
 | KDS: aceptar/listo | ✅ solo sobre pedidos que ya tenía | No recibe nuevos |
 | Marcar agotado | ✅ local | Solo afecta ese dispositivo hasta sincronizar |
@@ -124,8 +124,8 @@ El estado no se basa solo en `navigator.onLine` (poco fiable):
 ### 4.4 Operaciones bloqueadas sin conexión
 | Operación | Motivo |
 |---|---|
-| Corte de caja | Necesita todas las operaciones de todos los dispositivos para calcular el esperado |
-| Anular cuenta pagada | Riesgo de fraude; afecta caja y FEL |
+| Abrir turno de caja | PA-042: se puede cerrar la caja sin conexión pero no abrirla. Evita dos turnos abiertos en la misma caja |
+| Reabrir cuenta pagada | Riesgo de fraude; afecta la caja (no existen anulaciones, PA-012) |
 | Chatbot de IA | Requiere el LLM y el servidor |
 | Reportes (salvo resumen local del dispositivo) | Datos incompletos |
 | Cambios de configuración, usuarios, menú, precios | Deben propagarse a todos |
@@ -157,7 +157,7 @@ El estado no se basa solo en `navigator.onLine` (poco fiable):
 
 ### 6.2 Cobro en caja de una mesa a cargo de un mesero (sin conexión)
 Caso común: la mesa la abrió el celular del mesero, pero se cobra en caja.
-1. El mesero imprime la **pre-cuenta** desde su dispositivo (impresión local). La pre-cuenta offline incluye folio temporal, total y un **código QR** con `{occupancyId, billId, version, total, itemIds}` `[SUPUESTO — validar en F1]`.
+1. El mesero imprime la **pre-cuenta** desde su dispositivo (impresión local). La pre-cuenta offline incluye folio temporal, total y un **código QR** con `{occupancyId, billId, version, total, itemIds}`. **Entra en el MVP** (PA-044); el formato exacto se valida en F1 `[SUPUESTO]`.
 2. En la caja, el cajero pulsa "Cobrar pre-cuenta" y escanea el QR (cámara) o ingresa folio y total. La caja **toma** la cuenta: crea localmente la cuenta con ese estado y la cobra.
 3. Al sincronizar, el servidor compara el pago con el total real de la cuenta tras aplicar las operaciones del mesero:
    - Coincide → sin conflicto.
@@ -171,19 +171,19 @@ Caso común: la mesa la abrió el celular del mesero, pero se cobra en caja.
 | Misma operación enviada dos veces | `idempotency_key` repetida | Se ignora la segunda (`DUPLICADA`) | No |
 | Dos dispositivos abren la misma mesa offline | Índice único de ocupación abierta | La segunda ocupación se guarda como **ocupación sin mesa** ("Mesa 5-B") | Sí: unir o trasladar |
 | Dos pagos para la misma cuenta | Σ pagos > total | Se aplica el primero que llega; los siguientes quedan `EN_CONFLICTO` | Sí: revertir (devolver dinero) o mantener como propina/sobrante |
-| Cancelación de ítem en cuenta ya pagada | Ítem en cuenta `PAGADA` | Se registra la cancelación como **solicitud**, no se aplica | Sí: anular y recobrar, o descartar |
+| Cancelación de ítem en cuenta ya pagada | Ítem en cuenta `PAGADA` | Se registra la cancelación como **solicitud**, no se aplica | Sí: reabrir la cuenta y recobrar (solo si se pagó en efectivo), o descartar |
 | Ítem agregado a cuenta ya pagada | Cuenta `PAGADA` | Se mueve a cuenta nueva "Pendiente — conflicto" | Sí: cobrar o cancelar |
 | Producto agotado/desactivado mientras estaba offline | Estado del producto | Se acepta el pedido (ya se preparó con la comanda en papel) y se marca | Informativo |
 | Precio cambiado durante el corte | Precio actual ≠ precio enviado | Se respeta el precio con que se vendió (snapshot) | Informativo |
 | Descuento/cancelación con 🔑 offline cuyo autorizador perdió el permiso o fue desactivado | Revalidación | Se aplica y se marca | Sí |
-| Dos turnos abiertos en la misma caja | Índice único | El segundo se rechaza; sus pagos se asignan al primero | Sí |
-| Pago en efectivo sin turno abierto | Validación | Se asocia al turno abierto de esa caja o se crea conflicto | Sí |
+| Corte provisional con esperado distinto al recalculado | Recalculo del servidor al sincronizar | El turno se cierra con el esperado del servidor; se guardan ambos valores (`CORTE_DIFERENTE`) | Sí |
+| Pago en efectivo sin turno abierto (ej. cobrado por un mesero o después de un corte provisional) | Validación | Se asocia al turno abierto de la caja principal (PA-052), que el celular conoce desde su última sincronización; si ese turno ya se cerró, se asocia al siguiente turno abierto de la caja principal y se crea conflicto | Sí |
 | Dispositivo revocado envía operaciones | `device.revoked` | Se rechazan todas | Sí (lista de operaciones rechazadas) |
 
 ### 6.4 Pantalla de revisión de conflictos (gerente)
 - Ruta: Administración › Sincronización › Conflictos. Insignia con el número de conflictos abiertos en la barra del gerente y de la caja.
 - Por cada conflicto: tipo, mesa/folio, dispositivos involucrados, usuarios, horas (cliente y servidor), monto afectado y acciones posibles.
-- Acciones: **Aceptar** (mantener), **Revertir** (anular pago/ítem con motivo), **Corregir** (mover ítems, unir ocupaciones), **Descartar** (con nota).
+- Acciones: **Aceptar** (mantener), **Revertir** (revertir el pago duplicado o cancelar el ítem, con motivo), **Corregir** (mover ítems, unir ocupaciones), **Descartar** (con nota).
 - Toda resolución queda en la bitácora.
 - El corte de caja de un turno con conflictos abiertos que afecten efectivo muestra advertencia y pide confirmación del gerente.
 
@@ -206,8 +206,9 @@ Caso común: la mesa la abrió el celular del mesero, pero se cobra en caja.
 | Pre-cuenta | ✅ impresión local | ✅ | — | — |
 | Cobrar | ✅ si tiene permiso y la cuenta es suya | ✅ cuentas propias o tomadas por QR/folio | — | — |
 | Recibo | ✅ local | ✅ local | — | — |
-| Corte de caja | — | ❌ | — | — |
-| Anulaciones de cuentas pagadas | ❌ | ❌ | — | — |
+| Abrir turno de caja | — | ❌ | — | — |
+| Corte de caja | — | ✅ provisional | — | — |
+| Reabrir cuentas pagadas | ❌ | ❌ | — | — |
 | Chatbot / reportes | ❌ | ❌ (solo resumen local del dispositivo) | — | — |
 
 **iPhone/iPad:** solo imprimen sin internet si la impresora es **ePOS LAN** (Safari no soporta WebUSB ni Web Bluetooth). Si no, el mesero con iPhone escribe la comanda en papel (§10) o pide a la caja que la envíe.
@@ -232,9 +233,9 @@ Caso común: la mesa la abrió el celular del mesero, pero se cobra en caja.
 | Rol | Qué hace |
 |---|---|
 | Gerente / encargado | Confirma el corte (indicador rojo en varios dispositivos), avisa al personal, revisa que la impresora de cocina siga imprimiendo, llama al proveedor de internet. Si el corte dura > 15 min, decide pasar a papel. |
-| Mesero | Sigue tomando pedidos **en su dispositivo**. Verifica que salga la comanda en cocina. Atiende solo **sus** mesas. Para mesas de otro mesero, se las pasa al dueño. Avisa a cocina en voz alta los pedidos urgentes. |
+| Mesero | Sigue tomando pedidos **en su dispositivo** y cobra sus cuentas si tiene permiso. Verifica que salga la comanda en cocina. Atiende solo **sus** mesas. Para mesas de otro mesero, se las pasa al dueño. Avisa a cocina en voz alta los pedidos urgentes. |
 | Cocina | Trabaja con las **comandas impresas** en orden de llegada. Las pega en el riel. Avisa "listo" con campana/voz. Al volver la conexión, en el KDS marca como listos los pedidos ya despachados. |
-| Cajero | Cobra solo cuentas propias o pre-cuentas tomadas (QR/folio). Anota en el formato de papel cualquier cobro que no pueda registrar. **No** hace corte ni anulaciones hasta que vuelva la conexión. |
+| Cajero | Cobra solo cuentas propias o pre-cuentas tomadas (QR/folio). Anota en el formato de papel cualquier cobro que no pueda registrar. Si termina su turno sin conexión, puede hacer un **corte provisional**; **no** puede abrir un turno nuevo ni reabrir cuentas hasta que vuelva la conexión. |
 
 ### 10.2 Si además falla el dispositivo (o la impresora)
 Se usa el **formato de respaldo en papel** (talonario prenumerado por sucursal, impreso por RENGO a partir de la plantilla):
@@ -267,7 +268,7 @@ Al volver el sistema, el cajero o gerente **captura** cada comanda de papel en e
 2. Gerente revisa **Conflictos**.
 3. Cocina pone al día el KDS (marcar listos/entregados).
 4. Capturar comandas de papel si las hubo.
-5. Hacer el corte de caja solo después de los pasos anteriores.
+5. Hacer el corte de caja después de los pasos anteriores. Si ya se hizo un corte provisional, revisar que el servidor lo haya cerrado y atender el conflicto `CORTE_DIFERENTE` si aparece.
 
 ## 11. Impresión local como contingencia
 Ver [11-impresion.md](11-impresion.md) y ADR-003. Regla: **imprime el dispositivo que origina el documento** por su ruta directa; el flujo es el mismo con o sin internet. Si el dispositivo no tiene ruta directa (ej. iPhone sin impresora ePOS), sin internet **no** puede imprimir y se muestra: "No se pudo imprimir la comanda: dicta el pedido a cocina o usa el formato de papel".

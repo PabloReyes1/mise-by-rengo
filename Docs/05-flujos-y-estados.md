@@ -23,7 +23,7 @@ flowchart TD
     M --> N[Pre-cuenta impresa]
     N --> O[Cobro: métodos, propina,<br/>descuentos, cambio]
     O --> P[Recibo impreso]
-    P --> Q{¿Todas las cuentas<br/>pagadas o anuladas?}
+    P --> Q{¿Todas las cuentas<br/>pagadas?}
     Q -->|No| N
     Q -->|Sí| R[Mesa liberada]
     R --> S{¿Fin del turno?}
@@ -38,10 +38,10 @@ flowchart TD
 |---|---|
 | Actor | Cajero (o gerente) con `cash.open_shift` |
 | Pantalla | Caja › Abrir turno |
-| Entradas | Caja (dispositivo), fondo inicial (desglose por denominación opcional), observación |
+| Entradas | Caja (dispositivo), fondo inicial, observación. El fondo depende de la configuración de la caja (PA-024): **fijo** = el sistema escribe el monto configurado; **variable** = el cajero lo escribe (se sugiere lo que quedó en el corte anterior `[SUPUESTO]`) |
 | Estados | Turno: — → `ABIERTO` |
-| Reglas | Un solo turno `ABIERTO` por caja. El fondo puede sugerirse con el monto que quedó en el corte anterior. Se puede operar mesas sin turno, pero **no** cobrar en efectivo. |
-| Errores | Turno ya abierto (`409 SHIFT_ALREADY_OPEN`); sin conexión: se permite abrir turno offline `[SUPUESTO]` y se valida al sincronizar (si había otro turno abierto en esa caja → conflicto). |
+| Reglas | Un solo turno `ABIERTO` por caja. Se puede operar mesas sin turno, pero **no** cobrar en efectivo. |
+| Errores | Turno ya abierto (`409 SHIFT_ALREADY_OPEN`). **Sin conexión no se puede abrir turno** (PA-042): el botón muestra "Requiere conexión". |
 
 ### Paso 2 — Abrir mesa u orden para llevar
 | Aspecto | Detalle |
@@ -121,34 +121,37 @@ flowchart TD
 ### Paso 11 — Pago
 | Aspecto | Detalle |
 |---|---|
-| Actor | Cajero (`payment.register`) |
+| Actor | Cajero o mesero con `payment.register` (en la plantilla los dos cobran, S-06). El efectivo que cobra el mesero va al **turno abierto de la caja principal** de la sucursal (PA-052); el mesero entrega ese efectivo al cajero y el reporte RPT-034 muestra cuánto debe entregar cada mesero. Si la caja principal no tiene turno abierto, el mesero no puede cobrar en efectivo (sí con otros métodos) |
 | Pantalla | Cobro: total, propina (editable), descuentos, lista de pagos, teclado numérico, botones de billetes rápidos (Q 50, Q 100, Q 200), cambio |
 | Estados | Cuenta → `PAGADA`; Pagos → `APLICADO` |
-| Reglas | Ver [§4 Reglas de cálculo](#4-reglas-de-cálculo-de-cuenta). Solo efectivo genera cambio. Tarjeta y transferencia piden referencia si así se configuró. NIT/CF opcional (punto de extensión FEL). Se imprime el recibo. Pagos en efectivo se asocian al turno abierto de la caja. |
+| Reglas | Ver [§4 Reglas de cálculo](#4-reglas-de-cálculo-de-cuenta). Solo efectivo genera cambio. Tarjeta y transferencia piden referencia si así se configuró. NIT/CF opcional (se imprime en el recibo; único punto de extensión FEL en el MVP). Se imprime el recibo. Pagos en efectivo se asocian al turno abierto de la caja. |
 | Errores | Pagos insuficientes; método inactivo; turno cerrado; cuenta modificada por otro dispositivo (`409 STALE_VERSION`). |
 
 ### Paso 12 — Cierre y liberación de mesa
 | Aspecto | Detalle |
 |---|---|
 | Actor | Sistema |
-| Reglas | Cuando todas las cuentas de la ocupación están `PAGADA` o `ANULADA` y no hay ítems sin cuenta, la ocupación pasa a `CERRADA` y la mesa a `LIBRE`. Las cuentas vacías (sin ítems) se eliminan al cerrar. |
+| Reglas | Cuando todas las cuentas de la ocupación están `PAGADA` y no hay ítems sin cuenta, la ocupación pasa a `CERRADA` y la mesa a `LIBRE`. Las cuentas vacías (sin ítems) se eliminan al cerrar. |
 
 ### Paso 13 — Corte de caja
 | Aspecto | Detalle |
 |---|---|
 | Actor | Cajero / gerente (`cash.close_shift`) |
-| Fórmula | Efectivo esperado = fondo inicial + Σ pagos en efectivo aplicados (monto aplicado a la cuenta, ya neto del cambio entregado) + depósitos − retiros − reversos de anulaciones en efectivo (ver RPT-030 en [12-catalogo-reportes.md](12-catalogo-reportes.md)) |
-| Estados | Turno `ABIERTO` → `EN_CORTE` → `CERRADO` |
-| Reglas | Requiere conexión y que no haya operaciones pendientes en la outbox del dispositivo de caja. Corte a ciegas si el usuario no tiene `cash.view_expected`. Comentario obligatorio si la diferencia supera el umbral configurado. Se imprime el reporte. Un turno cerrado es inmutable. |
+| Fórmula | Efectivo esperado = fondo inicial + Σ cobros en efectivo **registrados en este turno** (monto aplicado a la cuenta, ya neto del cambio entregado; incluye los que después se revirtieron) + depósitos − retiros − **reversos por reapertura registrados en este turno** (ver RPT-030 en [12-catalogo-reportes.md](12-catalogo-reportes.md)). Así cada turno refleja el efectivo que realmente entró y salió de su caja, aunque la reapertura ocurra en otro turno |
+| Estados | Turno `ABIERTO` → `EN_CORTE` → `CERRADO`; sin conexión: `EN_CORTE` → `CERRADO_PROVISIONAL` → `CERRADO` al sincronizar |
+| Corte sin conexión (PA-042) | Se permite. El dispositivo de caja calcula el esperado con los datos que tiene, el cajero cuenta y se imprime el corte marcado **"PROVISIONAL — sin sincronizar"**. El turno queda `CERRADO_PROVISIONAL`: ya no acepta cobros, pero tampoco se puede abrir otro turno en esa caja hasta volver la conexión (abrir turno requiere conexión). Al sincronizar, el servidor recalcula el esperado con **todas** las operaciones; si coincide, el turno pasa a `CERRADO`; si no, pasa a `CERRADO` con el esperado del servidor y se crea el conflicto `CORTE_DIFERENTE` para el gerente, que puede reimprimir el corte definitivo `[SUPUESTO]` |
+| Reglas | Con conexión, no debe haber operaciones pendientes en la outbox del dispositivo de caja. Corte a ciegas si el usuario no tiene `cash.view_expected`. Comentario obligatorio si la diferencia supera el umbral configurado. El conteo por denominación es obligatorio u opcional según la configuración de la caja (PA-025; por defecto opcional). Se imprime el reporte. Un turno cerrado es inmutable. |
 
-### Paso 14 — Cancelaciones y anulaciones
+### Paso 14 — Cancelaciones y reapertura de cuentas
+**No existen las anulaciones de cuentas pagadas** (PA-012). Para corregir un cobro se reabre la cuenta.
 | Caso | Permiso | Motivo | Efecto |
 |---|---|---|---|
 | Ítem en borrador | Ninguno | No | Se elimina; no queda en bitácora |
 | Ítem enviado, no listo | `order.cancel_sent` o 🔑 | Obligatorio | Ítem `CANCELADO`; KDS lo tacha; comanda de cancelación; bitácora |
 | Ítem listo o entregado | `order.cancel_sent` o 🔑 | Obligatorio | Ítem `CANCELADO` con marca `after_ready = true` (merma); bitácora |
 | Pedido completo enviado | `order.cancel_sent` o 🔑 | Obligatorio | Todos sus ítems `CANCELADO`; pedido `CANCELADO` |
-| Cuenta pagada | `payment.void` o 🔑 | Obligatorio | Cuenta `ANULADA`; pagos `REVERTIDO`; movimiento negativo en turno vigente; evento FEL `ANULAR` si aplica. **Solo con conexión.** |
+| Reabrir cuenta pagada (RF-069) | `bill.reopen` o 🔑 | Obligatorio | Solo si **todos** los pagos fueron en efectivo. Se puede hacer desde **otro turno** (S-28), dentro del mismo día de negocio `[SUPUESTO]`, y no importa si la mesa está ocupada (S-29). Requiere un turno abierto en la caja que reabre. Cuenta `PAGADA` → `ABIERTA`; pagos `REVERTIDO`; movimiento `REVERSO_REAPERTURA` en el turno abierto de esa caja (el turno original no cambia); bitácora. **La mesa y la ocupación no cambian**: la cuenta reabierta aparece en Caja › "Cuentas reabiertas", ahí se corrige y se cobra de nuevo con recibo nuevo. **Solo con conexión.** |
+| Cuenta pagada con tarjeta, transferencia u otro método | — | — | **No se puede reabrir ni corregir en el sistema** (PA-051, decisión de RENGO) |
 
 ## 3. Flujo de pago (detalle)
 
@@ -183,7 +186,7 @@ Todos los precios **incluyen impuestos**. No hay cálculo de impuestos en esta f
 3. `subtotal_cuenta = Σ (precio_linea − descuento_linea)` de ítems no cancelados.
 4. `descuento_cuenta` = porcentaje × `subtotal_cuenta` o monto fijo (≤ `subtotal_cuenta`).
 5. `total_consumo = subtotal_cuenta − descuento_cuenta`.
-6. `propina = total_consumo × % sugerido` (editable; base de la propina configurable: antes o después de descuentos `[SUPUESTO: después]`).
+6. `propina = total_consumo × % sugerido`. La propina es **siempre una sugerencia** (S-10): se muestra, el comensal decide y quien cobra la puede cambiar o quitar. Se calcula después de descuentos (configurable). Si el restaurante no registra propinas (PA-046), este paso no existe y `propina = 0`.
 7. `total_a_pagar = total_consumo + propina`.
 8. `cambio = Σ pagos − total_a_pagar`, solo si `cambio ≤ Σ pagos en efectivo`.
 9. Redondeo: a 2 decimales con *half-up* en cada línea; el total es la suma de líneas redondeadas. Todos los montos se guardan como `numeric(12,2)` (nunca `float`).
@@ -197,7 +200,7 @@ stateDiagram-v2
     LIBRE --> OCUPADA: abrir mesa
     OCUPADA --> UNIDA: unir a otra mesa
     UNIDA --> LIBRE: se libera la mesa principal
-    OCUPADA --> LIBRE: todas las cuentas pagadas/anuladas
+    OCUPADA --> LIBRE: todas las cuentas pagadas
     OCUPADA --> LIBRE: trasladar ocupación a otra mesa
     LIBRE --> BLOQUEADA: bloquear (mantenimiento/reservada manual)
     BLOQUEADA --> LIBRE: desbloquear
@@ -209,7 +212,7 @@ Los estados visuales "Con pedido en cocina", "Listo para entregar" y "Pre-cuenta
 stateDiagram-v2
     [*] --> ABIERTA: abrir mesa / para llevar
     ABIERTA --> FUSIONADA: unida a otra ocupación
-    ABIERTA --> CERRADA: todas las cuentas pagadas o anuladas
+    ABIERTA --> CERRADA: todas las cuentas pagadas
     ABIERTA --> CANCELADA: sin ítems enviados y se cierra
     FUSIONADA --> [*]
     CERRADA --> [*]
@@ -254,32 +257,33 @@ stateDiagram-v2
     PRECUENTA --> ABIERTA: agregar/mover ítems
     ABIERTA --> PAGADA: pagos ≥ total
     PRECUENTA --> PAGADA: pagos ≥ total
-    PAGADA --> ANULADA: anular (motivo + permiso, en línea)
+    PAGADA --> ABIERTA: reabrir (solo efectivo, motivo + permiso, en línea)
     ABIERTA --> ELIMINADA: cuenta vacía al cerrar
     PAGADA --> [*]
-    ANULADA --> [*]
 ```
-Estado de facturación (independiente, punto de extensión FEL): `NO_REQUERIDA` · `PENDIENTE` · `EN_PROCESO` · `EMITIDA` · `ERROR` · `ANULACION_PENDIENTE` · `ANULADA`.
+No existe el estado `ANULADA` (PA-012). El estado de facturación se agregará cuando se implemente FEL (PA-002/PA-003).
 
 ### 5.6 Pago
 ```mermaid
 stateDiagram-v2
     [*] --> APLICADO: registrar pago
-    APLICADO --> REVERTIDO: anular cuenta
+    APLICADO --> REVERTIDO: reabrir cuenta (solo efectivo)
     APLICADO --> EN_CONFLICTO: duplicado detectado al sincronizar
     EN_CONFLICTO --> APLICADO: gerente lo mantiene
-    EN_CONFLICTO --> REVERTIDO: gerente lo anula
+    EN_CONFLICTO --> REVERTIDO: gerente lo revierte (pago duplicado)
     REVERTIDO --> [*]
 ```
 
 ### 5.7 Turno de caja
 ```mermaid
 stateDiagram-v2
-    [*] --> ABIERTO: abrir con fondo
+    [*] --> ABIERTO: abrir con fondo (solo en línea)
     ABIERTO --> ABIERTO: pagos, retiros, depósitos
-    ABIERTO --> EN_CORTE: iniciar corte (en línea, outbox vacía)
+    ABIERTO --> EN_CORTE: iniciar corte
     EN_CORTE --> ABIERTO: cancelar corte
-    EN_CORTE --> CERRADO: confirmar conteo
+    EN_CORTE --> CERRADO: confirmar conteo (en línea, outbox vacía)
+    EN_CORTE --> CERRADO_PROVISIONAL: confirmar conteo sin conexión
+    CERRADO_PROVISIONAL --> CERRADO: sincronizar (conflicto si el esperado cambia)
     CERRADO --> [*]
 ```
 

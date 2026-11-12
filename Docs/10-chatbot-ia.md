@@ -16,7 +16,7 @@ sequenceDiagram
     participant LLM as Proveedor LLM (configurable)
     participant SQ as Constructor de consultas
     participant RO as PostgreSQL (rol solo lectura, esquema semantic)
-    U->>API: POST /api/ai/chat {message}
+    U->>API: POST /api/ai/chat {message, context}
     API->>API: Permisos, módulo activo, cuota, sanitizar
     API->>LLM: system prompt + catálogo semántico + pregunta<br/>(herramienta query_metric con esquema JSON)
     LLM-->>API: tool_call query_metric{metric, dimensions, filters, period}
@@ -27,7 +27,8 @@ sequenceDiagram
     API->>LLM: resultado (solo agregados)
     LLM-->>API: respuesta en español + tipo de visualización
     API-->>U: {answer, table?, chart?, query, reportLink}
-    API->>API: Registrar en ai_messages (tokens, costo)
+    API->>API: Registrar en ai_queries (pregunta, consulta, tokens, costo)
+    API->>API: Sumar 1 a ai_usage_monthly
 ```
 
 ### 2.1 Proveedor desacoplado
@@ -42,8 +43,9 @@ interface LlmProvider {
 }
 ```
 - Implementaciones: `AnthropicProvider` (por defecto, modelos Claude), y espacio para otros (`OpenAiProvider`, etc.).
-- Configuración en `.env` del cliente: `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_MAX_TOKENS`. `[SUPUESTO]` La llave puede ser de RENGO (costo incluido en la licencia) o del cliente — PA-030.
-- Modelo recomendado por costo/calidad: un modelo pequeño y rápido (ej. **Claude Haiku 5.5**, `claude-haiku-5-5`) para interpretación; escalar a uno mayor solo si la calidad no alcanza. Verificar precios vigentes al implementar.
+- Configuración en `.env` del cliente: `AI_PROVIDER`, `AI_MODEL`, `AI_API_KEY`, `AI_MAX_TOKENS`.
+- **La llave es de RENGO** (PA-030): el costo lo asume RENGO y se cobra dentro de la licencia. El cliente no configura nada.
+- **El proveedor queda listo y desacoplado; el modelo lo indica RENGO después** (PA-031). `AI_MODEL` es obligatorio y no tiene valor por defecto `[PENDIENTE DE DEFINIR]`. Al elegirlo, verificar precios vigentes y correr los criterios de §10.
 
 ## 3. Acceso de solo lectura
 1. **Rol de base de datos** `mise_<cliente>_ro`:
@@ -58,7 +60,7 @@ interface LlmProvider {
 |---|---|---|---|
 | `ventas_netas` | Σ total de cuentas pagadas − propinas | `bills_paid` | fecha, día_semana, hora, sucursal, mesero, tipo_orden |
 | `ventas_por_metodo` | Σ monto de pagos aplicados | `payments` | fecha, sucursal, método |
-| `ordenes` | Nº de cuentas pagadas | `bills_paid` | fecha, sucursal, mesero, tipo_orden |
+| `ordenes` | Nº de ocupaciones distintas con cuenta pagada (PA-011: una mesa dividida en 3 cuentas = 1 orden) | `bills_paid` | fecha, sucursal, mesero, tipo_orden |
 | `ticket_promedio` | ventas_netas / ordenes | `bills_paid` | fecha, sucursal, mesero |
 | `comensales` | Σ comensales | `bills_paid` | fecha, sucursal |
 | `unidades_vendidas` | Σ cantidad | `sales_items` | producto, categoría, fecha, hora |
@@ -123,18 +125,19 @@ Respuesta estándar (texto configurable): *"Solo puedo responder preguntas sobre
 ## 7. Límites de uso y costos
 | Límite | Valor por defecto `[SUPUESTO]` | Dónde |
 |---|---|---|
-| Preguntas por usuario por día | 30 | `license.limits` |
-| Preguntas por cliente por día | 100 | `license.limits` |
-| Tokens por cliente por mes | 1 000 000 | `license.limits` |
-| Tokens máximos por respuesta | 800 | `.env` |
-| Historial enviado al LLM | Últimos 6 mensajes | Código (constante del producto) |
+| Preguntas por cliente por mes (S-13) | **100** (definido por RENGO) | `license.limits.aiQuestionsPerMonth` |
+| Tokens máximos por respuesta | 800 `[SUPUESTO]` | `.env` |
+| Contexto enviado al LLM | Últimos 6 mensajes **de la sesión actual**, que manda el navegador (PA-032) | Código (constante del producto) |
 | Tiempo máximo de respuesta | 20 s | Código |
 
-**Costo estimado** `[SUPUESTO — verificar precios al implementar]`: cada pregunta ≈ 2 llamadas al LLM, ≈ 3 000 tokens de entrada (catálogo + pregunta + resultado) y ≈ 400 de salida. Con un modelo pequeño, el costo por pregunta es del orden de **centavos de dólar o menos**; 100 preguntas/día por cliente ≈ unos pocos USD/mes. Se usa *prompt caching* del catálogo semántico (parte fija del prompt) para reducir costo y latencia. El costo real por mensaje se calcula con el uso devuelto por el proveedor y una tabla de precios configurable, y se guarda en `ai_messages.cost_usd`.
+**Al llegar al límite** el chat se bloquea hasta el mes siguiente y muestra: *"Se alcanzó el límite de 100 preguntas de este mes. Contacta a RENGO para aumentar tus consultas."* RENGO sube el límite cambiando la licencia, sin código. El mes es el calendario del cliente en su zona horaria `[SUPUESTO]`.
+
+**Costo estimado** `[SUPUESTO — verificar precios al implementar]`: cada pregunta ≈ 2 llamadas al LLM, ≈ 3 000 tokens de entrada (catálogo + pregunta + resultado) y ≈ 400 de salida. Con un modelo pequeño, el costo por pregunta es del orden de **centavos de dólar o menos**; 100 preguntas al mes por cliente ≈ menos de unos pocos USD/mes. Se usa *prompt caching* del catálogo semántico (parte fija del prompt) para reducir costo y latencia. El costo real por mensaje se calcula con el uso devuelto por el proveedor y una tabla de precios configurable, y se guarda en `ai_queries.cost_usd`.
 
 ## 8. Registro y auditoría
-- `ai_messages` guarda: pregunta, llamada a herramienta (JSON), consulta semántica resuelta, número de filas, respuesta, tokens, costo, latencia, y si fue marcada como fuera de alcance o bloqueada.
-- Los administradores ven el historial de uso y costo en Configuración › IA.
+- **No se guarda el historial de la conversación ni las respuestas** (PA-032). La conversación vive solo en la memoria del navegador: es un texto mínimo durante la sesión y se borra al cerrar el panel o la sesión.
+- `ai_queries` guarda por pregunta: el texto de la pregunta (máx. 300 caracteres), la consulta semántica interpretada (JSON), número de filas, tokens, costo, latencia y si fue marcada como fuera de alcance o bloqueada. Sirve para **repetir la consulta** ("Consultas recientes": vuelve a ejecutar `query_metric` con datos actuales, sin pasar por el LLM ni gastar cuota `[SUPUESTO]`) y para auditoría y costo.
+- Los administradores ven uso y costo en Configuración › IA; RENGO ve el consumo de todos los clientes en el reporte RPT-063.
 - Los usuarios pueden marcar una respuesta como 👍/👎 (para mejorar el catálogo y las instrucciones).
 - Retención: 12 meses `[SUPUESTO]`.
 
@@ -142,7 +145,8 @@ Respuesta estándar (texto configurable): *"Solo puedo responder preguntas sobre
 - Panel lateral "Pregúntale a Mise" en Reportería, con aviso fijo: **"Requiere internet. Las respuestas se basan en los datos del sistema; revisa la tabla adjunta."**
 - Sin conexión: el panel se deshabilita con "El asistente necesita internet".
 - Respuesta: texto breve + (tabla con hasta 50 filas | gráfica de barras/líneas/pastel según el tipo) + chip "Periodo: 2–8 nov 2026 · Sucursal: Centro" + botón "Abrir reporte" + exportar CSV.
-- Indicador de cuota restante cuando quedan < 10 preguntas.
+- Indicador "Te quedan N preguntas este mes" cuando quedan < 10.
+- Lista "Consultas recientes" (de `ai_queries` del usuario) para repetirlas con un toque.
 
 ## 10. Criterios de aceptación
 | # | Pregunta de prueba | Resultado esperado |

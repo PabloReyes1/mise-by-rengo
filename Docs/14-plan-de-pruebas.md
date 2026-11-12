@@ -36,7 +36,17 @@
 | PR-011 | Pago con excedente en tarjeta | Rechazado |
 | PR-012 | Pago mixto con cambio | Cambio solo sobre efectivo |
 | PR-013 | Cancelación de ítem enviado sin permiso | Pide 🔑 + motivo; KDS tachado; comanda de cancelación |
-| PR-014 | Anular cuenta pagada | Pagos revertidos, movimiento negativo en turno, evento FEL si había NIT y factura |
+| PR-014 | Reabrir cuenta pagada en efectivo, corregir y volver a cobrar (mismo turno y desde **otro turno** del mismo día, con la mesa libre u ocupada) | Pago original `REVERTIDO`; movimiento `REVERSO_REAPERTURA` en el turno abierto donde se reabrió; el turno cerrado no cambia; ocupación y mesa sin cambios; recibo nuevo "CORREGIDO"; bitácora con solicitante y autorizador |
+| PR-014b | Intentar reabrir una cuenta pagada con tarjeta (o pago mixto), de otro día de negocio, o sin turno abierto en la caja | `409 REOPEN_NOT_ALLOWED`; no existe opción de anular |
+| PR-014c | Separar 1 de "3 × Cerveza" y pasarla a otra cuenta (RF-104) | 2 + 1 en cuentas distintas; total de la mesa igual; mismo pedido en cocina |
+| PR-014d | Fondo fijo y variable al abrir turno; conteo por denominación obligatorio y opcional en el corte | Se respeta la configuración de cada caja |
+| PR-014e | Órdenes en el dashboard con una mesa dividida en 3 cuentas | Cuenta como 1 orden; ticket promedio por orden |
+| PR-014f | Propinas con cada configuración: desactivadas, `WAITER`, `POOL`, `HOUSE` | Sin propinas no hay paso ni reporte; RPT-033 reparte según la configuración; la propina siempre aparece como sugerida y editable |
+| PR-014g | Enviar un borrador con un producto agotado con cada política (`ANY_USER_CONFIRMS`, `MANAGER_AUTH`, `BLOCK`) | Pide confirmación / pide PIN del gerente / no deja enviar |
+| PR-014h | Descuentos desactivados por el gerente; luego activados con límite por rol | Sin la opción de descuento; luego se aplica dentro del límite y pide 🔑 si lo supera |
+| PR-014i | Mesero cobra una cuenta en efectivo | Pago registrado al momento en el turno abierto de la caja principal; aparece en RPT-034 como efectivo por entregar. Sin turno abierto en la caja principal, el cobro en efectivo se bloquea |
+| PR-014j | Sesión sin actividad 11 h 59 min y 12 h 01 min | La primera sigue (el token se refresca solo); la segunda pide iniciar sesión. No hay bloqueo de pantalla por inactividad |
+| PR-014k | Pregunta 100 y 101 del mes en el chatbot | La 100 responde; la 101 devuelve `AI_QUOTA_EXCEEDED` y muestra "Contacta a RENGO" |
 | PR-015 | Unir mesas y transferir mesero | Ocupaciones fusionadas; nuevo mesero recibe avisos |
 | PR-016 | Corte a ciegas | Esperado oculto hasta confirmar conteo |
 | PR-017 | Corte con diferencia > umbral | Comentario obligatorio |
@@ -80,7 +90,8 @@
 | PR-209 | Reloj del dispositivo adelantado 10 min | | Marcas corregidas con `clockOffsetMs` |
 | PR-210 | Cerrar la app con pendientes | Cerrar pestaña | Aviso `beforeunload`; al reabrir, la outbox se envía |
 | PR-211 | Nueva versión de la PWA con pendientes | Desplegar durante el corte | No se actualiza hasta vaciar la outbox |
-| PR-212 | Intentar corte de caja, anulación y chatbot offline | | Bloqueados con mensaje |
+| PR-212 | Intentar abrir turno, reabrir cuenta y usar el chatbot offline | | Bloqueados con mensaje "Requiere conexión" |
+| PR-212b | Corte de caja offline y luego sincronizar, con un pago de otro dispositivo que la caja no conocía | | Turno `CERRADO_PROVISIONAL` con recibo "PROVISIONAL"; al sincronizar pasa a `CERRADO` con el esperado recalculado y conflicto `CORTE_DIFERENTE` |
 | PR-213 | Red inestable (pérdida 30 %, latencia 2 s) | toxiproxy | Indicador amarillo; sin duplicados; sin pérdida |
 | PR-214 | KDS sin conexión 5 min y vuelve | | Recupera eventos con `lastSeq`; pedidos llegados tarde marcados |
 | PR-215 | Failover dual WAN | Desconectar la fibra del router | Cambio a 4G; socket reconecta en < 30 s; sin intervención |
@@ -123,7 +134,7 @@
 | Windows 10/11 Chrome/Edge | ✅ | ✅ | ✅ | ePOS, Web Serial, WebUSB (WinUSB), QZ Tray |
 | macOS Chrome | — | ✅ | — | ePOS, Web Serial |
 
-Impresoras a validar `[PENDIENTE DE DEFINIR — PA-021]`: modelo de cocina y de caja del primer cliente, en 58 y 80 mm.
+Impresoras a validar (PA-021, propuesta de trabajo en doc 06 §7): Epson TM-m30III Ethernet y TM-T20III Ethernet por `epos-lan`, desde Android (Chrome) e iPhone (Safari). Se repite con el modelo final cuando RENGO lo elija.
 
 ## 8. Pruebas de operación
 

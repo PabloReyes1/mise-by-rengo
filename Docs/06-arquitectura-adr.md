@@ -51,11 +51,14 @@ flowchart LR
 ├── app/                         # repositorio clonado y compilado (una sola vez)
 │   ├── backend/
 │   │   ├── dist/                # compilado de Fastify (usado por TODOS los procesos)
-│   │   └── prisma/              # schema.prisma + migrations/
+│   │   └── prisma/              # schema/ (un .prisma por módulo) + migrations/
 │   ├── frontend/
 │   │   └── dist/                # PWA compilada (una sola para todos los clientes)
+│   ├── shared/                  # contratos (esquemas Zod de la API y eventos) y dominio (cálculo de cuenta, folios) usados por backend y frontend
 │   ├── scripts/                 # nuevo-cliente.sh, desplegar.sh, respaldo.sh, monitor.sh, ...
-│   └── templates/               # plantillas de seed y configuración inicial
+│   ├── templates/               # seed, plantillas de configuración inicial, Caddy y pm2
+│   └── tests/                   # e2e (Playwright) y carga (k6)
+│                                # Estructura completa del repositorio: doc 19
 ├── clients/
 │   ├── ClienteA/
 │   │   ├── .env                 # PORT, DATABASE_URL, JWT_SECRET, ... (chmod 600)
@@ -87,15 +90,17 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 - Node.js LTS + TypeScript + Fastify. Mismo `backend/dist` para todos los clientes.
 - pm2 arranca cada proceso con `cwd: /opt/mise/clients/<Cliente>` y el backend carga `.env` desde `process.cwd()`.
 - Escucha **solo** en `127.0.0.1:<PORT>`.
-- Módulos internos (monolito modular):
+- Módulos internos (monolito modular), cada uno en `backend/src/modules/<módulo>/` ([19](19-estructura-del-proyecto.md)):
 
 | Módulo | Responsabilidad |
 |---|---|
+| `system` | `GET /api/health`, `GET /api/time`, `GET /api/config/public` |
 | `config` | Configuración del cliente, licencia, módulos, sucursales, regionales, plantillas de tickets |
 | `auth` | Login, PIN, JWT, dispositivos, autorizaciones 🔑 |
 | `catalog` | Menú, modificadores, combos, imágenes |
 | `floor` | Zonas, mesas, ocupaciones |
-| `orders` | Pedidos, ítems, KDS |
+| `orders` | Toma y envío de pedidos (rondas), ítems, cancelaciones, entrega |
+| `kitchen` | KDS: cola FIFO, aceptar, listo (pedido e ítem), recall |
 | `billing` | Cuentas, descuentos, propinas, pagos |
 | `cash` | Turnos, movimientos, cortes |
 | `recipes` | Insumos, recetas, costeo |
@@ -103,7 +108,6 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 | `ai` | Chatbot (capa semántica, proveedor LLM) |
 | `sync` | Recepción de outbox, idempotencia, conflictos, folios |
 | `audit` | Bitácora |
-| `fel` | Punto de extensión: `invoice_events` |
 | `realtime` | Socket.IO, salas, eventos |
 
 ### 3.3 PostgreSQL
@@ -151,7 +155,7 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 - **Contexto:** Muchos procesos en un mismo VPS → la RAM por proceso es el recurso crítico.
 - **Decisión:** Fastify (bajo consumo y alto rendimiento), Prisma con PostgreSQL, Zod para validar entradas y `.env`, pino para logs, argon2id para contraseñas/PIN, JWT.
 - **Alternativas:** NestJS (más estructura, más RAM y arranque más lento); Express (más lento, sin esquemas nativos); Drizzle/Kysely en vez de Prisma (menos RAM, pero el pedido exige Prisma).
-- **Notas:** Usar la versión de Prisma con cliente en TypeScript sin motor binario (*query compiler* / driver adapter `@prisma/adapter-pg`) si está estable a la fecha de inicio, porque reduce RAM y elimina el binario por proceso. `[PENDIENTE DE DEFINIR]` versión exacta al iniciar (PA-020). `connection_limit` por cliente en `DATABASE_URL`.
+- **Notas:** Usar la versión de Prisma con cliente en TypeScript sin motor binario (*query compiler* / driver adapter `@prisma/adapter-pg`) si está estable a la fecha de inicio, porque reduce RAM y elimina el binario por proceso. Versiones aprobadas en **ADR-012** (PA-020). `connection_limit` por cliente en `DATABASE_URL`.
 
 ### ADR-003 — Impresión térmica
 - **Estado:** Propuesto (requiere validación con hardware real, PA-021).
@@ -200,7 +204,7 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 
 ### ADR-008 — Autenticación por dispositivo
 - **Estado:** Aceptado.
-- **Decisión:** Registro de dispositivo por un administrador (código de emparejamiento de 6 dígitos válido 10 min). Cada dispositivo tiene un `device_token` de larga duración (revocable). Las sesiones de usuario se abren sobre un dispositivo registrado: usuario+contraseña o PIN → JWT de acceso (15 min) + refresco rotativo (30 días). `JWT_SECRET` distinto por cliente.
+- **Decisión:** Registro de dispositivo por un administrador (código de emparejamiento de 6 dígitos válido 10 min). Cada dispositivo tiene un `device_token` de larga duración (revocable). Las sesiones de usuario se abren sobre un dispositivo registrado: usuario+contraseña o PIN → JWT de acceso (15 min) que se refresca solo mientras se usa la app + token de refresco rotativo que vence tras **12 horas sin actividad** (S-04). No hay bloqueo de pantalla por inactividad. `JWT_SECRET` distinto por cliente.
 
 ### ADR-009 — Imágenes en la base, en tabla separada
 - **Estado:** Aceptado.
@@ -216,6 +220,32 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 - **Estado:** Aceptado.
 - **Decisión:** Montos `numeric(12,2)`; en TypeScript se manejan con una librería decimal (`decimal.js` o enteros en centavos en el frontend). Fechas en UTC (`timestamptz`); el "día de negocio" se calcula con la zona horaria de la sucursal y una hora de corte configurable (ej. 04:00) para restaurantes que cierran después de medianoche.
 
+### ADR-012 — Versiones del runtime: Node.js 24 LTS
+- **Estado:** **Aceptado** por RENGO el 2026-11-11 (resuelve PA-020).
+- **Contexto:** El backend corre en Node (Fastify, Prisma, argon2) y el frontend usa Node solo para compilar (Vite). React corre en el navegador, así que la versión de Node afecta a **Vite y a las herramientas**, no a React.
+
+| Línea de Node | Estado al 2026-11-11 | Fin de soporte |
+|---|---|---|
+| 22 "Jod" | Mantenimiento | 2027-04-30 — demasiado pronto: vencería durante la Fase 2 |
+| **24 "Krypton"** | Mantenimiento LTS desde 2026-10-20 | **2028-04-30** |
+| 26 "Lithium" | Active LTS desde 2026-10-28 | 2029-04-30 |
+
+| Pieza del stack | Versión actual | Node que soporta | Con Node 24 | Con Node 26 |
+|---|---|---|:-:|:-:|
+| React | 19.3 (sep. 2026) | Corre en el navegador | ✅ | ✅ |
+| Vite | 8 | 20.19+, 22.12+ | ✅ | ✅ |
+| Fastify | 5 | 20+; en sus pruebas ya corre Node 24 y 26 | ✅ | ✅ |
+| Prisma ORM | 7 (estable) | ^20.19, ^22.12, ^24.0 — **no lista 26** | ✅ | ⚠️ |
+| Prisma ORM | 8 (*release candidate*) | 22.18+, 24.11+, 26+; **recomienda 24** | ✅ | ✅ |
+| argon2 | Módulo nativo | Requiere binarios precompilados para la versión de Node | ✅ | ⚠️ verificar |
+
+- **Decisión:** **Node.js 24 LTS** (la versión 24.x más reciente, mínimo 24.11 para ser compatible también con Prisma 8), **Prisma ORM 7** con el cliente sin motor Rust (`prisma-client`) y `@prisma/adapter-pg`, Fastify 5, Vite 8, React 19 y TypeScript ≥ 5.9.
+  - La versión se fija en el repositorio (`.nvmrc` y `engines` en `package.json`) y en el servidor (instalación desde el repositorio oficial de Node, doc 13 §1).
+- **Por qué no Node 26:** lleva menos de un mes como LTS, Prisma 7 estable no lo soporta oficialmente y hay que verificar los binarios de argon2. Node 24 tiene soporte de seguridad hasta abril de 2028, suficiente para el MVP y la Fase 2.
+- **Plan de actualización:** pasar a Node 26 cuando Prisma lo soporte en una versión estable, después de probarlo en staging, y siempre antes de 2028-04-30. La actualización es un despliegue normal (doc 13 §4) porque todos los clientes usan el mismo runtime.
+- **Pendiente de confirmar en la Semana 0:** el esquema Prisma en varios archivos (`backend/prisma/schema/`, doc 19) con Prisma 7 y `prisma.config.ts`, y que Prisma 7 ya no carga el `.env` solo (el backend lo carga desde `process.cwd()`, regla R1).
+- **Fuentes:** calendario oficial de Node.js (`nodejs/Release`), requisitos de Prisma 7 y 8 en prisma.io, anuncio de Vite 8, guía de migración de Fastify 5 y blog de React 19.3.
+
 ## 6. Seguridad (resumen)
 
 | Capa | Medida |
@@ -230,19 +260,38 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 
 ## 7. Hardware recomendado
 
-`[SUPUESTO]` Valores de referencia; validar con el primer cliente (PA-021).
+> **Propuesta de trabajo (PA-021, 2026-11-12):** RENGO todavía no elige los equipos. Mientras tanto se desarrolla y se prueba con este kit. Si al final se eligen otros equipos, se revisa ADR-003 y la prueba de impresión (doc 14 §7).
 
-| Equipo | Mínimo | Recomendado |
-|---|---|---|
-| Celular de mesero | Android 10 / iOS 16, 3 GB RAM, Chrome o Safari actual | Android 12+, 4 GB RAM (permite Web Bluetooth/USB como respaldo) |
-| Caja | Tablet Android 10" 4 GB RAM o PC con Windows 10/11 y Chrome/Edge | Mini PC Windows 11 / tablet Android 11", con cajón de dinero conectado a la impresora (RJ11) |
-| KDS | Tablet Android 10" con soporte de pared, Chrome | Pantalla 15"+ táctil con Android o mini PC; parlante externo si la cocina es ruidosa |
-| Impresora de cocina | Térmica 80 mm ESC/POS con Ethernet | Epson TM-m30III o TM-T20III (versión Ethernet con ePOS) con corte automático |
-| Impresora de caja | Térmica 58/80 mm USB | Igual a la de cocina (repuesto intercambiable) |
-| Router | Wi-Fi 5 doble banda | Router dual WAN con failover automático a módem 4G/LTE + UPS para router e impresoras |
-| Red | 10 Mbps bajada / 2 Mbps subida | Fibra 25 Mbps + 4G de respaldo con plan de datos ≥ 5 GB/mes |
+### 7.1 Idea principal: los meseros usan su propio celular
+En muchos restaurantes los meseros tomarán pedidos **con su teléfono** y no habrá tablets. Esto define el kit:
+
+1. **Las impresoras deben ser Epson con ePOS por red (LAN).** Es el único transporte que funciona desde **cualquier** celular, incluido iPhone (Safari no soporta USB ni Bluetooth, ADR-003). Una impresora solo USB o solo Bluetooth dejaría sin imprimir a los meseros con iPhone.
+2. **Los celulares deben estar en el Wi-Fi del personal**, en la misma red que las impresoras. Si un celular se sale del Wi-Fi y usa sus datos, ya no ve la impresora: la comanda se imprime por el transporte `delegate` (otro dispositivo de la sucursal la imprime) mientras haya internet; sin internet, ese celular no imprime.
+3. **La pantalla de cocina (KDS) es opcional.** Con la comanda impresa la cocina puede trabajar sin pantalla. Si el restaurante quiere KDS, basta una tablet Android sencilla en la pared.
+4. **La caja puede ser una PC o laptop que el restaurante ya tenga**, con Chrome o Edge.
+
+### 7.2 Kit de referencia
+
+| Equipo | Propuesta de trabajo | Alternativa | Notas |
+|---|---|---|---|
+| Celular de mesero (propio) | Android 10+ con Chrome actual, o iPhone con iOS 16.4+ y Safari; 3 GB de RAM | — | Requisitos mínimos para instalar la PWA. Cada celular se empareja como dispositivo (RF-031) |
+| Impresora de cocina | **Epson TM-m30III**, modelo con Ethernet (80 mm, corte automático, ePOS-Print) | **Epson TM-T20III Ethernet** (más barata; la ficha de Epson indica soporte ePOS para imprimir desde web y móviles) | Confirmar con el distribuidor local que el modelo trae **ePOS** antes de comprar. IP fija por DHCP |
+| Impresora de caja | La misma que en cocina (TM-m30III Ethernet) | TM-T20III Ethernet | Mismo modelo = repuesto intercambiable y un solo transporte (`epos-lan`), sin QZ Tray |
+| Cajón de dinero | Cajón estándar con conector RJ11 a la impresora de caja | — | Lo abre la impresora al cobrar en efectivo |
+| Caja | PC o laptop del restaurante con Windows 10/11 y Chrome/Edge | Tablet Android 10" o el celular del cajero | Con impresora ePOS no se necesita instalar nada en la PC |
+| KDS (opcional) | Tablet Android 10" (4 GB de RAM) con soporte de pared y cargador fijo | Sin KDS: solo comanda impresa | La pantalla queda siempre encendida (doc 03 §6) |
+| Router | **TP-Link ER605** (dual WAN con *Link Backup*), administrado con Omada | MikroTik con dual WAN | Configurar la detección de caída con un servidor de *echo*; probar el cambio de enlace antes de entregar |
+| Respaldo de internet | **Router 4G con salida Ethernet** conectado a la segunda WAN del ER605 | Módem USB 4G | Se prefiere el router 4G por Ethernet: hay reportes de módems USB que se desconectan |
+| Wi-Fi | Punto de acceso TP-Link Omada (EAP) con red del personal separada de la de clientes | Wi-Fi del ER605 + router actual | Cobertura en cocina, salón, terraza y caja (doc 09 §2) |
+| UPS | UPS de 600–750 VA para router, router 4G, punto de acceso e impresora de cocina | — | ≥ 30 min de respaldo |
+| Internet | Fibra o cable ≥ 25 Mbps | — | Plan de datos 4G ≥ 5 GB/mes |
 
 **Consumo de datos estimado** por sucursal: < 300 MB/día `[SUPUESTO]` (sin contar la primera carga de la PWA e imágenes).
+
+### 7.3 Antes de comprar
+- Pedir al distribuidor en Guatemala precio y disponibilidad de la TM-m30III Ethernet y la TM-T20III Ethernet, y confirmar que traen ePOS.
+- Hacer la **prueba de impresión** de la Semana 0 (doc 17) con la impresora real, desde un Android y desde un iPhone, por HTTPS.
+- Verificar que el Wi-Fi del restaurante **no** aísle a los clientes en la red del personal (si no, los celulares no ven la impresora).
 
 ## 8. Escalabilidad del servidor
 

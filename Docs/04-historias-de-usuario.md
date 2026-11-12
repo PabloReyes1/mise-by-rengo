@@ -22,7 +22,7 @@ Como **gerente**, quiero crear un producto con grupos de modificadores, para que
 ### HU-003 Marcar producto agotado (RF-011)
 Como **cocina**, quiero marcar un producto como agotado, para que los meseros no lo vendan.
 - **Dado** que "Pepián" está activo, **cuando** lo marco agotado en el KDS, **entonces** en ≤ 2 s aparece en gris con la etiqueta "AGOTADO" en todos los celulares y no se puede agregar.
-- **Dado** un pedido en borrador que ya contenía Pepián, **cuando** el mesero intenta enviarlo, **entonces** se le avisa "Pepián se agotó" y debe quitarlo o confirmarlo con un gerente `[SUPUESTO]`.
+- **Dado** un pedido en borrador que ya contenía Pepián, **cuando** el mesero intenta enviarlo, **entonces** se le avisa "Pepián se agotó" y debe quitarlo o confirmar que se envía. Qué pasa aquí es configurable (PA-041): **bloquear**, **pedir autorización de un gerente** o **dejar que cualquier usuario confirme**, que es el valor por defecto.
 
 ### HU-004 Crear combo (RF-015)
 Como **gerente**, quiero crear "Combo almuerzo" con plato fuerte a elegir y bebida a elegir a Q 45.00, para vender menús del día.
@@ -47,7 +47,7 @@ Como **administrador**, quiero registrar la tablet de caja y su impresora USB de
 
 ### HU-009 Configurar descuentos y motivos (RF-026, RF-028)
 Como **administrador**, quiero un catálogo de descuentos con motivos, para controlar por qué se descuenta.
-- **Dado** el motivo "Cortesía de la casa" y tope de Cajero 10 %, **cuando** un cajero aplica 15 %, **entonces** se pide PIN de gerente y la bitácora registra ambos usuarios.
+- **Dado** que el gerente activó los descuentos y fijó el límite del Cajero en 10 % (S-05), **cuando** un cajero aplica 15 % con el motivo "Cortesía de la casa", **entonces** se pide PIN de gerente y la bitácora registra ambos usuarios.
 
 ---
 
@@ -56,6 +56,7 @@ Como **administrador**, quiero un catálogo de descuentos con motivos, para cont
 ### HU-010 Abrir turno de caja (RF-050)
 Como **cajero**, quiero abrir mi turno con el fondo inicial, para empezar a cobrar.
 - **Dado** que no hay turno abierto en "Caja 1", **cuando** ingreso fondo Q 500.00, **entonces** el turno queda abierto con mi usuario, hora y dispositivo.
+- **Dado** que "Caja 1" tiene fondo **fijo** de Q 500.00, **cuando** abro el turno, **entonces** el fondo ya aparece escrito. **Dado** fondo **variable**, **entonces** lo escribo yo (PA-024).
 - **Dado** que ya hay un turno abierto en esa caja, **cuando** intento abrir otro, **entonces** se muestra "Ya hay un turno abierto por <usuario> desde <hora>".
 
 ### HU-011 Registrar retiro de efectivo (RF-064)
@@ -67,7 +68,7 @@ Como **cajero**, quiero hacer el corte de mi turno, para entregar la caja cuadra
 - **Dado** que hay cuentas abiertas cobradas parcialmente en mi turno, **cuando** inicio el corte, **entonces** se me avisa y puedo continuar (las cuentas siguen abiertas para el siguiente turno) `[SUPUESTO]`.
 - **Dado** esperado Q 2,350.00 y contado Q 2,340.00, **cuando** confirmo, **entonces** se registra diferencia −Q 10.00, se pide comentario obligatorio si la diferencia supera el umbral configurado y se imprime el corte.
 - **Dado** que no tengo `cash.view_expected`, **cuando** hago el corte, **entonces** cuento primero (corte a ciegas) y solo después veo la diferencia.
-- **Dado** que no hay internet, **cuando** intento el corte, **entonces** el botón está deshabilitado con "Requiere conexión".
+- **Dado** que no hay internet, **cuando** hago el corte, **entonces** se registra como **corte provisional**, se imprime con la marca "PROVISIONAL — sin sincronizar" y se confirma solo al volver la conexión (PA-042). Abrir un turno nuevo sí requiere conexión.
 
 ---
 
@@ -116,7 +117,7 @@ Como **mesero**, quiero cancelar un ítem que ya fue a cocina porque el comensal
 Como **mesero**, quiero dividir la mesa 5 en una cuenta por persona, para que cada uno pague lo suyo.
 - **Dado** la mesa con 6 líneas en "Cuenta 1", **cuando** creo "Cuenta 2" y arrastro 2 líneas, **entonces** ambas cuentas muestran sus totales recalculados.
 - **Dado** que "Cuenta 2" ya está pagada, **cuando** intento mover un ítem a ella, **entonces** se rechaza: "No se puede modificar una cuenta pagada".
-- **Dado** la línea "3 × Cerveza", **cuando** intento mover 1 sola unidad, **entonces** el comportamiento depende de PA-001 `[PENDIENTE DE DEFINIR]`.
+- **Dado** la línea "3 × Cerveza" en "Cuenta 1", **cuando** elijo "Separar" con 1 unidad y la paso a "Cuenta 2", **entonces** la Cuenta 1 queda con "2 × Cerveza", la Cuenta 2 con "1 × Cerveza", ambos totales se recalculan y el total de la mesa no cambia (RF-104, PA-001).
 
 ### HU-029 Unir mesas (RF-105)
 Como **mesero**, quiero unir las mesas 5 y 6 porque llegó más gente, para manejarlas como una sola.
@@ -141,16 +142,21 @@ Como **cajero**, quiero cobrar una cuenta parte en efectivo y parte con tarjeta,
 
 ### HU-042 Aplicar descuento (RF-026)
 Como **cajero**, quiero aplicar 10 % de descuento a la cuenta por "Cliente frecuente", para premiar al cliente.
-- **Dado** que mi tope es 10 %, **cuando** aplico 10 % con motivo, **entonces** se aplica sin autorización y queda en bitácora.
+- **Dado** que mi límite es 10 % (lo fijó el gerente), **cuando** aplico 10 % con motivo, **entonces** se aplica sin autorización y queda en bitácora.
 
-### HU-043 Anular cuenta pagada (RF-068)
-Como **gerente**, quiero anular una cuenta cobrada por error, para corregir la caja.
-- **Dado** la cuenta pagada en efectivo, **cuando** la anulo con motivo "Cobro duplicado", **entonces** la cuenta pasa a "Anulada", se registra un movimiento negativo en el turno abierto y, si tenía factura emitida, se genera evento `ANULAR` para el RPA.
-- **Dado** que no hay internet, **entonces** la anulación está bloqueada.
+### HU-043 Reabrir cuenta pagada (RF-069)
+Como **gerente**, quiero reabrir una cuenta cobrada con un error, para corregirla y cobrarla bien.
+- **Dado** una cuenta pagada en efectivo, **cuando** la reabro con motivo "Se cobró un ítem de más", **entonces** la cuenta vuelve a "Abierta", su pago queda "Revertido", el efectivo devuelto se registra como reverso en el turno abierto de mi caja y la bitácora registra quién la reabrió y quién autorizó.
+- **Dado** que la cuenta se cobró en el turno de la mañana y ya hubo cambio de turno, **entonces** igual la puedo reabrir desde el turno actual (S-28); el corte de la mañana no cambia.
+- **Dado** que la mesa de esa cuenta ya está ocupada por otros comensales, **entonces** igual la puedo reabrir: la cuenta reabierta se maneja desde la caja sin afectar la mesa (S-29).
+- **Cuando** quito el ítem y cobro de nuevo, **entonces** se imprime un recibo nuevo y la cuenta queda "Pagada".
+- **Dado** una cuenta pagada con tarjeta (o en parte con tarjeta), **entonces** la opción "Reabrir" no aparece y no hay forma de corregirla en el sistema (PA-051).
+- **Dado** que no hay internet, **entonces** la reapertura está bloqueada.
+- No existe "anular cuenta" (PA-012).
 
 ### HU-044 Liberar mesa (RF-063)
 Como **cajero**, quiero que la mesa se libere al pagarse todas sus cuentas, para que se pueda volver a usar.
-- **Dado** la mesa 5 con cuenta 1 pagada y cuenta 2 abierta, **entonces** sigue ocupada. **Cuando** se paga la cuenta 2, **entonces** la mesa queda "Libre" (o "Por limpiar" si está configurado `[SUPUESTO]`).
+- **Dado** la mesa 5 con cuenta 1 pagada y cuenta 2 abierta, **entonces** sigue ocupada. **Cuando** se paga la cuenta 2, **entonces** la mesa queda "Libre" (o "Por limpiar" si el restaurante lo activó; por defecto no, PA-040).
 
 ---
 
@@ -200,7 +206,7 @@ Como **mesero**, quiero seguir tomando pedidos si se cae el internet, para no de
 
 ### HU-071 Resolver conflictos (RF-229)
 Como **gerente**, quiero revisar lo que no se pudo sincronizar limpiamente, para corregirlo.
-- **Dado** que dos dispositivos registraron un pago para la misma cuenta durante el corte, **cuando** abro "Conflictos", **entonces** veo ambos pagos, el total cobrado de más y las opciones "Anular pago duplicado" o "Mantener como propina/sobrante".
+- **Dado** que dos dispositivos registraron un pago para la misma cuenta durante el corte, **cuando** abro "Conflictos", **entonces** veo ambos pagos, el total cobrado de más y las opciones "Revertir pago duplicado" o "Mantener como propina/sobrante".
 
 ---
 
@@ -215,5 +221,5 @@ Como **operador de RENGO**, quiero suspender un cliente con pagos vencidos, para
 - **Dado** el cliente activo, **cuando** ejecuto `suspender-cliente.sh LaFonda`, **entonces** la app muestra "Servicio suspendido, contacte a RENGO" y los datos se conservan.
 
 ### HU-082 Consultar bitácora (RF-255)
-Como **administrador**, quiero ver quién anuló la cuenta #0156, para aclarar una diferencia de caja.
+Como **administrador**, quiero ver quién reabrió la cuenta #0156, para aclarar una diferencia de caja.
 - **Dado** el filtro por entidad "Cuenta #0156", **entonces** veo cada acción con usuario, autorizador, dispositivo, fecha y valores antes/después.
