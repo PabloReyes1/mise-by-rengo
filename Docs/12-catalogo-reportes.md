@@ -16,7 +16,7 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | **Ventas netas** | Venta bruta − descuentos = Σ (`bills.total − bills.tip_amount`) de cuentas válidas. **No** incluye propina. Incluye impuestos (los precios los incluyen) |
 | Propinas | Σ `bills.tip_amount` de cuentas válidas |
 | Total cobrado | Ventas netas + propinas = Σ `payments.amount` con estado `APLICADO` de cuentas válidas |
-| Órdenes | Nº de **ocupaciones** distintas con al menos una cuenta válida (PA-011): una mesa dividida en 3 cuentas = 1 orden; una orden para llevar = 1 orden. Se cuenta en el día de negocio de su última cuenta pagada `[SUPUESTO]` |
+| Órdenes | Nº de **ocupaciones** distintas con al menos una cuenta válida (PA-011): una mesa dividida en 3 cuentas = 1 orden; una orden para llevar = 1 orden. Se cuenta en el día de negocio de su última cuenta pagada |
 | Cuentas pagadas | Nº de cuentas válidas (se sigue mostrando en el corte de caja y en RPT-012) |
 | Ticket promedio | Ventas netas / órdenes (es decir, por mesa o pedido para llevar, no por cuenta) |
 | Comensales | Σ `occupancies.guests` de ocupaciones con al menos una cuenta válida (para llevar cuenta 1 por defecto o lo que se capture) |
@@ -88,7 +88,7 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 | RPT-030 | Cortes de caja | Turno, caja, cajero, apertura, cierre, fondo, cobros por método, depósitos, retiros, reaperturas, esperado, contado, diferencia, comentario | Periodo, sucursal, caja, cajero | **Esperado = fondo + Σ pagos en efectivo cobrados en el turno (netos de cambio, incluidos los que después se revirtieron) + depósitos − retiros − reversos por reapertura registrados en el turno.** Así un turno cerrado nunca cambia: la reapertura resta en el turno abierto donde se hace. Diferencia = contado − esperado. Los cortes provisionales (sin conexión) se marcan y muestran el esperado provisional y el recalculado |
 | RPT-031 | Movimientos de caja | Fecha, turno, tipo, monto, motivo, usuario, autorizador | Periodo, sucursal, tipo, motivo | |
 | RPT-032 | Diferencias de caja | Cajero, turnos, Σ diferencias, nº turnos con faltante/sobrante | Periodo, sucursal | |
-| RPT-033 | Propinas | Mesero, cuentas, Σ propinas, propina promedio %, por método, **a quién le corresponde** | Periodo, sucursal | Propina % = tip / (total − tip). Reparto según `tip_distribution` (PA-046): `WAITER` → al mesero de la ocupación; `POOL` → Σ propinas del día de negocio / meseros que trabajaron ese día, en partes iguales `[SUPUESTO]`; `HOUSE` → al establecimiento. Si el restaurante no registra propinas, el reporte no aparece |
+| RPT-033 | Propinas | Mesero, cuentas, Σ propinas, propina promedio %, por método, **a quién le corresponde** | Periodo, sucursal | Propina % = tip / (total − tip). Reparto según `tip_distribution` (PA-046): `WAITER` → al mesero de la ocupación; `POOL` → Σ propinas del día de negocio / meseros que trabajaron ese día, en partes iguales; `HOUSE` → al establecimiento. Si el restaurante no registra propinas, el reporte no aparece |
 | RPT-034 | Efectivo cobrado por meseros | Mesero, turno de la caja principal, nº de cobros en efectivo, Σ efectivo (neto de cambio) | Periodo, sucursal, mesero | Sirve para cuadrar lo que cada mesero entrega al cajero (PA-052). Solo pagos `APLICADO` con `received_by` sin rol de caja |
 
 ### 3.4 Control 🔒
@@ -122,6 +122,6 @@ Las fórmulas se implementan **una sola vez** (módulo `reports/metrics`) y se r
 1. Montos con `numeric`; redondeo *half-up* a 2 decimales solo al presentar.
 2. Los reportes leen de las vistas del esquema `semantic` (las mismas del chatbot) para que los números coincidan.
 3. Ventas offline sincronizadas tarde se reportan en su **día de negocio real** (`paid_at` corregido con `clockOffsetMs`).
-4. No existen anulaciones (PA-012). Una cuenta pagada en efectivo se puede reabrir desde **otro turno** (S-28), dentro del mismo día de negocio `[SUPUESTO]`. Las ventas quedan en el día de negocio del último cobro; el dinero devuelto se registra como `REVERSO_REAPERTURA` en el turno donde se reabrió.
+4. No existen anulaciones (PA-012). Una cuenta pagada en efectivo se puede reabrir desde **otro turno** (S-28), dentro del mismo día de negocio. Las ventas quedan en el día de negocio del último cobro; el dinero devuelto se registra como `REVERSO_REAPERTURA` en el turno donde se reabrió.
 5. Las variaciones % con base 0 se muestran como "—" (no infinito).
 6. Rango "histórico" y rangos > 92 días se calculan en segundo plano (F2) y pueden usar tablas resumen diarias (`daily_sales_summary`) materializadas cada noche.

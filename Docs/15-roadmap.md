@@ -6,7 +6,7 @@
 
 ```mermaid
 gantt
-    title Mise by Rengo — fases (duraciones [SUPUESTO], equipo de 2 desarrolladores)
+    title Mise by Rengo — fases (duraciones aprobadas, equipo de 2 desarrolladores)
     dateFormat  YYYY-MM-DD
     axisFormat  %b %Y
     section Fase 0
@@ -31,7 +31,7 @@ gantt
 ### Fase 0 — Documentación (actual)
 | Entregable | Criterio de salida |
 |---|---|
-| Documentación completa (este directorio) | Aprobada por RENGO; preguntas abiertas críticas (🔴 en [16](16-preguntas-abiertas.md)) resueltas |
+| Documentación completa (este directorio) | ✅ Aprobada por RENGO el 2026-11-12 (versión 1.0); preguntas abiertas críticas (🔴 en [16](16-preguntas-abiertas.md)) resueltas |
 | Prueba de concepto de impresión **sin código de producto** | Validar con la impresora real del cliente: ePOS LAN desde Android, iPhone y PC; WebUSB en Android; certificados HTTPS de la impresora (ADR-003) |
 | Compra/definición de hardware del primer cliente | Lista aprobada (ver [06 §7](06-arquitectura-adr.md#7-hardware-recomendado)) |
 
@@ -67,7 +67,7 @@ gantt
 | Facturación electrónica FEL vía RPA | Por ahora no se maneja IVA ni FEL (PA-002, PA-003). Se agregan con migraciones aditivas: estado de facturación, `invoice_events`, desglose de IVA y conexión del RPA (RF-271, RF-272, RF-274) |
 | Varias estaciones de cocina (ruteo por categoría, KDS por estación, comanda por estación) | Modelo ya preparado |
 | Multisucursal avanzado (reportes consolidados, precios por sucursal) | |
-| Panel de plataforma para RENGO (web) en lugar de scripts | `[SUPUESTO]` |
+| Panel de plataforma para RENGO (web) en lugar de scripts | Aprobado (2026-11-12) |
 
 ### Fuera de alcance (sin fecha)
 Delivery de cualquier tipo, menú online y pedidos en línea, reservaciones y lista de espera, inventario de existencias/compras/proveedores, reseñas y encuestas, asistencia del personal, agentes de IA en WhatsApp o teléfono, verificación automática de transferencias, pronósticos, ingeniería de menú automática, promociones automáticas, configuración de impuestos, servidor local, Docker.

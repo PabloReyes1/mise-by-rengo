@@ -28,7 +28,7 @@
 | RF-021 | Editor visual del mapa de mesas (arrastrar y soltar). | La posición guardada se respeta en todos los dispositivos. | F2 |
 | RF-022 | Estaciones de cocina: existe una por defecto; el modelo permite N y asigna categorías a estaciones. | En MVP la UI solo muestra una estación; la tabla y la relación categoría→estación existen. | MVP (modelo) |
 | RF-025 | Propina configurable (PA-046): (a) si se registran propinas o no; (b) porcentaje sugerido, si es editable y si aplica a para llevar; (c) **a quién le corresponde**: al mesero que atendió la mesa, repartida entre todos los meseros, o al establecimiento. La propina siempre es **sugerida**: el comensal decide (S-10). | Al cobrar se muestra la propina sugerida y quien cobra puede quitarla o cambiarla. El reporte de propinas (RPT-033) muestra cuánto le toca a cada quien según la regla configurada. | MVP |
-| RF-026 | Descuentos: por porcentaje o monto fijo, por ítem o por cuenta, con motivo obligatorio de un catálogo configurable. El **gerente** configura si se permiten descuentos y el límite de cada rol (S-05); en la plantilla vienen desactivados `[SUPUESTO]`. | Con descuentos desactivados, la opción no aparece. Un descuento mayor al límite del rol pide autorización (PIN de un usuario con permiso). | MVP |
+| RF-026 | Descuentos: por porcentaje o monto fijo, por ítem o por cuenta, con motivo obligatorio de un catálogo configurable. El **gerente** configura si se permiten descuentos y el límite de cada rol (S-05); en la plantilla vienen desactivados. | Con descuentos desactivados, la opción no aparece. Un descuento mayor al límite del rol pide autorización (PIN de un usuario con permiso). | MVP |
 | RF-027 | Métodos de pago configurables: nombre, tipo (efectivo / tarjeta / transferencia / otro), si admite cambio, si pide referencia, activo. | Solo los métodos de tipo efectivo calculan cambio y afectan el efectivo esperado del corte. | MVP |
 | RF-028 | Motivos configurables de cancelación, reapertura de cuenta, descuento, retiro y depósito de caja. | Cada catálogo es independiente y se puede desactivar un motivo sin perder el historial. | MVP |
 | RF-030 | Usuarios: nombre, usuario, correo opcional, contraseña, PIN de 4–6 dígitos, rol(es), sucursal(es) y estado. | Un usuario inactivo no puede iniciar sesión; su historial se conserva. | MVP |
@@ -46,7 +46,7 @@
 
 | ID | Requisito | Criterio de aceptación | Prioridad |
 |---|---|---|---|
-| RF-050 | Abrir turno de caja con fondo inicial, usuario y dispositivo de caja. **Solo con conexión** (PA-042). El fondo es configurable por caja (PA-024): **fijo** (el mismo monto todos los días, ya escrito) o **variable** (el cajero escribe el monto; se sugiere lo que quedó en el corte anterior `[SUPUESTO]`). | No se puede cobrar en efectivo sin un turno abierto en esa caja. Solo un turno abierto por caja. | MVP |
+| RF-050 | Abrir turno de caja con fondo inicial, usuario y dispositivo de caja. **Solo con conexión** (PA-042). El fondo es configurable por caja (PA-024): **fijo** (el mismo monto todos los días, ya escrito) o **variable** (el cajero escribe el monto; se sugiere lo que quedó en el corte anterior). | No se puede cobrar en efectivo sin un turno abierto en esa caja. Solo un turno abierto por caja. | MVP |
 | RF-051 | Abrir mesa: elegir mesa libre, mesero (por defecto quien abre) y número de comensales. | La mesa pasa a "Ocupada" en todos los dispositivos en ≤ 2 s. | MVP |
 | RF-052 | Crear orden para llevar sin mesa con nombre o teléfono del cliente opcional. | Aparece en la lista "Para llevar" y la comanda dice "PARA LLEVAR" y el nombre. | MVP |
 | RF-053 | Tomar pedido en celular: buscar o navegar por categoría, elegir producto, modificadores, cantidad y nota. | El pedido en borrador se guarda localmente; si se cierra la app, se recupera. | MVP |
@@ -65,7 +65,7 @@
 | RF-066 | Cancelar ítems antes de enviarlos a cocina sin permiso especial (se borran del borrador). | No queda en bitácora como cancelación. | MVP |
 | RF-067 | Cancelar ítems ya enviados a cocina con permiso o autorización y motivo obligatorio. | El KDS muestra el ítem tachado con "CANCELADO" y se imprime una comanda de cancelación. | MVP |
 | RF-068 | ~~Anular una cuenta pagada.~~ **Retirado** (PA-012, 2026-11-11): el sistema **no** tiene anulación de cuentas. Las correcciones se hacen con RF-069. | — | — |
-| RF-069 | Reabrir una cuenta pagada para corregirla, con permiso `bill.reopen` (o 🔑) y motivo obligatorio. Solo si **todos** sus pagos fueron en efectivo (PA-013). Se puede reabrir **desde otro turno** (ej. hubo cambio de turno mientras se resolvía; S-28), dentro del mismo día de negocio `[SUPUESTO]`. La reapertura no depende de si la mesa está ocupada (S-29). Solo con conexión y con un turno abierto en la caja que reabre. | La cuenta vuelve a "Abierta" y sus pagos pasan a "Revertido". El efectivo devuelto se registra como **reverso por reapertura** en el turno abierto de la caja que reabre; el turno original no cambia (si ya se cerró, sigue igual). Se registra en bitácora y se puede corregir y volver a cobrar. Una cuenta pagada con tarjeta, transferencia u otro método **no se puede reabrir ni corregir en el sistema** (PA-051, decisión de RENGO). | MVP |
+| RF-069 | Reabrir una cuenta pagada para corregirla, con permiso `bill.reopen` (o 🔑) y motivo obligatorio. Solo si **todos** sus pagos fueron en efectivo (PA-013). Se puede reabrir **desde otro turno** (ej. hubo cambio de turno mientras se resolvía; S-28), dentro del mismo día de negocio. La reapertura no depende de si la mesa está ocupada (S-29). Solo con conexión y con un turno abierto en la caja que reabre. | La cuenta vuelve a "Abierta" y sus pagos pasan a "Revertido". El efectivo devuelto se registra como **reverso por reapertura** en el turno abierto de la caja que reabre; el turno original no cambia (si ya se cerró, sigue igual). Se registra en bitácora y se puede corregir y volver a cobrar. Una cuenta pagada con tarjeta, transferencia u otro método **no se puede reabrir ni corregir en el sistema** (PA-051, decisión de RENGO). | MVP |
 | RF-070 | Bitácora de auditoría de toda acción sensible (ver RF-255). | Cada registro incluye usuario, autorizador, dispositivo, IP, fecha, entidad, acción, antes y después. | MVP |
 | RF-071 | Abrir el cajón de dinero sin venta con permiso y registro. | Queda en bitácora. | F2 |
 
@@ -77,7 +77,7 @@
 | RF-101 | Toda ocupación nace con una cuenta "Cuenta 1". Se pueden crear más cuentas (ej. por persona) y nombrarlas. | Crear "Cuenta 2 — Ana" y asignarle ítems. | MVP |
 | RF-102 | Asignar y mover ítems entre cuentas de la misma ocupación mientras la cuenta origen y destino no estén pagadas. | Mover recalcula los totales de ambas cuentas. | MVP |
 | RF-103 | Un ítem pertenece a un solo pedido y una sola cuenta; no se divide un ítem entre cuentas ni pedidos. | La API rechaza asignar un ítem a dos cuentas (`409 ITEM_ALREADY_ASSIGNED`). | MVP |
-| RF-104 | Separar una línea con cantidad > 1 en unidades entre cuentas (PA-001). La línea se **divide** en dos ítems (ej. 3 cervezas → 2 + 1) en el mismo pedido, con el mismo producto, modificadores, nota y precio unitario; después cada ítem se mueve a su cuenta. Así se sigue cumpliendo "un ítem = una cuenta" (RF-103). | Separar 1 de "3 × Cerveza" deja "2 × Cerveza" en la Cuenta 1 y "1 × Cerveza" en la Cuenta 2; el total de la mesa no cambia. No se puede dividir un ítem con descuento de ítem aplicado (hay que quitarlo primero) `[SUPUESTO]`, ni uno de una cuenta pagada. | MVP |
+| RF-104 | Separar una línea con cantidad > 1 en unidades entre cuentas (PA-001). La línea se **divide** en dos ítems (ej. 3 cervezas → 2 + 1) en el mismo pedido, con el mismo producto, modificadores, nota y precio unitario; después cada ítem se mueve a su cuenta. Así se sigue cumpliendo "un ítem = una cuenta" (RF-103). | Separar 1 de "3 × Cerveza" deja "2 × Cerveza" en la Cuenta 1 y "1 × Cerveza" en la Cuenta 2; el total de la mesa no cambia. No se puede dividir un ítem con descuento de ítem aplicado (hay que quitarlo primero), ni uno de una cuenta pagada. | MVP |
 | RF-105 | Unir mesas: la ocupación de la mesa B se fusiona con la de A (pedidos y cuentas se conservan). Requiere permiso. | La mesa B pasa a "Unida a A" y se libera junto con A. | MVP |
 | RF-106 | Transferir una ocupación a otra mesa libre. | El historial conserva la mesa original. | MVP |
 | RF-107 | Transferir una mesa o cuenta a otro mesero, con permiso. | El nuevo mesero recibe las notificaciones de "Listo". | MVP |
@@ -117,7 +117,7 @@
 | RF-172 | Exportar cada reporte a CSV, Excel (.xlsx) y PDF. | El archivo respeta filtros, moneda y zona horaria del cliente. | MVP (CSV, Excel) / F2 (PDF) |
 | RF-173 | Mapa de calor de ventas por hora y día de la semana. | Celdas con intensidad por monto. | F2 |
 | RF-174 | Un usuario solo ve las sucursales que tiene asignadas. | Filtro de sucursal limitado. | MVP |
-| RF-175 | Reportes pesados (rango > 92 días) se generan en segundo plano y se avisan al terminar. `[SUPUESTO]` | — | F2 |
+| RF-175 | Reportes pesados (rango > 92 días) se generan en segundo plano y se avisan al terminar. | — | F2 |
 
 ### 1.7 Chatbot de IA para reportes (RF-200 a RF-219)
 
@@ -159,7 +159,7 @@ Detalle en [09-modo-sin-internet.md](09-modo-sin-internet.md).
 | RF-253 | Respaldo manual por cliente. | `respaldo-cliente.sh <Cliente>` genera un `pg_dump` con fecha. | MVP |
 | RF-254 | Plantillas de configuración inicial (roles, métodos de pago, motivos, impresos, menú de ejemplo). | El seed aplica la plantilla elegida. | MVP |
 | RF-255 | Bitácora de auditoría por cliente: quién, qué, cuándo, desde qué dispositivo. | Consultable y exportable; no se puede editar ni borrar desde la app. | MVP |
-| RF-256 | Licencia y módulos activos en la tabla de configuración de la base del cliente, con fecha de vencimiento. | Al vencer la licencia (y los días de gracia configurados en `license.grace_days`, que pueden ser 0) el cliente pasa a **modo solo lectura** (PA-015): puede consultar y exportar, pero no operar. Primer aviso 15 días antes `[SUPUESTO]` y **un aviso nuevo cada día** desde entonces hasta renovar (S-32). | MVP |
+| RF-256 | Licencia y módulos activos en la tabla de configuración de la base del cliente, con fecha de vencimiento. | Al vencer la licencia (y los días de gracia configurados en `license.grace_days`, que pueden ser 0) el cliente pasa a **modo solo lectura** (PA-015): puede consultar y exportar, pero no operar. Primer aviso 15 días antes y **un aviso nuevo cada día** desde entonces hasta renovar (S-32). | MVP |
 
 ### 1.10 Puntos de extensión (RF-270 a RF-279)
 
@@ -189,11 +189,11 @@ Detalle en [09-modo-sin-internet.md](09-modo-sin-internet.md).
 | RNF-010 | Seguridad | Validación de toda entrada con Zod; consultas parametrizadas (Prisma). | Pruebas de inyección fallan. |
 | RNF-011 | Seguridad | Cabeceras de seguridad: CSP, `X-Content-Type-Options`, `Referrer-Policy`. | Verificado en pruebas. |
 | RNF-020 | Rendimiento | Enviar pedido → visible en KDS ≤ 2 s (p95) con conexión normal. | Medido en pruebas de carga. |
-| RNF-021 | Rendimiento | Soportar 30 dispositivos simultáneos por sucursal y 3 sucursales por cliente `[SUPUESTO]`. | Prueba de carga sin errores. |
+| RNF-021 | Rendimiento | Soportar 30 dispositivos simultáneos por sucursal y 3 sucursales por cliente. | Prueba de carga sin errores. |
 | RNF-022 | Rendimiento | RAM por proceso backend ≤ 300 MB (objetivo 150 MB en reposo). pm2 `max_memory_restart: 400M`. | Monitoreo durante 7 días. |
 | RNF-023 | Rendimiento | API p95 ≤ 300 ms en operaciones de servicio (abrir mesa, agregar ítem, pagar). | Medición en logs. |
 | RNF-024 | Rendimiento | Las listas nunca devuelven columnas pesadas; paginación con máximo 200 registros. | Revisión de código y pruebas. |
-| RNF-025 | Rendimiento | `connection_limit` de Prisma por cliente = 5 `[SUPUESTO]`; `max_connections` de PostgreSQL dimensionado (ver [13-operacion.md](13-operacion.md)). | Sin errores de conexiones agotadas. |
+| RNF-025 | Rendimiento | `connection_limit` de Prisma por cliente = 5; `max_connections` de PostgreSQL dimensionado (ver [13-operacion.md](13-operacion.md)). | Sin errores de conexiones agotadas. |
 | RNF-030 | Tiempo real | Reconexión automática de WebSocket con espera exponencial (1 s → 30 s) y resincronización del estado al reconectar. | Tras cortar la red 1 min, el KDS se pone al día solo. |
 | RNF-031 | Tiempo real | Latido (ping) cada 25 s; un cliente sin respuesta se considera desconectado a los 60 s. | — |
 | RNF-040 | Disponibilidad | Disponibilidad mensual ≥ 99.5 % (excluye mantenimiento anunciado). | Monitor externo. |

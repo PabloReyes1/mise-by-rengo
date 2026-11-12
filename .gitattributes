@@ -1,0 +1,18 @@
+# Saltos de línea LF en el repositorio y en la copia de trabajo (el servidor es Linux;
+# los scripts .sh fallan con CRLF). Docs/19-estructura-del-proyecto.md §6
+* text=auto eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.xlsx binary

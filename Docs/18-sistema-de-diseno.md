@@ -27,7 +27,7 @@ Al implementarlo **no se modifica la lógica ni la funcionalidad**: solo se adap
 ## 3. Lineamientos
 1. `primary` es el identificador de la aplicación: es el color que más "se reconoce".
 2. Se priorizan los fondos claros (`background`) y las superficies limpias (`surface`).
-3. No se usan todos los colores con la misma intensidad. Proporción orientativa por pantalla `[SUPUESTO]`: ~60 % `background`, ~25 % `surface`, ~10 % `primary`/`secondary`, ≤ 5 % `accent` y funcionales.
+3. No se usan todos los colores con la misma intensidad. Proporción orientativa por pantalla: ~60 % `background`, ~25 % `surface`, ~10 % `primary`/`secondary`, ≤ 5 % `accent` y funcionales.
 4. Jerarquía visual consistente: una sola acción `primary` por vista o sección; las demás son `secondary` o de contorno.
 5. `accent` solo como complemento.
 6. Contraste y legibilidad garantizados en textos, botones e íconos (§4).
@@ -100,7 +100,7 @@ Los colores de estado son **configurables por cliente** (RF-109); estos son los 
 🟢 En línea → `success` · 🟡 Inestable → `warning` · 🔴 Sin conexión → `error`. Siempre con texto ("En línea", "Inestable", "Sin conexión").
 
 ### 5.4 Reportes y gráficas
-Series en este orden: `primary`, `secondary`, `accent`, `surface` con borde `primary`. Los colores funcionales solo para significado (meta cumplida, alerta de margen). Para más de 4 series se usan tonos de opacidad de `primary`/`secondary`, sin colores nuevos `[SUPUESTO]`.
+Series en este orden: `primary`, `secondary`, `accent`, `surface` con borde `primary`. Los colores funcionales solo para significado (meta cumplida, alerta de margen). Para más de 4 series se usan tonos de opacidad de `primary`/`secondary`, sin colores nuevos.
 
 ### 5.5 Tickets impresos
 Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc 11).
@@ -109,7 +109,7 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 - Los tokens se definen una sola vez como variables CSS (`--color-primary`, `--color-secondary`, `--color-accent`, `--color-surface`, `--color-background`, `--color-success`, `--color-warning`, `--color-error`) y se exponen en el tema de Tailwind con esos mismos nombres.
 - El frontend aplica el tema que devuelve `GET /api/config/public` (doc 06 §3.4): `theme_id` (por defecto `botanical-graphite`) y, si existe, `color_primary_override`.
 - **El cliente solo puede cambiar `primary`** (PA-048). `secondary`, `accent`, `surface`, `background` y los colores funcionales son fijos. Al guardar un `primary` nuevo, el backend valida que cumpla: blanco sobre `primary` ≥ 4.5, `primary` sobre `background` ≥ 4.5 y `primary` sobre `surface` ≥ 4.5; si no cumple, se rechaza con un mensaje que dice qué falla.
-- Revisión de cada pantalla con la skill `web-design-guidelines` y verificación de contraste automática en las pruebas E2E `[SUPUESTO]`.
+- Revisión de cada pantalla con la skill `web-design-guidelines` y verificación de contraste automática en las pruebas E2E.
 - La skill `claude` (`awesome-design-claude`) sigue siendo la referencia para tipografía, espaciado y estilo; **en color manda este documento**.
 
 ## 7. Preguntas de este documento
@@ -145,8 +145,8 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 ### 8.2 Qué cuesta
 | Momento | Esfuerzo | Por qué |
 |---|---|---|
-| En la Semana 0, junto con los tokens | **2 a 3 días extra** `[SUPUESTO]` | Variables CSS, cargar el tema, validador de contraste y la prueba. Botanical Graphite queda como el único tema del MVP |
-| Cada tema nuevo después | **Medio día** `[SUPUESTO]` | Elegir 8 colores, pasar el validador y revisar las pantallas principales |
+| En la Semana 0, junto con los tokens | **2 a 3 días extra** | Variables CSS, cargar el tema, validador de contraste y la prueba. Botanical Graphite queda como el único tema del MVP |
+| Cada tema nuevo después | **Medio día** | Elegir 8 colores, pasar el validador y revisar las pantallas principales |
 | Si se agrega cuando ya hay pantallas | **Semanas** | Hay que buscar y cambiar colores sueltos en todos los componentes |
 
 ### 8.3 Límites
@@ -166,7 +166,7 @@ RENGO entregó 5 paletas de 5 colores. Cada tema necesita los 8 tokens, así que
 - `secondary`: un segundo color que dé ≥ 4.5 sobre `background` (enlaces, íconos activos).
 - `accent`: un color de la paleta solo para detalles; nunca como texto ni como estado.
 - `surface` y `background`: los colores claros.
-- `success`, `warning`, `error`: los de Botanical Graphite (§2) en todos los temas `[SUPUESTO]`, salvo donde la paleta trae un dorado que pasa las reglas: ahí ese dorado reemplaza a `warning` para no tener dos amarillos parecidos.
+- `success`, `warning`, `error`: los de Botanical Graphite (§2) en todos los temas, salvo donde la paleta trae un dorado que pasa las reglas: ahí ese dorado reemplaza a `warning` para no tener dos amarillos parecidos.
 - Cuando la paleta no trae un color que cumpla una regla, se propone un **tono derivado**: el mismo color de la paleta, más claro o más oscuro. Los derivados están marcados con ◆ y fueron **aprobados** por RENGO el 2026-11-12 (PA-054).
 
 #### Tema 1 — "Piedra y rosa" (`piedra-y-rosa`)
@@ -246,5 +246,5 @@ Contraste: blanco sobre `primary` 6.83 ✅ · `primary` sobre `background` 6.83 
 | 4 · Uva y porcelana | 2 | Sí |
 | 5 · Cielo de medianoche | 1 | Sí |
 
-**Cuándo:** el sistema de temas se hace en la Semana 0 con Botanical Graphite; los 5 temas se agregan en H1 como datos, medio día cada uno `[SUPUESTO]`. Antes de publicarlos se revisan las pantallas de mesero, caja y KDS con cada tema.
+**Cuándo:** el sistema de temas se hace en la Semana 0 con Botanical Graphite; los 5 temas se agregan en H1 como datos, medio día cada uno. Antes de publicarlos se revisan las pantallas de mesero, caja y KDS con cada tema.
 

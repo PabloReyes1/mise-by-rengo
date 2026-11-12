@@ -366,7 +366,7 @@ ____________  ____________
 |---|---|
 | Comprobante de retiro/depósito | Tipo, monto, motivo, usuario, autorizador, hora, firma |
 | Página de prueba | Dispositivo, impresora, transporte, ancho, tabla de caracteres especiales (ñ á é í ó ú ü ¿ ¡ Q) |
-| Reporte X (resumen parcial del turno, sin cerrar) | Igual al corte sin conteo ni diferencia `[SUPUESTO — F2]` |
+| Reporte X (resumen parcial del turno, sin cerrar) | Igual al corte sin conteo ni diferencia (F2) |
 
 ## 5. Cajón de dinero
 Se abre con el comando ESC/POS de pulso (`ESC p`) al imprimir un recibo con pago en efectivo, si la impresora de caja tiene `drawer_kick = true`. Apertura sin venta requiere `cash.open_drawer` y queda en bitácora.

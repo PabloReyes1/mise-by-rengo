@@ -1,0 +1,8 @@
+# Paquetes del monorepo (Docs/19-estructura-del-proyecto.md §7)
+packages:
+  - backend
+  - frontend
+  - shared
+
+# Falla la instalación si la versión de Node no cumple "engines" (ADR-012: Node 24)
+engineStrict: true

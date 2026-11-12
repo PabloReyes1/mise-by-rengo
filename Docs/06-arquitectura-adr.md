@@ -111,7 +111,8 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 | `realtime` | Socket.IO, salas, eventos |
 
 ### 3.3 PostgreSQL
-- Un servidor (versión LTS actual `[SUPUESTO: 17]`), solo escucha en `localhost`.
+- Un servidor **PostgreSQL 18** (S-27, aprobado 2026-11-12), solo escucha en `localhost`. PostgreSQL no tiene versiones LTS: cada versión mayor recibe 5 años de soporte (la 18, hasta noviembre de 2030). Prisma 7 soporta oficialmente hasta la 18. La 19 se evalúa cuando Prisma la soporte.
+- **Desarrollo local:** contenedor Docker `postgres:18` (`mise-postgres`, solo en `127.0.0.1:5433`, base `mise_dev`, rol `mise_dev_app`). Docker se usa **solo en las máquinas de desarrollo**; en el servidor PostgreSQL se instala sin Docker (doc 13 §1).
 - Una base por cliente: `mise_<cliente>` (minúsculas). Dueño: rol `mise_<cliente>_app`. Rol de solo lectura para el chatbot: `mise_<cliente>_ro` con acceso solo al esquema `semantic`.
 - Esquemas por base: `public` (tablas de la app) y `semantic` (vistas para reportes y chatbot).
 
@@ -239,7 +240,7 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 | Prisma ORM | 8 (*release candidate*) | 22.18+, 24.11+, 26+; **recomienda 24** | ✅ | ✅ |
 | argon2 | Módulo nativo | Requiere binarios precompilados para la versión de Node | ✅ | ⚠️ verificar |
 
-- **Decisión:** **Node.js 24 LTS** (la versión 24.x más reciente, mínimo 24.11 para ser compatible también con Prisma 8), **Prisma ORM 7** con el cliente sin motor Rust (`prisma-client`) y `@prisma/adapter-pg`, Fastify 5, Vite 8, React 19 y TypeScript ≥ 5.9.
+- **Decisión:** **Node.js 24 LTS** (la versión 24.x más reciente, mínimo 24.11 para ser compatible también con Prisma 8), **Prisma ORM 7** con el cliente sin motor Rust (`prisma-client`) y `@prisma/adapter-pg`, Fastify 5, Vite 8, React 19 y **TypeScript 6.0** (2026-11-12: la 7.0 ya salió, pero typescript-eslint solo soporta hasta la 6.0; se pasa a la 7 cuando lo soporte). Gestor de paquetes: **pnpm** con workspaces (doc 19 §7).
   - La versión se fija en el repositorio (`.nvmrc` y `engines` en `package.json`) y en el servidor (instalación desde el repositorio oficial de Node, doc 13 §1).
 - **Por qué no Node 26:** lleva menos de un mes como LTS, Prisma 7 estable no lo soporta oficialmente y hay que verificar los binarios de argon2. Node 24 tiene soporte de seguridad hasta abril de 2028, suficiente para el MVP y la Fase 2.
 - **Plan de actualización:** pasar a Node 26 cuando Prisma lo soporte en una versión estable, después de probarlo en staging, y siempre antes de 2028-04-30. La actualización es un despliegue normal (doc 13 §4) porque todos los clientes usan el mismo runtime.
@@ -286,7 +287,7 @@ En muchos restaurantes los meseros tomarán pedidos **con su teléfono** y no ha
 | UPS | UPS de 600–750 VA para router, router 4G, punto de acceso e impresora de cocina | — | ≥ 30 min de respaldo |
 | Internet | Fibra o cable ≥ 25 Mbps | — | Plan de datos 4G ≥ 5 GB/mes |
 
-**Consumo de datos estimado** por sucursal: < 300 MB/día `[SUPUESTO]` (sin contar la primera carga de la PWA e imágenes).
+**Consumo de datos estimado** por sucursal: < 300 MB/día (sin contar la primera carga de la PWA e imágenes).
 
 ### 7.3 Antes de comprar
 - Pedir al distribuidor en Guatemala precio y disponibilidad de la TM-m30III Ethernet y la TM-T20III Ethernet, y confirmar que traen ePOS.

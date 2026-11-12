@@ -4,7 +4,7 @@
 
 ## 1. Estrategia
 
-| Nivel | Herramienta `[SUPUESTO]` | Alcance | Meta |
+| Nivel | Herramienta | Alcance | Meta |
 |---|---|---|---|
 | Unitarias | Vitest | Cálculos de cuenta, descuentos, propina, cambio, corte, costeo, conversiones, folios, reglas de conflictos, generación ESC/POS | ≥ 70 % cobertura en dominio (RNF-101) |
 | Integración (API) | Vitest + Fastify `inject` + PostgreSQL de prueba | Endpoints, permisos, idempotencia, transacciones, migraciones | Todos los endpoints |
@@ -151,5 +151,5 @@ Impresoras a validar (PA-021, propuesta de trabajo en doc 06 §7): Epson TM-m30I
 ## 9. Aceptación del primer cliente (UAT)
 1. Configuración real del menú, mesas, usuarios e impresoras con el cliente.
 2. Servicio simulado de 2 horas con el personal (incluye un corte de internet provocado de 15 min).
-3. Operación en paralelo con papel durante 3 días `[SUPUESTO]`, comparando caja diaria.
+3. Operación en paralelo con papel durante 3 días, comparando caja diaria.
 4. Criterio de salida: 0 diferencias de caja atribuibles al sistema, 0 pedidos perdidos, personal capacitado por rol.

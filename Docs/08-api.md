@@ -88,7 +88,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST/PUT | `/api/products[/:id]` | | `config.menu` |
 | PATCH | `/api/products/:id/status` | `{ status: "SOLD_OUT" }` | `menu.toggle_soldout` |
 | POST | `/api/products/:id/image` (multipart) | Sube y redimensiona | `config.menu` |
-| GET | `/api/products/:id/image?v=<updatedAt>` | Imagen WebP, `Cache-Control: public, max-age=31536000, immutable`, `ETag` | Público `[SUPUESTO]` |
+| GET | `/api/products/:id/image?v=<updatedAt>` | Imagen WebP, `Cache-Control: public, max-age=31536000, immutable`, `ETag` | Público |
 | POST/PUT | `/api/modifier-groups[/:id]`, `/api/modifiers[/:id]` | | `config.menu` |
 | POST/PUT | `/api/products/:id/combo-groups` | | `config.menu` |
 | POST | `/api/menu/import` (CSV/XLSX) · GET `/api/menu/export` | F2 | `config.menu` |
@@ -131,7 +131,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/bills/:id/discounts` | `{ id, target: "BILL"|"ITEM", itemId?, kind, value, reasonId, authorization? }` | `discount.apply` |
 | DELETE | `/api/discounts/:id` | Quita descuento (registrado en bitácora) | `discount.apply` |
 | POST | `/api/bills/:id/pay` | `{ tipAmount, payments:[{ id, methodId, amount, tendered?, reference? }], cashRegisterId, version }` → cuenta pagada, cambio, datos del recibo | `payment.register` |
-| POST | `/api/bills/:id/reopen` | `{ reasonId, note, authorization?, version }` — **solo en línea**. Rechaza con `409 REOPEN_NOT_ALLOWED` si algún pago no fue en efectivo (PA-051) o si el cobro es de otro día de negocio `[SUPUESTO]`. Se puede reabrir desde otro turno (S-28) y sin importar si la mesa está ocupada (S-29); requiere un turno **abierto** en la caja que reabre, donde se registra el movimiento `REVERSO_REAPERTURA` (RF-069). No existe `/void` (PA-012) | `bill.reopen` |
+| POST | `/api/bills/:id/reopen` | `{ reasonId, note, authorization?, version }` — **solo en línea**. Rechaza con `409 REOPEN_NOT_ALLOWED` si algún pago no fue en efectivo (PA-051) o si el cobro es de otro día de negocio. Se puede reabrir desde otro turno (S-28) y sin importar si la mesa está ocupada (S-29); requiere un turno **abierto** en la caja que reabre, donde se registra el movimiento `REVERSO_REAPERTURA` (RF-069). No existe `/void` (PA-012) | `bill.reopen` |
 | GET | `/api/bills/:id/receipt` | Datos para reimprimir recibo | `bill.reprint` |
 
 ### 2.8 Caja

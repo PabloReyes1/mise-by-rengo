@@ -1,0 +1,10 @@
+# La documentación y las skills no se reformatean (las tablas Markdown se escriben a mano)
+Docs/
+CLAUDE.md
+.claude/
+
+pnpm-lock.yaml
+node_modules/
+dist/
+coverage/
+backend/prisma/migrations/

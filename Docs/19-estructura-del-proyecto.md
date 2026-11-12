@@ -10,6 +10,7 @@
 
 ```
 mise-by-rengo/
+├── .github/workflows/    CI de GitHub Actions (ci.yml)
 ├── Docs/                 Documentación (manda sobre el código)
 ├── backend/              API Fastify + Prisma (un proceso por cliente)
 ├── frontend/             PWA React (una sola compilación para todos los clientes)
@@ -154,4 +155,42 @@ shared/
 | `tests/e2e/` | Playwright: flujos completos y pruebas sin internet (doc 14 §2–§4, §7) |
 | `tests/load/` | k6: carga (doc 14 §5) |
 
-Los archivos de configuración de la raíz (`package.json`, `tsconfig`, lint, `.gitignore`, `.env.example`) se crean en la Semana 0 ([17 §2](17-plan-de-trabajo.md#2-semana-0-juntos)).
+Los archivos de configuración de la raíz se crean en la Semana 0 ([17 §2](17-plan-de-trabajo.md#2-semana-0-cimientos)), a cargo de Deniscito:
+
+| Archivo | Para qué |
+|---|---|
+| `package.json` | Scripts de todo el repositorio y herramientas compartidas; fija pnpm (`packageManager`) y Node 24 (`engines`) |
+| `pnpm-workspace.yaml` | Declara los paquetes `backend`, `frontend` y `shared` (§7) |
+| `tsconfig.base.json` | Opciones de TypeScript comunes; cada paquete tiene su `tsconfig.json` que lo extiende |
+| `eslint.config.js` | Lint (ESLint con typescript-eslint); incluye la regla "sin colores hex en los módulos" (doc 18) |
+| `.prettierrc.json`, `.prettierignore` | Formato |
+| `.dependency-cruiser.cjs` | Reglas entre módulos (§8) |
+| `vitest.config.ts` | Pruebas: un proyecto por paquete; cada paquete tiene su `vitest.config.ts` |
+| `.nvmrc` | Versión de Node (24) |
+| `.editorconfig`, `.gitattributes` | Saltos de línea LF y UTF-8 en todos los archivos (el servidor es Linux y los `.sh` fallan con CRLF) |
+| `.gitignore`, `.env.example` | Archivos que no se suben y plantilla del `.env` (doc 13 §2.1) |
+| `.github/workflows/ci.yml` | CI: typecheck, lint, formato, reglas entre módulos y pruebas en cada push y pull request |
+
+**Comandos de la raíz:** `pnpm typecheck`, `pnpm lint`, `pnpm format` / `pnpm format:check`, `pnpm check:boundaries`, `pnpm test` y **`pnpm verify`**, que corre todo lo que corre el CI. Antes de subir cambios se corre `pnpm verify`. (No se llama `ci` porque `pnpm ci` es un comando propio de pnpm que reinstala todo.)
+
+## 7. Gestor de paquetes: pnpm
+
+Se usa **pnpm** con workspaces (aprobado por RENGO, 2026-11-12); no se usa npm ni yarn para instalar.
+
+- `pnpm-workspace.yaml` en la raíz declara los tres paquetes: `backend`, `frontend` y `shared`. `backend` y `frontend` usan `shared` como dependencia `workspace:*`.
+- Un solo `pnpm-lock.yaml` en la raíz, que se sube al repositorio. No se suben `package-lock.json` ni `yarn.lock`.
+- La versión de pnpm se fija en el campo `packageManager` del `package.json` de la raíz (hoy `pnpm@12.18.0`) y se activa con Corepack (`corepack enable pnpm`), igual en las máquinas de desarrollo, el CI y el servidor.
+- **Por qué:** pnpm no deja que un paquete use una dependencia que no declaró en su `package.json`. Con npm eso funciona en la PC y falla después en el servidor. Además instala más rápido y ocupa menos disco.
+
+## 8. Las reglas entre módulos las revisa la máquina
+
+Las reglas de importación de §3, §4 y §5 no se quedan solo en este documento: las verifica **dependency-cruiser** (archivo `.dependency-cruiser.cjs` en la raíz) con el comando `pnpm check:boundaries`. Corre en el CI y **el CI falla si alguna se rompe** (aprobado por RENGO, 2026-11-12).
+
+| Regla | Dónde está escrita |
+|---|---|
+| Un módulo del backend no importa archivos internos de otro módulo; solo lo que exporta su `index.ts` | §3 |
+| Un módulo del frontend no importa nada de otro módulo; lo común se sube a `core/` | §4 |
+| `shared/` no importa nada de `backend/` ni de `frontend/` | §5 |
+| `backend/` y `frontend/` no se importan entre sí; lo que comparten va en `shared/` | §1 |
+
+Si hace falta una excepción, primero se escribe aquí con su motivo, después se agrega al archivo de reglas y se registra en el Control de cambios. No se desactiva una regla en el código para que el CI pase.

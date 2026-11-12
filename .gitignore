@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+
+# Compilados y reportes
+dist/
+coverage/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Variables de entorno (solo se sube la plantilla)
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Claude Code: configuración personal
+.claude/settings.local.json

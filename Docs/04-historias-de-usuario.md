@@ -65,7 +65,7 @@ Como **cajero**, quiero registrar un retiro de Q 300.00 para pagar al proveedor 
 
 ### HU-012 Corte de caja (RF-065)
 Como **cajero**, quiero hacer el corte de mi turno, para entregar la caja cuadrada.
-- **Dado** que hay cuentas abiertas cobradas parcialmente en mi turno, **cuando** inicio el corte, **entonces** se me avisa y puedo continuar (las cuentas siguen abiertas para el siguiente turno) `[SUPUESTO]`.
+- **Dado** que hay cuentas abiertas cobradas parcialmente en mi turno, **cuando** inicio el corte, **entonces** se me avisa y puedo continuar (las cuentas siguen abiertas para el siguiente turno).
 - **Dado** esperado Q 2,350.00 y contado Q 2,340.00, **cuando** confirmo, **entonces** se registra diferencia −Q 10.00, se pide comentario obligatorio si la diferencia supera el umbral configurado y se imprime el corte.
 - **Dado** que no tengo `cash.view_expected`, **cuando** hago el corte, **entonces** cuento primero (corte a ciegas) y solo después veo la diferencia.
 - **Dado** que no hay internet, **cuando** hago el corte, **entonces** se registra como **corte provisional**, se imprime con la marca "PROVISIONAL — sin sincronizar" y se confirma solo al volver la conexión (PA-042). Abrir un turno nuevo sí requiere conexión.
@@ -138,7 +138,7 @@ Como **mesero**, quiero imprimir la pre-cuenta de la cuenta 1, para que el comen
 ### HU-041 Cobrar con varios métodos (RF-061, RF-062)
 Como **cajero**, quiero cobrar una cuenta parte en efectivo y parte con tarjeta, para aceptar cómo paga el comensal.
 - **Dado** total Q 203.50 (incluida propina), **cuando** registro tarjeta Q 100.00 con referencia y efectivo Q 150.00, **entonces** el cambio es Q 46.50, la cuenta queda pagada y se imprime el recibo.
-- **Dado** que registro tarjeta Q 250.00 en una cuenta de Q 203.50, **entonces** se rechaza: "El excedente solo puede darse como cambio en efectivo" `[SUPUESTO]`.
+- **Dado** que registro tarjeta Q 250.00 en una cuenta de Q 203.50, **entonces** se rechaza: "El excedente solo puede darse como cambio en efectivo".
 
 ### HU-042 Aplicar descuento (RF-026)
 Como **cajero**, quiero aplicar 10 % de descuento a la cuenta por "Cliente frecuente", para premiar al cliente.

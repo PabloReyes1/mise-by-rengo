@@ -2,7 +2,7 @@
 
 > ⚠️ **IMPORTANTE — REGLA DEL PROYECTO:** No se escribe ninguna línea de código hasta que esta documentación esté terminada y aprobada. La documentación vive en `Docs/` en formato `.md` y **se actualiza cada vez que se hace un cambio**. Registra cada cambio en el [Control de cambios](README.md#control-de-cambios).
 
-> Estado: **Propuesta** — pendiente de aprobación por RENGO. Las semanas siguen el Gantt de [15-roadmap.md](15-roadmap.md) (duraciones `[SUPUESTO]`, S-22). Las carpetas están en [19-estructura-del-proyecto.md](19-estructura-del-proyecto.md).
+> Estado: ✅ **Aprobado** por RENGO (2026-11-12). Las semanas siguen el Gantt de [15-roadmap.md](15-roadmap.md) (duraciones confirmadas, S-22). Las carpetas están en [19-estructura-del-proyecto.md](19-estructura-del-proyecto.md).
 
 ## 1. Cómo se reparte: por módulos
 
@@ -18,7 +18,7 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | Documentos que mantiene | 05 (pasos 1–4 y 9–14), 09, RPT de caja en 12, 13 | 05 (pasos 5–8), 10, 11, 12, 18 |
 | Pruebas | PR-001, PR-008 a PR-017, PR-100–102, PR-104–107, PR-200–220, PR-500–506 | PR-002 a PR-007, PR-018 a PR-026, PR-103, PR-108, PR-300–304, PR-400–408 |
 
-**De los dos (se hacen juntos en la Semana 0 y después se cambian solo avisando):** `frontend/src/app/`, `frontend/src/styles/`, `frontend/src/core/api/`, `core/ui/`, `core/format/`, `shared/domain/orders`, `shared/domain/ids`, `backend/src/core/`. En `core/print/documents/` cada uno hace los impresos de su módulo: comanda (Persona 2); pre-cuenta, recibo, corte y movimientos (Persona 1).
+**De los dos (los construye Deniscito en la Semana 0; después son de los dos y se cambian solo avisando):** `frontend/src/app/`, `frontend/src/styles/`, `frontend/src/core/api/`, `core/ui/`, `core/format/`, `shared/domain/orders`, `shared/domain/ids`, `backend/src/core/`. En `core/print/documents/` cada uno hace los impresos de su módulo: comanda (Persona 2); pre-cuenta, recibo, corte y movimientos (Persona 1).
 
 **Asignación (PA-047, resuelta 2026-11-12):** Persona 1 (P1, Sala y caja) = **Pablito** · Persona 2 (P2, Cocina y gestión) = **Deniscito**.
 
@@ -32,19 +32,21 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | La comanda se imprime desde el celular del mesero (también sin internet) | P2 hace `core/print` y el documento comanda; P1 lo llama al enviar | P1 usa la función de impresión que expone `core/print`, sin cambiarla |
 | Sin internet, el KDS no recibe pedidos | P1 (`sync`, `core/offline`) | P2 solo muestra el banner y la etiqueta "LLEGÓ TARDE" en el KDS |
 
-## 2. Semana 0 (juntos)
+## 2. Semana 0 (cimientos)
 
-3–5 días, al aprobar la documentación. Es lo único que bloquea a ambos.
+5–8 días hábiles `[SUPUESTO]` (S-43), al aprobar la documentación. **Los cimientos los hace Deniscito (P2)** (RENGO, 2026-11-12): son lo que tiene que existir antes de que Pablito tome sus módulos. Pablito revisa cada entregable y avanza en lo suyo que no depende de los cimientos.
 
 | # | Entregable | Quién |
 |---|---|---|
-| 1 | Archivos de configuración de la raíz: `package.json` con workspaces, `tsconfig`, lint, formato, Vitest, `.gitignore`, `.env.example` | P1 |
-| 2 | CI: typecheck, lint y pruebas | P1 |
+| 1 | Archivos de configuración de la raíz: `package.json` y `pnpm-workspace.yaml` (pnpm, doc 19 §7), `tsconfig`, lint, formato, Vitest, reglas entre módulos con dependency-cruiser (doc 19 §8), `.gitignore`, `.env.example` | P2 |
+| 2 | CI: typecheck, lint, reglas entre módulos (`pnpm check:boundaries`) y pruebas | P2 |
 | 3 | `backend/src/core`: `.env` con Zod, Prisma, Fastify en `127.0.0.1`, `GET /api/health`, errores, logger, verificación de JWT y permisos | P2 |
-| 4 | `frontend/src/app`, `styles` (tokens de doc 18), `core/api`, `core/ui` con los componentes base | Juntos |
-| 5 | `shared/contracts/errors`, `shared/domain/orders` (estados) y `shared/domain/ids` | Juntos |
+| 4 | `frontend/src/app`, `styles` (tokens de doc 18 y sistema de temas), `core/api`, `core/ui` con los componentes base, `core/format` | P2; P1 revisa |
+| 5 | `shared/contracts/errors`, `shared/domain/orders` (estados) y `shared/domain/ids` | P2; P1 revisa los estados de `orders` |
 | 6 | Contratos v1 de `auth`, `catalog` y `orders`, que son los que conectan los dos módulos | Cada uno los suyos; el otro los revisa |
 | 7 | `templates/seed` y `templates/restaurante-basico` con un menú de prueba | P2 |
+
+**Mientras tanto, Pablito (P1):** revisa los entregables 1 a 5 (sobre todo los estados de `shared/domain/orders`, que son de su módulo), escribe el contrato v1 de `orders` (entregable 6), prepara el servidor de staging y las plantillas de Caddy y pm2, empieza `scripts/nuevo-cliente.sh` y termina los bocetos de mesero y caja. Sus módulos (`floor`, outbox, `orders`…) empiezan en H1, cuando los cimientos estén terminados.
 
 ## 3. Reglas para trabajar por separado e integrar después
 
@@ -72,8 +74,8 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | # | Módulo | Qué incluye | Tipo | Depende de | Persona | Hito |
 |:-:|---|---|:-:|---|:-:|:-:|
 | 1 | Cimientos del backend (`backend/src/core`, `system`) | `.env` validado, escucha en `127.0.0.1`, `GET /api/health`, errores, logs con etiquetas, montos en `numeric` | 🧱 | — | P2 | S0 |
-| 2 | Cimientos compartidos (`shared/domain/ids`, `contracts/errors`) | ULID, formato de errores | 🧱 | — | Juntos | S0 |
-| 3 | Cimientos del frontend (`app`, `styles`, `core/api`, `core/ui`) | Rutas, sistema de temas con Botanical Graphite como único tema y validador de contraste (doc 18 §8, +2–3 días `[SUPUESTO]`), componentes base, cliente `/api` relativo, PWA instalable | 🧱 | 1 | Juntos | S0 |
+| 2 | Cimientos compartidos (`shared/domain/ids`, `contracts/errors`) | ULID, formato de errores | 🧱 | — | P2 | S0 |
+| 3 | Cimientos del frontend (`app`, `styles`, `core/api`, `core/ui`) | Rutas, sistema de temas con Botanical Graphite como único tema y validador de contraste (doc 18 §8, +2–3 días), componentes base, cliente `/api` relativo, PWA instalable | 🧱 | 1 | P2 | S0 |
 | 4 | **Login y permisos** (`auth`) | Emparejar dispositivo, login, PIN, JWT por cliente (15 min, se refresca; vence a las 12 h sin actividad), permisos en el backend, 🔑, bloqueo por intentos | 🔒 | 1, 2 | P2 | H1 (sem. 1–2) |
 | 5 | **Bitácora** (`audit`) | Registro de solo `INSERT`; cada módulo la usa desde su primera acción sensible | 🧱 | 4 | P2 | H1 |
 | 6 | **Configuración y licencia** (`config`, `core/config`) | Datos del restaurante, sucursal, regionales, módulos activos (`403 MODULE_DISABLED`), `config/public` | 🔒🧱 | 4 | P2 | H1 |
@@ -162,6 +164,7 @@ P1: E2E de sala y caja, pruebas sin internet. P2: E2E de cocina y admin, carga (
 
 | Riesgo | Mitigación |
 |---|---|
+| Toda la Semana 0 depende de una sola persona (P2) | Orden fijo de los entregables (1 → 5); P1 revisa cada uno al terminarlo para no frenar; si P2 se atrasa, P1 toma el CI (entregable 2) |
 | P1 depende del login y el menú de P2 al inicio | P2 los hace primero; P1 empieza con el menú de `templates/restaurante-basico` y un usuario de desarrollo |
 | P1 tiene la parte más difícil (sin internet) | Diseño conjunto de 1 día al iniciar H4; si P1 se atrasa, P2 toma `scripts/` |
 | Las dos personas editan la tabla `orders` | Dueño único (P1); P2 pide los campos de cocina por contrato (§3 regla 2) |

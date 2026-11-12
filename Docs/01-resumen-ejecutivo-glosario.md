@@ -40,7 +40,7 @@ El primer cliente es un restaurante pequeño en Guatemala que lleva sus cuentas 
 ### 1.6 Arquitectura en una línea
 VPS Hetzner → Caddy (HTTPS, estáticos del frontend PWA, `/api/*` por dominio) → un proceso Node/Fastify por cliente en pm2 (solo `127.0.0.1`) → un PostgreSQL con una base por cliente. Ver [06-arquitectura-adr.md](06-arquitectura-adr.md).
 
-### 1.7 Métricas de éxito del MVP `[SUPUESTO]`
+### 1.7 Métricas de éxito del MVP
 | Métrica | Meta |
 |---|---|
 | Tiempo de toma de un pedido de 4 ítems en celular | ≤ 60 s |

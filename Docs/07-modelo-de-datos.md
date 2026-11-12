@@ -140,8 +140,8 @@ erDiagram
 | tip_suggested_pct | numeric(5,2) | Ej. 10.00; null = sin sugerencia. La propina siempre es sugerida (S-10) |
 | tip_editable, tip_applies_takeaway | boolean | |
 | tip_base | text | `AFTER_DISCOUNT` (default) / `BEFORE_DISCOUNT` |
-| tip_distribution | text | A quién le corresponde (PA-046): `WAITER` (mesero que atendió la mesa), `POOL` (se reparte entre todos los meseros; en partes iguales entre los que trabajaron ese día de negocio `[SUPUESTO]`), `HOUSE` (el establecimiento) |
-| discounts_enabled | boolean | El gerente decide si se permiten descuentos (S-05). Default `false` en la plantilla `[SUPUESTO]` |
+| tip_distribution | text | A quién le corresponde (PA-046): `WAITER` (mesero que atendió la mesa), `POOL` (se reparte entre todos los meseros; en partes iguales entre los que trabajaron ese día de negocio), `HOUSE` (el establecimiento) |
+| discounts_enabled | boolean | El gerente decide si se permiten descuentos (S-05). Default `false` en la plantilla |
 | soldout_on_send | text | Al enviar un borrador con un producto que se agotó (PA-041): `ANY_USER_CONFIRMS` (default), `MANAGER_AUTH`, `BLOCK` |
 | table_cleaning_state | boolean | Estado de mesa "Por limpiar" tras liberar (PA-040). Default `false` |
 | kitchen_ticket_order | text | Orden de la comanda (PA-043): `CART` (default) / `CATEGORY` |
@@ -158,7 +158,7 @@ erDiagram
 **`license`** (una fila)
 | Columna | Tipo | Nota |
 |---|---|---|
-| plan | text | `BASICO`, `PRO`, ... `[PENDIENTE DE DEFINIR]` planes comerciales |
+| plan | text | `BASICO`, `PRO`, ... Los planes los define RENGO después (PA-014, aprobado así el 2026-11-12) |
 | status | text | `ACTIVA`, `GRACIA`, `SOLO_LECTURA`, `SUSPENDIDA` |
 | modules | jsonb | `{ "recipes": true, "ai": false, "multiBranch": false, "advancedReports": true }` |
 | limits | jsonb | `{ "branches": 1, "devices": 15, "aiQuestionsPerMonth": 100 }` — al llegar al límite de preguntas el chat se bloquea y pide contactar a RENGO (S-13) |
@@ -292,7 +292,7 @@ erDiagram
 ### 4.6 Recetas y costeo
 
 **`units`**: id, code (`kg`, `g`, `l`, `ml`, `u`, `oz`), name, dimension (`MASS`, `VOLUME`, `COUNT`).
-**`unit_conversions`**: from_unit_id, to_unit_id, factor (ej. kg→g = 1000). Conversiones por insumo (ej. 1 u de huevo = 50 g) en `ingredient_unit_conversions` `[SUPUESTO]`.
+**`unit_conversions`**: from_unit_id, to_unit_id, factor (ej. kg→g = 1000). Conversiones por insumo (ej. 1 u de huevo = 50 g) en `ingredient_unit_conversions`.
 **`ingredients`**: id, name, category, base_unit_id, current_unit_cost numeric(12,4), active.
 **`ingredient_costs`**: id, ingredient_id, unit_cost, valid_from, set_by. (Historial; sin compras ni existencias.)
 **`recipes`**: id, product_id null, modifier_id null, combo_option_id null, is_subrecipe, name, yield_qty, yield_unit_id, computed_cost, computed_at.
@@ -321,7 +321,7 @@ Fórmulas: `costo = Σ cantidad_convertida × (1 + merma%) × costo_unitario`; `
 **`folio_sequences`**: branch_id, doc_type (`ORDER`, `BILL`), last_value. Folio definitivo con `UPDATE ... RETURNING` en la transacción.
 **`connectivity_logs`**: id, device_id, offline_from, offline_to, duration_s, pending_ops_max, network_type, notes.
 **`realtime_events`**: seq bigserial, branch_id, event, payload jsonb, at (retención 24 h).
-**`ai_queries`** (PA-032: **no** se guardan conversaciones ni respuestas): id, user_id, branch_scope, asked_at, question text (truncada a 300 caracteres), semantic_query jsonb (la consulta interpretada, para repetirla), rows_returned, tokens_in, tokens_out, cost_usd, latency_ms, flagged (fuera de alcance o bloqueada). Retención `[SUPUESTO]`: 12 meses.
+**`ai_queries`** (PA-032: **no** se guardan conversaciones ni respuestas): id, user_id, branch_scope, asked_at, question text (truncada a 300 caracteres), semantic_query jsonb (la consulta interpretada, para repetirla), rows_returned, tokens_in, tokens_out, cost_usd, latency_ms, flagged (fuera de alcance o bloqueada). Retención: 12 meses.
 **`ai_usage_monthly`**: month, questions, tokens_in, tokens_out, cost_usd (para el límite de 100 preguntas al mes, S-13).
 
 ### 4.8 Punto de extensión FEL

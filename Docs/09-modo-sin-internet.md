@@ -19,7 +19,7 @@ Si la capa 1 funciona (el caso esperado), el personal ni se entera del corte. La
 
 ## 2. Capa 1 — Redundancia de conexión (primera línea de defensa)
 
-| Opción | Descripción | Costo aprox. `[SUPUESTO]` | Recomendación |
+| Opción | Descripción | Costo aprox. | Recomendación |
 |---|---|---|---|
 | Router dual WAN con failover automático | Fibra/cable como principal + módem 4G/LTE USB o por Ethernet como respaldo. Cambia en segundos sin intervención. | Router Q 800–2 000 + plan de datos | **Recomendado** para todo cliente |
 | Router 4G con SIM como segunda WAN | Igual al anterior, con SIM integrada | Similar | Alternativa |
@@ -31,7 +31,7 @@ Si la capa 1 funciona (el caso esperado), el personal ni se entera del corte. La
 | Requisito | Valor |
 |---|---|
 | Ancho de banda | ≥ 10 Mbps bajada, ≥ 2 Mbps subida por sucursal |
-| Latencia al VPS (Hetzner) | < 250 ms. El VPS va en **EE. UU.** (PA-022), lo que deja ~60–90 ms desde Guatemala `[SUPUESTO]` (en Europa serían ~150–200 ms) |
+| Latencia al VPS (Hetzner) | < 250 ms. El VPS va en **EE. UU.** (PA-022), lo que deja ~60–90 ms desde Guatemala (en Europa serían ~150–200 ms) |
 | Wi-Fi | 5 GHz para dispositivos + 2.4 GHz para impresoras si lo requieren; cobertura en cocina, salón, terraza y caja (≥ −67 dBm) |
 | IP de impresoras | **Fija** (reservada por DHCP en el router) |
 | Aislamiento de clientes Wi-Fi | **Desactivado** en la red del personal (si no, los celulares no ven la impresora) |
@@ -157,7 +157,7 @@ El estado no se basa solo en `navigator.onLine` (poco fiable):
 
 ### 6.2 Cobro en caja de una mesa a cargo de un mesero (sin conexión)
 Caso común: la mesa la abrió el celular del mesero, pero se cobra en caja.
-1. El mesero imprime la **pre-cuenta** desde su dispositivo (impresión local). La pre-cuenta offline incluye folio temporal, total y un **código QR** con `{occupancyId, billId, version, total, itemIds}`. **Entra en el MVP** (PA-044); el formato exacto se valida en F1 `[SUPUESTO]`.
+1. El mesero imprime la **pre-cuenta** desde su dispositivo (impresión local). La pre-cuenta offline incluye folio temporal, total y un **código QR** con `{occupancyId, billId, version, total, itemIds}`. **Entra en el MVP** (PA-044); el formato exacto se valida en F1.
 2. En la caja, el cajero pulsa "Cobrar pre-cuenta" y escanea el QR (cámara) o ingresa folio y total. La caja **toma** la cuenta: crea localmente la cuenta con ese estado y la cobra.
 3. Al sincronizar, el servidor compara el pago con el total real de la cuenta tras aplicar las operaciones del mesero:
    - Coincide → sin conflicto.

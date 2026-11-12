@@ -8,10 +8,10 @@
 
 | Paso | Detalle |
 |---|---|
-| VPS | Hetzner Cloud, Ubuntu LTS. Ubicación: **EE. UU.** (PA-022, resuelta) por latencia a Guatemala; se recomienda Ashburn (costa este, más cerca de Guatemala que Hillsboro) `[SUPUESTO]`. Tamaño inicial: lo **define RENGO** (S-16); referencia 4 vCPU / 8 GB RAM / 160 GB disco |
+| VPS | Hetzner Cloud, Ubuntu LTS. Ubicación: **EE. UU.** (PA-022, resuelta) por latencia a Guatemala; se recomienda Ashburn (costa este, más cerca de Guatemala que Hillsboro). Tamaño inicial: lo **define RENGO** (S-16); referencia 4 vCPU / 8 GB RAM / 160 GB disco |
 | Usuarios | `mise` (servicio, sin login por contraseña) y usuarios de operadores con llave SSH; `PasswordAuthentication no`, `PermitRootLogin no` |
 | Firewall | `ufw`: permitir 22, 80, 443; denegar el resto. `fail2ban` para SSH |
-| Paquetes | Node.js LTS (vía repositorio oficial), pm2 (global), PostgreSQL (LTS), Caddy (repositorio oficial), `cron`, `jq`, `curl` |
+| Paquetes | Node.js LTS (vía repositorio oficial), pm2 (global), pnpm (con Corepack, versión fijada en `packageManager`; doc 19 §7), PostgreSQL 18 (repositorio oficial PGDG), Caddy (repositorio oficial), `cron`, `jq`, `curl` |
 | Actualizaciones | `unattended-upgrades` solo de seguridad |
 | PostgreSQL | `listen_addresses = 'localhost'`; `max_connections` según §6.2; `shared_buffers` ≈ 25 % de RAM; autenticación `scram-sha-256` |
 | pm2 | `pm2 startup systemd -u mise`; `pm2-logrotate` (10 MB, 14 archivos, comprimidos) |
@@ -122,7 +122,7 @@ flowchart TD
 | 4 | `prisma migrate deploy` en cada base (recorriendo `registry.csv`, cargando el `DATABASE_URL` de cada `.env`) | Detener el despliegue; las bases ya migradas quedan con columnas nuevas que el código viejo ignora (por eso las migraciones solo agregan). Corregir y reintentar |
 | 5 | Recrear vistas `semantic` (`CREATE OR REPLACE VIEW`, solo agregando columnas) | Igual |
 | 6 | `prisma generate` | Abortar (nada reiniciado aún) |
-| 7 | `npm ci` + compilar backend (`tsc`) y frontend (`vite build`) **una vez**, en un directorio temporal; luego cambio atómico de `dist` (renombrar) | Abortar; se mantiene el `dist` anterior |
+| 7 | `pnpm install --frozen-lockfile` + compilar backend (`tsc`) y frontend (`vite build`) **una vez**, en un directorio temporal; luego cambio atómico de `dist` (renombrar) | Abortar; se mantiene el `dist` anterior |
 | 8 | `pm2 restart all` (o `pm2 reload` escalonado por cliente) | Revisar logs; `rollback` = volver al `dist` anterior y `pm2 restart all` (el esquema nuevo es compatible) |
 | 9 | Verificar `GET /api/health` de cada dominio | Alerta Telegram |
 | 10 | Registrar versión, fecha y operador en `/opt/mise/deploys.log` | — |
@@ -151,7 +151,7 @@ flowchart TD
 
 Lee `monitor.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, umbrales, `REPEAT_MINUTES`).
 
-| Verificación | Cómo | Umbral por defecto `[SUPUESTO]` |
+| Verificación | Cómo | Umbral por defecto |
 |---|---|---|
 | Proceso caído | `pm2 jlist` → estado ≠ `online` | Inmediato |
 | Proceso reiniciado | `restart_time` aumentó desde la última ejecución | Cualquier reinicio |
@@ -176,7 +176,7 @@ Lee `monitor.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, umbrales, `REPEAT_M
 ## 7. Límites y crecimiento
 
 ### 7.1 RAM
-| Componente | Consumo estimado `[SUPUESTO — medir en F1]` |
+| Componente | Consumo estimado (medir en F1) |
 |---|---|
 | Sistema + Caddy + pm2 | ~400 MB |
 | PostgreSQL | `shared_buffers` 25 % de RAM + ~5–10 MB por conexión activa |
@@ -195,7 +195,7 @@ Lee `monitor.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, umbrales, `REPEAT_M
 `max_connections = (clientes × 8) + 20 reservadas`. Ej.: 20 clientes → 180 → configurar 200. Si se supera ~300, usar **PgBouncer** en modo *transaction* (compatible con Prisma configurando `pgbouncer=true`).
 
 ### 7.3 Disco
-| Elemento | Estimación por cliente `[SUPUESTO]` |
+| Elemento | Estimación por cliente |
 |---|---|
 | Base de datos (1 sucursal, ~150 cuentas/día) | ~0.5–1 GB/año (incluye imágenes y bitácora) |
 | Respaldos (14 + 8 + 12 + 5 copias comprimidas) | ~10× el tamaño comprimido de la base |

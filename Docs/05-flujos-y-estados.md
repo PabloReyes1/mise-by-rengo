@@ -38,7 +38,7 @@ flowchart TD
 |---|---|
 | Actor | Cajero (o gerente) con `cash.open_shift` |
 | Pantalla | Caja › Abrir turno |
-| Entradas | Caja (dispositivo), fondo inicial, observación. El fondo depende de la configuración de la caja (PA-024): **fijo** = el sistema escribe el monto configurado; **variable** = el cajero lo escribe (se sugiere lo que quedó en el corte anterior `[SUPUESTO]`) |
+| Entradas | Caja (dispositivo), fondo inicial, observación. El fondo depende de la configuración de la caja (PA-024): **fijo** = el sistema escribe el monto configurado; **variable** = el cajero lo escribe (se sugiere lo que quedó en el corte anterior) |
 | Estados | Turno: — → `ABIERTO` |
 | Reglas | Un solo turno `ABIERTO` por caja. Se puede operar mesas sin turno, pero **no** cobrar en efectivo. |
 | Errores | Turno ya abierto (`409 SHIFT_ALREADY_OPEN`). **Sin conexión no se puede abrir turno** (PA-042): el botón muestra "Requiere conexión". |
@@ -109,7 +109,7 @@ flowchart TD
 | Actor | Mesero (`order.deliver`) |
 | Estados | Pedido `LISTO` → `ENTREGADO`; `delivered_at = now()` |
 | Métricas | Espera = `accepted_at − sent_at`; Preparación = `ready_at − accepted_at`; Entrega = `delivered_at − ready_at` |
-| Reglas | Si el mesero olvida marcar entregado, el pedido se marca automáticamente al imprimir la pre-cuenta `[SUPUESTO]` y se excluye del promedio de tiempo de entrega (`delivered_auto = true`). |
+| Reglas | Si el mesero olvida marcar entregado, el pedido se marca automáticamente al imprimir la pre-cuenta y se excluye del promedio de tiempo de entrega (`delivered_auto = true`). |
 
 ### Paso 10 — Pre-cuenta
 | Aspecto | Detalle |
@@ -139,7 +139,7 @@ flowchart TD
 | Actor | Cajero / gerente (`cash.close_shift`) |
 | Fórmula | Efectivo esperado = fondo inicial + Σ cobros en efectivo **registrados en este turno** (monto aplicado a la cuenta, ya neto del cambio entregado; incluye los que después se revirtieron) + depósitos − retiros − **reversos por reapertura registrados en este turno** (ver RPT-030 en [12-catalogo-reportes.md](12-catalogo-reportes.md)). Así cada turno refleja el efectivo que realmente entró y salió de su caja, aunque la reapertura ocurra en otro turno |
 | Estados | Turno `ABIERTO` → `EN_CORTE` → `CERRADO`; sin conexión: `EN_CORTE` → `CERRADO_PROVISIONAL` → `CERRADO` al sincronizar |
-| Corte sin conexión (PA-042) | Se permite. El dispositivo de caja calcula el esperado con los datos que tiene, el cajero cuenta y se imprime el corte marcado **"PROVISIONAL — sin sincronizar"**. El turno queda `CERRADO_PROVISIONAL`: ya no acepta cobros, pero tampoco se puede abrir otro turno en esa caja hasta volver la conexión (abrir turno requiere conexión). Al sincronizar, el servidor recalcula el esperado con **todas** las operaciones; si coincide, el turno pasa a `CERRADO`; si no, pasa a `CERRADO` con el esperado del servidor y se crea el conflicto `CORTE_DIFERENTE` para el gerente, que puede reimprimir el corte definitivo `[SUPUESTO]` |
+| Corte sin conexión (PA-042) | Se permite. El dispositivo de caja calcula el esperado con los datos que tiene, el cajero cuenta y se imprime el corte marcado **"PROVISIONAL — sin sincronizar"**. El turno queda `CERRADO_PROVISIONAL`: ya no acepta cobros, pero tampoco se puede abrir otro turno en esa caja hasta volver la conexión (abrir turno requiere conexión). Al sincronizar, el servidor recalcula el esperado con **todas** las operaciones; si coincide, el turno pasa a `CERRADO`; si no, pasa a `CERRADO` con el esperado del servidor y se crea el conflicto `CORTE_DIFERENTE` para el gerente, que puede reimprimir el corte definitivo |
 | Reglas | Con conexión, no debe haber operaciones pendientes en la outbox del dispositivo de caja. Corte a ciegas si el usuario no tiene `cash.view_expected`. Comentario obligatorio si la diferencia supera el umbral configurado. El conteo por denominación es obligatorio u opcional según la configuración de la caja (PA-025; por defecto opcional). Se imprime el reporte. Un turno cerrado es inmutable. |
 
 ### Paso 14 — Cancelaciones y reapertura de cuentas
@@ -150,7 +150,7 @@ flowchart TD
 | Ítem enviado, no listo | `order.cancel_sent` o 🔑 | Obligatorio | Ítem `CANCELADO`; KDS lo tacha; comanda de cancelación; bitácora |
 | Ítem listo o entregado | `order.cancel_sent` o 🔑 | Obligatorio | Ítem `CANCELADO` con marca `after_ready = true` (merma); bitácora |
 | Pedido completo enviado | `order.cancel_sent` o 🔑 | Obligatorio | Todos sus ítems `CANCELADO`; pedido `CANCELADO` |
-| Reabrir cuenta pagada (RF-069) | `bill.reopen` o 🔑 | Obligatorio | Solo si **todos** los pagos fueron en efectivo. Se puede hacer desde **otro turno** (S-28), dentro del mismo día de negocio `[SUPUESTO]`, y no importa si la mesa está ocupada (S-29). Requiere un turno abierto en la caja que reabre. Cuenta `PAGADA` → `ABIERTA`; pagos `REVERTIDO`; movimiento `REVERSO_REAPERTURA` en el turno abierto de esa caja (el turno original no cambia); bitácora. **La mesa y la ocupación no cambian**: la cuenta reabierta aparece en Caja › "Cuentas reabiertas", ahí se corrige y se cobra de nuevo con recibo nuevo. **Solo con conexión.** |
+| Reabrir cuenta pagada (RF-069) | `bill.reopen` o 🔑 | Obligatorio | Solo si **todos** los pagos fueron en efectivo. Se puede hacer desde **otro turno** (S-28), dentro del mismo día de negocio, y no importa si la mesa está ocupada (S-29). Requiere un turno abierto en la caja que reabre. Cuenta `PAGADA` → `ABIERTA`; pagos `REVERTIDO`; movimiento `REVERSO_REAPERTURA` en el turno abierto de esa caja (el turno original no cambia); bitácora. **La mesa y la ocupación no cambian**: la cuenta reabierta aparece en Caja › "Cuentas reabiertas", ahí se corrige y se cobra de nuevo con recibo nuevo. **Solo con conexión.** |
 | Cuenta pagada con tarjeta, transferencia u otro método | — | — | **No se puede reabrir ni corregir en el sistema** (PA-051, decisión de RENGO) |
 
 ## 3. Flujo de pago (detalle)
