@@ -276,3 +276,95 @@ describe('consultar y editar la ocupación', () => {
     expect(res.json().error.code).toBe('TABLE_OCCUPIED');
   });
 });
+
+describe('unir, trasladar y transferir (RF-105 a RF-107)', () => {
+  let table6: string;
+  let table7: string;
+
+  beforeEach(async () => {
+    table6 = (await post('/api/tables', admin, { zoneId, name: '6', capacity: 4 })).json().id;
+    table7 = (await post('/api/tables', admin, { zoneId, name: '7', capacity: 2 })).json().id;
+  });
+
+  async function floorTable(id: string) {
+    const floor = (await app.inject({ method: 'GET', url: '/api/floor', headers: admin })).json();
+    return floor.zones[0].tables.find((t: { id: string }) => t.id === id);
+  }
+
+  it('unir la 6 a la 5: cuentas, comensales y "Unida a 5" (HU-029)', async () => {
+    const a = (await open(waiter)).json();
+    const b = (await open(waiter, { tableId: table6, guests: 3 })).json();
+    const res = await post(`/api/occupancies/${a.id}/merge`, waiter, { sourceOccupancyId: b.id });
+    // El mesero no tiene table.merge: sin 🔑 no puede
+    expect(res.json().error.code).toBe('AUTHORIZATION_REQUIRED');
+
+    const merged = await post(`/api/occupancies/${a.id}/merge`, admin, {
+      sourceOccupancyId: b.id,
+    });
+    expect(merged.statusCode).toBe(200);
+    expect(merged.json()).toMatchObject({ guests: 7, mergedTables: [{ id: table6, name: '6' }] });
+    expect(merged.json().bills.map((x: { name: string }) => x.name)).toEqual([
+      'Cuenta 1',
+      'Cuenta 1 · Mesa 6',
+    ]);
+
+    expect(await floorTable(table6)).toMatchObject({
+      status: 'UNIDA',
+      joinedTo: { tableId, tableName: '5' },
+      occupancy: { id: a.id, guests: 7 },
+    });
+    const source = await prisma.occupancy.findUniqueOrThrow({ where: { id: toDbId(b.id) } });
+    expect(source.status).toBe('FUSIONADA');
+    expect(await prisma.auditLog.count({ where: { action: 'table.merge' } })).toBe(1);
+  });
+
+  it('con la 🔑 de un gerente, el mesero sí puede unir', async () => {
+    const ginaId = await createUser('gina', 'Gerente', { pin: '4821' });
+    const a = (await open(waiter)).json();
+    const b = (await open(waiter, { tableId: table6 })).json();
+    const res = await post(`/api/occupancies/${a.id}/merge`, waiter, {
+      sourceOccupancyId: b.id,
+      authorization: { userId: ginaId, pin: '4821' },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('una mesa ya unida no se puede volver a unir ni abrir', async () => {
+    const a = (await open(waiter)).json();
+    const b = (await open(waiter, { tableId: table6 })).json();
+    await post(`/api/occupancies/${a.id}/merge`, admin, { sourceOccupancyId: b.id });
+    const again = await post(`/api/occupancies/${a.id}/merge`, admin, { sourceOccupancyId: b.id });
+    expect(again.statusCode).toBe(400);
+    expect((await open(waiter, { tableId: table6 })).json().error.code).toBe('TABLE_OCCUPIED');
+  });
+
+  it('trasladar a una mesa libre: la anterior queda libre y la bitácora la recuerda', async () => {
+    const a = (await open(waiter)).json();
+    const res = await post(`/api/occupancies/${a.id}/move`, waiter, { targetTableId: table7 });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().tableId).toBe(table7);
+    expect(await floorTable(tableId)).toMatchObject({ status: 'LIBRE', occupancy: null });
+    expect(await floorTable(table7)).toMatchObject({ status: 'OCUPADA', currentOccupancyId: a.id });
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: 'table.move' } });
+    expect(log.before).toMatchObject({ table: '5' });
+  });
+
+  it('no se traslada a una mesa ocupada', async () => {
+    const a = (await open(waiter)).json();
+    await open(waiter, { tableId: table6 });
+    const res = await post(`/api/occupancies/${a.id}/move`, waiter, { targetTableId: table6 });
+    expect(res.json().error.code).toBe('TABLE_OCCUPIED');
+  });
+
+  it('transferir a otro mesero (HU-030)', async () => {
+    const a = (await open(waiter)).json();
+    const luisId = await createUser('luis', 'Mesero');
+    // El mesero no tiene table.transfer_waiter
+    expect(
+      (await post(`/api/occupancies/${a.id}/transfer`, waiter, { waiterId: luisId })).statusCode,
+    ).toBe(403);
+    const res = await post(`/api/occupancies/${a.id}/transfer`, admin, { waiterId: luisId });
+    expect(res.json()).toMatchObject({ waiterId: luisId, waiterName: 'luis', version: 1 });
+    expect(await prisma.auditLog.count({ where: { action: 'table.transfer' } })).toBe(1);
+  });
+});

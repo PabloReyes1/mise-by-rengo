@@ -1,6 +1,7 @@
 // Contrato v1 del módulo floor: zonas, mesas y ocupaciones (Docs/08 §2.5, Docs/07 §4.4).
-// Dueño: Pablito. Unir, trasladar y transferir llegan en la segunda parte de H1.
+// Dueño: Pablito.
 import { z } from 'zod';
+import { authorizationSchema } from '../auth/index.js';
 import { idSchema, isoDateTimeSchema, versionSchema } from '../common/index.js';
 
 // ---------------------------------------------------------------------------
@@ -126,6 +127,8 @@ export const occupancySchema = z.object({
   version: versionSchema,
   /** Cuentas de la ocupación. Los pedidos se agregan en H2 (orders) */
   bills: z.array(billSummarySchema),
+  /** Mesas unidas a esta ocupación (RF-105): "Mesa 5 + 6" */
+  mergedTables: z.array(z.object({ id: idSchema, name: z.string() })),
 });
 export type Occupancy = z.infer<typeof occupancySchema>;
 
@@ -159,6 +162,29 @@ export const updateOccupancyRequestSchema = z.object({
 });
 export type UpdateOccupancyRequest = z.infer<typeof updateOccupancyRequestSchema>;
 
+// POST /api/occupancies/:id/merge (table.merge) — la ocupación `sourceOccupancyId` se une a :id.
+// Sus cuentas pasan a :id y su mesa queda UNIDA (RF-105, HU-029).
+export const mergeOccupancyRequestSchema = z.object({
+  sourceOccupancyId: idSchema,
+  /** 🔑 si quien une no tiene el permiso */
+  authorization: authorizationSchema.optional(),
+});
+export type MergeOccupancyRequest = z.infer<typeof mergeOccupancyRequestSchema>;
+
+// POST /api/occupancies/:id/move (table.move) — pasa la ocupación a otra mesa libre (RF-106)
+export const moveOccupancyRequestSchema = z.object({
+  targetTableId: idSchema,
+  authorization: authorizationSchema.optional(),
+});
+export type MoveOccupancyRequest = z.infer<typeof moveOccupancyRequestSchema>;
+
+// POST /api/occupancies/:id/transfer (table.transfer_waiter) — otro mesero la atiende (RF-107)
+export const transferOccupancyRequestSchema = z.object({
+  waiterId: idSchema,
+  authorization: authorizationSchema.optional(),
+});
+export type TransferOccupancyRequest = z.infer<typeof transferOccupancyRequestSchema>;
+
 // ---------------------------------------------------------------------------
 // GET /api/floor — mapa de la sucursal
 // ---------------------------------------------------------------------------
@@ -175,7 +201,10 @@ export const occupancySummarySchema = occupancySchema.pick({
 export type OccupancySummary = z.infer<typeof occupancySummarySchema>;
 
 export const floorTableSchema = diningTableSchema.extend({
+  /** La ocupación abierta de la mesa; en una mesa UNIDA, la de la mesa principal */
   occupancy: occupancySummarySchema.nullable(),
+  /** Solo en mesas UNIDA: la mesa principal ("Unida a 5") */
+  joinedTo: z.object({ tableId: idSchema, tableName: z.string() }).nullable(),
 });
 export type FloorTable = z.infer<typeof floorTableSchema>;
 

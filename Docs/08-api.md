@@ -101,7 +101,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.5 Mesas y ocupaciones
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Los estados derivados (con pedido en cocina, lista, pre-cuenta) se agregan en H2 | Autenticado |
+| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Los estados derivados (con pedido en cocina, lista, pre-cuenta) se agregan en H2 | Autenticado |
 | GET | `/api/zones` | Todas las zonas de la sucursal, también las inactivas | `config.tables` |
 | POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
 | POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |
@@ -109,9 +109,9 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/occupancies` | `{ id, billId?, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 (`201`). Reenviar el mismo `id` responde `200` con la misma ocupación (SC-28, SC-29). Contrato v1: `shared/contracts/floor` | `table.open` |
 | GET | `/api/occupancies?status=ABIERTA` | Ocupaciones abiertas de la sucursal | Autenticado |
 | GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos (en H1 solo cuentas; pedidos en H2, pagos en H3) | Mesero dueño o `table.view_all` |
-| POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId }` — une mesas | `table.merge` |
-| POST | `/api/occupancies/:id/move` | `{ targetTableId }` | `table.move` |
-| POST | `/api/occupancies/:id/transfer` | `{ waiterId }` | `table.transfer_waiter` |
+| POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId, authorization? }` — une la mesa de `sourceOccupancyId` a la de `:id`: sus cuentas pasan a `:id` ("Cuenta 1 · Mesa 6"), se suman los comensales, la origen queda `FUSIONADA` y su mesa `UNIDA` (SC-34) | `table.merge` |
+| POST | `/api/occupancies/:id/move` | `{ targetTableId, authorization? }` — a una mesa `LIBRE`; la anterior queda `LIBRE` y la bitácora guarda las dos (`409 TABLE_OCCUPIED` si no está libre) | `table.move` |
+| POST | `/api/occupancies/:id/transfer` | `{ waiterId, authorization? }` — el mesero debe estar activo en la sucursal; queda en la bitácora | `table.transfer_waiter` |
 | PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño o `table.view_all` |
 
 ### 2.6 Pedidos y KDS

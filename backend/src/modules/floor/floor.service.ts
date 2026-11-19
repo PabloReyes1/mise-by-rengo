@@ -87,6 +87,7 @@ function toTable(t: TableRow): DiningTable {
 const occupancyInclude = {
   orderType: { select: { code: true } },
   bills: { orderBy: { name: 'asc' } },
+  mergedSources: { include: { table: { select: { id: true, name: true } } } },
 } satisfies Prisma.OccupancyInclude;
 
 type OccupancyRow = Prisma.OccupancyGetPayload<{ include: typeof occupancyInclude }>;
@@ -124,6 +125,9 @@ function toOccupancy(o: OccupancyRow, names: Map<string, string>): Occupancy {
       status: b.status as BillStatus,
       version: b.version,
     })),
+    mergedTables: o.mergedSources
+      .flatMap((s) => (s.table ? [{ id: toApiId(s.table.id), name: s.table.name }] : []))
+      .sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true })),
   };
 }
 
@@ -144,32 +148,47 @@ export async function getFloor(prisma: PrismaClient, branchId: string): Promise<
       tables: {
         where: { active: true },
         orderBy: { name: 'asc' },
-        include: { currentOccupancy: true },
+        include: {
+          currentOccupancy: {
+            include: { mergedInto: { include: { table: { select: { id: true, name: true } } } } },
+          },
+        },
       },
     },
   });
-  const waiterIds = zones.flatMap((z) =>
-    z.tables.flatMap((t) => (t.currentOccupancy ? [t.currentOccupancy.waiterId] : [])),
+  // En una mesa UNIDA, lo que se muestra es la ocupación de la mesa principal
+  const shown = (t: (typeof zones)[number]['tables'][number]) =>
+    t.currentOccupancy?.mergedInto ?? t.currentOccupancy;
+  const names = await waiterNames(
+    prisma,
+    zones.flatMap((z) => z.tables.flatMap((t) => (shown(t) ? [shown(t)!.waiterId] : []))),
   );
-  const names = await waiterNames(prisma, waiterIds);
   return {
     zones: zones.map((z) => ({
       ...toZone(z),
       tables: z.tables
         .sort((a, b) => a.name.localeCompare(b.name, 'es', { numeric: true }))
-        .map((t): FloorTable => ({
-          ...toTable(t),
-          occupancy: t.currentOccupancy
-            ? {
-                id: toApiId(t.currentOccupancy.id),
-                waiterId: toApiId(t.currentOccupancy.waiterId),
-                waiterName: names.get(t.currentOccupancy.waiterId) ?? '',
-                guests: t.currentOccupancy.guests,
-                openedAt: t.currentOccupancy.openedAt.toISOString(),
-                version: t.currentOccupancy.version,
-              }
-            : null,
-        })),
+        .map((t): FloorTable => {
+          const occ = shown(t);
+          const main = t.currentOccupancy?.mergedInto?.table;
+          return {
+            ...toTable(t),
+            occupancy: occ
+              ? {
+                  id: toApiId(occ.id),
+                  waiterId: toApiId(occ.waiterId),
+                  waiterName: names.get(occ.waiterId) ?? '',
+                  guests: occ.guests,
+                  openedAt: occ.openedAt.toISOString(),
+                  version: occ.version,
+                }
+              : null,
+            joinedTo:
+              t.status === 'UNIDA' && main
+                ? { tableId: toApiId(main.id), tableName: main.name }
+                : null,
+          };
+        }),
     })),
   };
 }
@@ -378,12 +397,7 @@ export async function openOccupancy(
       }
 
       const waiterId = toDbId(input.waiterId ?? actor.userId);
-      if (input.waiterId) {
-        const waiter = await tx.user.findFirst({
-          where: { id: waiterId, active: true, branches: { some: { branchId } } },
-        });
-        if (!waiter) throw new AppError('VALIDATION_ERROR', 'El mesero no existe en esta sucursal');
-      }
+      if (input.waiterId) await activeWaiter(tx, branchId, input.waiterId);
 
       const [settings, branch] = await Promise.all([
         tx.clientSettings.findFirstOrThrow({
@@ -479,6 +493,8 @@ export async function listOccupancies(
 /** Mesero dueño o con table.view_all (Docs/08 §2.5). */
 function assertCanOperate(occupancy: Occupancy, actor: Actor) {
   if (occupancy.waiterId === actor.userId || actor.permissions.includes('table.view_all')) return;
+  // Un gerente autorizó esta acción con su PIN (🔑): vale también para la mesa ajena (SC-33)
+  if (actor.authorizedBy) return;
   throw new AppError('AUTHORIZATION_REQUIRED', 'Esta mesa es de otro mesero', {
     permission: 'table.view_all',
   });
@@ -525,6 +541,192 @@ export async function updateGuests(
         currentVersion: current.version,
       });
     }
+    return (await loadOccupancy(tx, dbId))!;
+  });
+}
+
+// ─── Unir, trasladar y transferir (RF-105 a RF-107) ──────────────────────────
+
+/** Ocupación ABIERTA de la sucursal que el actor puede operar; si no, el error que toca. */
+async function openOccupancyFor(
+  tx: Tx,
+  branchId: string,
+  id: string,
+  actor: Actor,
+): Promise<Occupancy> {
+  const occupancy = await loadOccupancy(tx, toDbId(id));
+  if (!occupancy || occupancy.branchId !== toApiId(branchId)) {
+    throw new AppError('NOT_FOUND', 'La ocupación no existe');
+  }
+  assertCanOperate(occupancy, actor);
+  if (occupancy.status !== 'ABIERTA') {
+    throw new AppError('VALIDATION_ERROR', 'La ocupación ya está cerrada');
+  }
+  return occupancy;
+}
+
+async function activeWaiter(tx: Tx, branchId: string, waiterId: string) {
+  const waiter = await tx.user.findFirst({
+    where: { id: toDbId(waiterId), active: true, branches: { some: { branchId } } },
+    select: { id: true, fullName: true },
+  });
+  if (!waiter) throw new AppError('VALIDATION_ERROR', 'El mesero no existe en esta sucursal');
+  return waiter;
+}
+
+/**
+ * Une la ocupación `sourceId` (mesa B) a `targetId` (mesa A): las cuentas de B pasan a A con
+ * el nombre de su mesa, B queda FUSIONADA y su mesa UNIDA ("Unida a 5"). Los comensales se suman.
+ * Cuando exista orders (H2), sus pedidos también pasan a A. Al cerrar A (H3) se liberan sus
+ * mesas unidas.
+ */
+export async function mergeOccupancies(
+  prisma: PrismaClient,
+  branchId: string,
+  targetId: string,
+  sourceId: string,
+  actor: Actor,
+  now: Date = new Date(),
+): Promise<Occupancy> {
+  if (targetId === sourceId) {
+    throw new AppError('VALIDATION_ERROR', 'Elige otra mesa para unir');
+  }
+  return prisma.$transaction(async (tx) => {
+    const target = await openOccupancyFor(tx, branchId, targetId, actor);
+    const source = await openOccupancyFor(tx, branchId, sourceId, actor);
+    if (!target.tableId || !source.tableId) {
+      throw new AppError('VALIDATION_ERROR', 'Solo se unen mesas, no órdenes para llevar');
+    }
+    const [targetDb, sourceDb] = [toDbId(targetId), toDbId(sourceId)];
+    const sourceTable = await tx.diningTable.findUniqueOrThrow({
+      where: { id: toDbId(source.tableId) },
+    });
+
+    // Cuentas: "Cuenta 1" de la mesa 6 → "Cuenta 1 · Mesa 6"
+    for (const bill of source.bills) {
+      await tx.bill.update({
+        where: { id: toDbId(bill.id) },
+        data: {
+          occupancyId: targetDb,
+          name: `${bill.name} · Mesa ${sourceTable.name}`,
+          version: { increment: 1 },
+        },
+      });
+    }
+    // Si a B ya le habían unido otras mesas, ahora cuelgan de A (un solo nivel)
+    await tx.occupancy.updateMany({
+      where: { mergedIntoId: sourceDb },
+      data: { mergedIntoId: targetDb },
+    });
+    await tx.occupancy.update({
+      where: { id: sourceDb },
+      data: {
+        status: 'FUSIONADA',
+        mergedIntoId: targetDb,
+        closedAt: now,
+        version: { increment: 1 },
+      },
+    });
+    await tx.occupancy.update({
+      where: { id: targetDb },
+      data: { guests: Math.min(99, target.guests + source.guests), version: { increment: 1 } },
+    });
+    await tx.diningTable.update({
+      where: { id: sourceTable.id },
+      data: { status: 'UNIDA', version: { increment: 1 } },
+    });
+
+    await recordAudit(tx, {
+      action: 'table.merge',
+      entity: 'occupancy',
+      entityId: targetId,
+      ...auditActor(actor, branchId),
+      after: { sourceOccupancyId: sourceId, sourceTable: sourceTable.name },
+    });
+    return (await loadOccupancy(tx, targetDb))!;
+  });
+}
+
+/** Pasa la ocupación a otra mesa libre; la mesa anterior queda LIBRE (RF-106). */
+export async function moveOccupancy(
+  prisma: PrismaClient,
+  branchId: string,
+  id: string,
+  targetTableId: string,
+  actor: Actor,
+): Promise<Occupancy> {
+  return prisma.$transaction(async (tx) => {
+    const occupancy = await openOccupancyFor(tx, branchId, id, actor);
+    if (!occupancy.tableId) {
+      throw new AppError('VALIDATION_ERROR', 'Una orden para llevar no tiene mesa');
+    }
+    if (occupancy.tableId === targetTableId) {
+      throw new AppError('VALIDATION_ERROR', 'La ocupación ya está en esa mesa');
+    }
+    const dbId = toDbId(id);
+    const fromId = toDbId(occupancy.tableId);
+    const toId = toDbId(targetTableId);
+    const target = await tx.diningTable.findFirst({
+      where: { id: toId, active: true, zone: { branchId } },
+    });
+    if (!target) throw new AppError('NOT_FOUND', 'La mesa no existe');
+    if (target.status !== 'LIBRE') {
+      throw new AppError('TABLE_OCCUPIED', `La mesa ${target.name} no está libre`, {
+        status: target.status,
+      });
+    }
+    const from = await tx.diningTable.update({
+      where: { id: fromId },
+      data: { status: 'LIBRE', currentOccupancyId: null, version: { increment: 1 } },
+    });
+    const { count } = await tx.diningTable.updateMany({
+      where: { id: toId, status: 'LIBRE' },
+      data: { status: 'OCUPADA', currentOccupancyId: dbId, version: { increment: 1 } },
+    });
+    if (count === 0) throw new AppError('TABLE_OCCUPIED', `La mesa ${target.name} no está libre`);
+    await tx.occupancy.update({
+      where: { id: dbId },
+      data: { tableId: toId, version: { increment: 1 } },
+    });
+
+    // La bitácora conserva la mesa original (RF-106)
+    await recordAudit(tx, {
+      action: 'table.move',
+      entity: 'occupancy',
+      entityId: id,
+      ...auditActor(actor, branchId),
+      before: { tableId: occupancy.tableId, table: from.name },
+      after: { tableId: targetTableId, table: target.name },
+    });
+    return (await loadOccupancy(tx, dbId))!;
+  });
+}
+
+/** Otro mesero atiende la ocupación y recibe sus avisos de "Listo" (RF-107, HU-030). */
+export async function transferOccupancy(
+  prisma: PrismaClient,
+  branchId: string,
+  id: string,
+  waiterId: string,
+  actor: Actor,
+): Promise<Occupancy> {
+  return prisma.$transaction(async (tx) => {
+    const occupancy = await openOccupancyFor(tx, branchId, id, actor);
+    if (occupancy.waiterId === waiterId) return occupancy;
+    const waiter = await activeWaiter(tx, branchId, waiterId);
+    const dbId = toDbId(id);
+    await tx.occupancy.update({
+      where: { id: dbId },
+      data: { waiterId: waiter.id, version: { increment: 1 } },
+    });
+    await recordAudit(tx, {
+      action: 'table.transfer',
+      entity: 'occupancy',
+      entityId: id,
+      ...auditActor(actor, branchId),
+      before: { waiterId: occupancy.waiterId, waiter: occupancy.waiterName },
+      after: { waiterId, waiter: waiter.fullName },
+    });
     return (await loadOccupancy(tx, dbId))!;
   });
 }

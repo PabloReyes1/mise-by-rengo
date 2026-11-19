@@ -5,6 +5,9 @@ import {
   diningTableSchema,
   floorResponseSchema,
   listOccupanciesQuerySchema,
+  mergeOccupancyRequestSchema,
+  moveOccupancyRequestSchema,
+  transferOccupancyRequestSchema,
   occupancyListSchema,
   occupancySchema,
   openOccupancyRequestSchema,
@@ -24,7 +27,10 @@ import {
   getOccupancy,
   listOccupancies,
   listZones,
+  mergeOccupancies,
+  moveOccupancy,
   openOccupancy,
+  transferOccupancy,
   requestBranchId,
   saveZone,
   updateGuests,
@@ -137,6 +143,41 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { params, body: updateOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) => updateGuests(prisma, await branch(req), req.params.id, req.body, actor(req)),
+  );
+
+  // Unir, trasladar y transferir (🔑 si falta el permiso)
+  app.post(
+    '/api/occupancies/:id/merge',
+    {
+      preHandler: [authenticate, authorize('table.merge')],
+      schema: { params, body: mergeOccupancyRequestSchema, response: { 200: occupancySchema } },
+    },
+    async (req) =>
+      mergeOccupancies(
+        prisma,
+        await branch(req),
+        req.params.id,
+        req.body.sourceOccupancyId,
+        actor(req),
+      ),
+  );
+  app.post(
+    '/api/occupancies/:id/move',
+    {
+      preHandler: [authenticate, authorize('table.move')],
+      schema: { params, body: moveOccupancyRequestSchema, response: { 200: occupancySchema } },
+    },
+    async (req) =>
+      moveOccupancy(prisma, await branch(req), req.params.id, req.body.targetTableId, actor(req)),
+  );
+  app.post(
+    '/api/occupancies/:id/transfer',
+    {
+      preHandler: [authenticate, authorize('table.transfer_waiter')],
+      schema: { params, body: transferOccupancyRequestSchema, response: { 200: occupancySchema } },
+    },
+    async (req) =>
+      transferOccupancy(prisma, await branch(req), req.params.id, req.body.waiterId, actor(req)),
   );
 
   done();

@@ -108,6 +108,8 @@ Estado: ⏳ por revisar · ✅ confirmado · 🔁 cambiado
 | SC-30 | El nombre de la mesa no se repite entre las mesas activas de la sucursal (sin importar la zona ni mayúsculas): el mesero dice "la 5", no "la 5 de Terraza" | módulo floor | H1 | ⏳ |
 | SC-31 | Bloquear/desbloquear una mesa se hace con `PUT /api/tables/:id` `{ blocked, version }` (el doc 08 no tenía ruta para eso). No se bloquea, da de baja ni desactiva la zona de una mesa ocupada o unida | doc 08 §2.5, módulo floor | H1 | ⏳ |
 | SC-32 | Abrir a nombre de otro mesero (`waiterId`) solo pide `table.open`; el mesero debe estar activo y asignado a la sucursal. La sucursal de la petición es la de `X-Branch-Id` o, si no viene, la del dispositivo | módulo floor | H1 | ⏳ |
+| SC-33 | Operar la mesa de otro mesero exige `table.view_all`, salvo que la acción llegue con la 🔑 de quien sí puede: esa autorización vale también para la mesa ajena | módulo floor | H1 | ⏳ |
+| SC-34 | Unir mesas: solo mesas (no para llevar); las cuentas de la mesa unida se renombran "Cuenta 1 · Mesa 6"; los comensales se suman (máximo 99); si a la mesa unida ya le habían unido otras, pasan a la principal (un solo nivel). No hay "separar mesas" en el MVP | módulo floor | H1 | ⏳ |
 
 ## 3. Resueltas
 
