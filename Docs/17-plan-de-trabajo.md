@@ -38,6 +38,8 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 
 > **Avance (2026-11-12):** Semana 0 de Deniscito completa (entregables 1 a 5 y 7, y los contratos v1 de `auth`, `catalog` y `config` del entregable 6; el de `orders` es de Pablito). **H1 de Deniscito adelantado:** `auth`, `audit`, `config` + `admin` (restaurante, dispositivos) y `catalog` + `admin` (menú), con pantallas, y los temas que pasan el validador (PA-057 para los otros 3). Pendiente de H1 para Deniscito: `core/print` (después de la prueba con la impresora, R-01). Supuestos asumidos por Claude en doc 16 §2b, a revisar al cerrar H1.
 
+> **Avance (2026-11-18), Pablito:** contrato v1 de `orders` (Semana 0). H1: `scripts/nuevo-cliente.sh` y plantillas de Caddy y pm2 (falta probarlos en el VPS de staging); **`floor` backend, primera parte**: zonas, mesas (crear, editar, bloquear, dar de baja), mapa `GET /api/floor`, abrir mesa y para llevar con la Cuenta 1, consultar y cambiar comensales, con 21 pruebas contra PostgreSQL. Pendiente de H1: unir, trasladar y transferir; pantallas de `mesero`; `core/offline` (outbox); servidor de staging.
+
 | # | Entregable | Quién |
 |---|---|---|
 | 1 | Archivos de configuración de la raíz: `package.json` y `pnpm-workspace.yaml` (pnpm, doc 19 §7), `tsconfig`, lint, formato, Vitest, reglas entre módulos con dependency-cruiser (doc 19 §8), `.gitignore`, `.env.example` | P2 |

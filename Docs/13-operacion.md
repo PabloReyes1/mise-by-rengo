@@ -15,13 +15,18 @@
 | Actualizaciones | `unattended-upgrades` solo de seguridad |
 | PostgreSQL | `listen_addresses = 'localhost'`; `max_connections` según §6.2; `shared_buffers` ≈ 25 % de RAM; autenticación `scram-sha-256` |
 | pm2 | `pm2 startup systemd -u mise`; `pm2-logrotate` (10 MB, 14 archivos, comprimidos) |
-| Caddy | `/etc/caddy/Caddyfile` con `import /etc/caddy/clients/*.caddy` |
+| Caddy | `/etc/caddy/Caddyfile` con `import /etc/caddy/clients/*.caddy` (plantilla: [templates/caddy/Caddyfile](../templates/caddy/Caddyfile); se reemplaza `__CORREO_OPERADOR__`) |
+| pm2 (apps) | `/opt/mise/ecosystem.config.cjs` copiado de [templates/pm2/ecosystem.config.cjs](../templates/pm2/ecosystem.config.cjs). Se instala una vez: arma la lista de apps leyendo `clients/registry.csv`, así que el alta no lo edita |
 | Directorios | `/opt/mise/{app,clients,backups}` propiedad de `mise`; `monitor.env` con permisos 600 |
 | Respaldo externo | Hetzner Storage Box (o almacenamiento S3) montado/configurado para copiar `backups/` |
 
 ## 2. Alta de un cliente nuevo — `nuevo-cliente.sh <Nombre> <puerto> <dominio>`
 
-Ejemplo: `nuevo-cliente.sh LaFonda 3005 pos.lafonda.com`
+Ejemplo: `sudo scripts/nuevo-cliente.sh LaFonda 3005 pos.lafonda.com --nombre-comercial "La Fonda"`
+
+Implementación: [scripts/nuevo-cliente.sh](../scripts/nuevo-cliente.sh). Se corre con `sudo` (crea roles de PostgreSQL y archivos en `/etc/caddy`, y corre como `mise` lo que es del servicio) y **requiere el backend ya compilado** en `/opt/mise/app` (`pnpm build`, ver §4), porque usa `backend/dist/seed-cli.js` y `backend/dist/pairing-code-cli.js`.
+
+**Opciones:** `--nombre-comercial` (default `<Nombre>`), `--plantilla`, `--plan` (default `MVP`), `--modulos` (solo para `registry.csv`) y `--solo-infra` (omite los pasos 4 a 7b; solo para probar el servidor de staging, nunca para un cliente real).
 
 **Validaciones previas:**
 1. `<Nombre>`: solo letras y números (`^[A-Za-z][A-Za-z0-9]{1,30}$`); no existe `clients/<Nombre>/`.
@@ -37,17 +42,17 @@ Ejemplo: `nuevo-cliente.sh LaFonda 3005 pos.lafonda.com`
 | 3 | Crear `clients/<Nombre>/.env` (ver §2.1) con permisos 600 | Configuración del cliente |
 | 4 | Aplicar el esquema: `prisma migrate deploy` con el `DATABASE_URL` del cliente | Tablas |
 | 5 | Crear esquema `semantic` y vistas; `GRANT` de solo lectura a `_ro` | Capa semántica |
-| 6 | Seed: catálogo de unidades, tipos de orden, permisos, plantilla elegida (roles por defecto, métodos de pago, motivos, plantillas de ticket, sucursal inicial, estación por defecto, menú de ejemplo opcional), `client_settings` con el nombre, `license` con plan y módulos | Datos iniciales |
-| 7 | Crear usuario administrador inicial con contraseña temporal (se imprime una sola vez; obligatorio cambiarla al primer ingreso) | Acceso inicial |
-| 7b | Generar el código del primer dispositivo: `pnpm --filter @mise/backend pairing-code` desde la carpeta del cliente (10 min, un solo uso, SC-14). Los demás dispositivos se emparejan desde Administración › Dispositivos | Primer dispositivo |
-| 8 | Agregar la app al `ecosystem.config.cjs` y `pm2 start` del cliente; `pm2 save` | Proceso `mise-<nombre>` |
+| 6 | Seed (`seed-cli.js --template <plantilla> --trade-name <nombre comercial> --plan <plan>`, desde la carpeta del cliente): catálogo de unidades, tipos de orden, permisos, plantilla elegida (roles por defecto, métodos de pago, motivos, plantillas de ticket, sucursal inicial, estación por defecto, menú de ejemplo opcional), `client_settings` con el nombre, `license` con plan y módulos | Datos iniciales |
+| 7 | Crear usuario administrador inicial con contraseña temporal (se imprime una sola vez; obligatorio cambiarla al primer ingreso). Lo hace el mismo `seed-cli.js` del paso 6. En un cliente real nunca se usan `--with-menu` ni `--dev-user` | Acceso inicial |
+| 7b | Generar el código del primer dispositivo: `pairing-code-cli.js` desde la carpeta del cliente (en desarrollo: `pnpm --filter @mise/backend pairing-code`) (10 min, un solo uso, SC-14). Los demás dispositivos se emparejan desde Administración › Dispositivos | Primer dispositivo |
+| 8 | Agregar la fila a `clients/registry.csv` con `estado=ALTA` (así `ecosystem.config.cjs` ya ve al cliente), `pm2 start ecosystem.config.cjs --only mise-<nombre>` y `pm2 save` | Proceso `mise-<nombre>` |
 | 9 | Crear `/etc/caddy/clients/<nombre>.caddy` (ver §2.2); `caddy validate` y `systemctl reload caddy` | HTTPS y ruteo |
 | 10 | Esperar y verificar `https://<dominio>/api/health` → `status: ok` (reintentos hasta 60 s) | Verificación |
-| 11 | Agregar fila a `clients/registry.csv`: `nombre,puerto,dominio,base,estado=ACTIVO,plan,modulos,fecha_alta` | Registro |
+| 11 | Cambiar la fila de `clients/registry.csv` (`nombre,puerto,dominio,base,estado,plan,modulos,fecha_alta`) a `estado=ACTIVO` | Registro |
 | 12 | Primer respaldo `pg_dump` | Respaldo inicial |
 | 13 | Notificar por Telegram "Cliente LaFonda dado de alta" | Aviso |
 
-Si un paso falla, el script revierte los pasos anteriores (borra proceso pm2, bloque Caddy, base y directorio) y termina con error.
+Si un paso falla, el script revierte los pasos anteriores (borra proceso pm2, bloque Caddy, base, roles, directorio y fila del registro) y termina con error.
 
 ### 2.1 `.env` del cliente (claves)
 | Clave | Ejemplo / descripción |
@@ -65,15 +70,19 @@ Si un paso falla, el script revierte los pasos anteriores (borra proceso pm2, bl
 El backend valida el `.env` con Zod al arrancar y **no inicia** si falta una clave obligatoria.
 
 ### 2.2 Bloque de Caddy por cliente (especificación)
+Plantilla: [templates/caddy/cliente.caddy](../templates/caddy/cliente.caddy). El script la copia a `/etc/caddy/clients/<nombre>.caddy` reemplazando `__DOMINIO__`, `__PUERTO__` y `__NOMBRE__`. No se edita a mano en el servidor.
+
 - Sitio: `<dominio>`.
 - `encode zstd gzip`.
 - `handle /api/*` y `handle /socket.io/*` → `reverse_proxy 127.0.0.1:<puerto>` (con `flush_interval -1` para WebSocket/streaming).
 - `handle` resto → `root /opt/mise/app/frontend/dist`, `try_files {path} /index.html`, `file_server`.
-- Cabeceras: `Cache-Control` según §3.1 de [06](06-arquitectura-adr.md#31-caddy); `Strict-Transport-Security`, `X-Content-Type-Options nosniff`, `Referrer-Policy strict-origin-when-cross-origin`, CSP.
+- Cabeceras: `Cache-Control` según §3.1 de [06](06-arquitectura-adr.md#31-caddy) (`/assets/*` un año e `immutable`; lo demás `no-cache`); `Strict-Transport-Security` **sin** `includeSubDomains` (el dominio puede ser del cliente); `X-Content-Type-Options nosniff`, `Referrer-Policy strict-origin-when-cross-origin`, CSP con `connect-src 'self' https: wss:` (impresoras ePOS en la red local y QZ Tray, ADR-003).
 - `request_body max_size 10MB`.
 - Logs de acceso en `/var/log/caddy/<nombre>.log` (rotados).
 
 ### 2.3 pm2 (especificación de cada app)
+Plantilla: [templates/pm2/ecosystem.config.cjs](../templates/pm2/ecosystem.config.cjs). Crea una app por cada cliente de `registry.csv` en estado `ALTA`, `ACTIVO` o `SUSPENDIDO` (el suspendido sigue corriendo y responde 402, §3).
+
 | Opción | Valor |
 |---|---|
 | `name` | `mise-<nombre>` |

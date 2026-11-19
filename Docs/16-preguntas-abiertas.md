@@ -101,6 +101,13 @@ Estado: ⏳ por revisar · ✅ confirmado · 🔁 cambiado
 | SC-23 | El nombre del dispositivo ("Caja 1") se guarda solo en ese equipo; en el servidor queda el que se escribió al emparejar | frontend `core/session` | H1 | ⏳ |
 | SC-24 | En administración (H1) solo se generan códigos para emparejar; la lista de dispositivos y revocarlos desde la app llegan en H3 (la API ya existe: `DELETE /api/devices/:id`) | frontend `modules/admin` | H3 | ⏳ |
 | SC-25 | Los editores de producto y de modificadores se abren en la misma página (no en una ventana modal); "Se agotó" / "Hay de nuevo" cambia el estado con un toque | frontend `modules/admin` | H1 | ⏳ |
+| SC-26 | Formas de mesa en el mapa: `SQUARE` (default), `ROUND`, `RECTANGLE`. Posición y tamaño en unidades de una cuadrícula, opcionales hasta el editor visual (RF-021, F2) | doc 07 §4.4, `shared/contracts/floor` | H1 | ⏳ |
+| SC-27 | `dining_tables` tiene columna `active` (el doc 07 no la tenía): una mesa no se borra porque las ocupaciones viejas la referencian; se da de baja y desaparece del mapa | doc 07 §4.4, `floor.prisma` | H1 | ⏳ |
+| SC-28 | `POST /api/occupancies` acepta `billId` (opcional): el ULID de la Cuenta 1 lo genera el dispositivo, igual que el de la ocupación, para poder asignarle ítems sin conexión (Docs/09). Si no viene, lo genera el servidor | doc 08 §2.5, módulo floor | H4 (con `sync`) | ⏳ |
+| SC-29 | Mesa bloqueada al abrir → `409 TABLE_OCCUPIED` con `details.status = "BLOQUEADA"` (no hay un código propio). Reenviar el mismo `id` de ocupación responde `200` con la ocupación existente; la primera vez, `201` | módulo floor | H1 | ⏳ |
+| SC-30 | El nombre de la mesa no se repite entre las mesas activas de la sucursal (sin importar la zona ni mayúsculas): el mesero dice "la 5", no "la 5 de Terraza" | módulo floor | H1 | ⏳ |
+| SC-31 | Bloquear/desbloquear una mesa se hace con `PUT /api/tables/:id` `{ blocked, version }` (el doc 08 no tenía ruta para eso). No se bloquea, da de baja ni desactiva la zona de una mesa ocupada o unida | doc 08 §2.5, módulo floor | H1 | ⏳ |
+| SC-32 | Abrir a nombre de otro mesero (`waiterId`) solo pide `table.open`; el mesero debe estar activo y asignado a la sucursal. La sucursal de la petición es la de `X-Branch-Id` o, si no viene, la del dispositivo | módulo floor | H1 | ⏳ |
 
 ## 3. Resueltas
 

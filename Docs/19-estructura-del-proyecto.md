@@ -211,8 +211,8 @@ shared/
 | `templates/seed/` | Datos base del producto, iguales para todo cliente: permisos, unidades, tipos de orden |
 | `templates/restaurante-basico/` | Plantilla de onboarding: roles, métodos de pago, motivos, plantillas de ticket, estación, menú de ejemplo. También es el **menú de desarrollo** para trabajar sin la pantalla de admin. `dev-user.json` es **solo de desarrollo**: el seed lo crea únicamente con la opción de desarrollo y `nuevo-cliente.sh` nunca lo carga |
 | (formato de `templates/`) | Archivos JSON con un campo `$comment`. `backend/src/core/templates.ts` los lee y valida (formato con Zod y referencias cruzadas: permisos de cada rol, categorías y grupos de cada producto, SKU únicos, combos). Las referencias usan claves de texto (ej. `"category": "bebidas"`); el seed asigna los ULID al cargar. Hecho en la Semana 0, bloque 5 (2026-11-12) |
-| `templates/caddy/` | Plantilla del bloque Caddy por cliente (doc 13 §2.2) |
-| `templates/pm2/` | Plantilla de la app pm2 por cliente (doc 13 §2.3) |
+| `templates/caddy/` | `Caddyfile` del servidor (se instala una vez, doc 13 §1) y `cliente.caddy`, el bloque por cliente con `__DOMINIO__`, `__PUERTO__` y `__NOMBRE__` que llena `nuevo-cliente.sh` (doc 13 §2.2) |
+| `templates/pm2/` | `ecosystem.config.cjs`, uno solo para todo el servidor: arma una app por cliente leyendo `clients/registry.csv` (doc 13 §1 y §2.3) |
 | `tests/e2e/` | Playwright: flujos completos y pruebas sin internet (doc 14 §2–§4, §7) |
 | `tests/load/` | k6: carga (doc 14 §5) |
 

@@ -1,0 +1,75 @@
+// Módulo floor (Docs/07 §4.4). Dueño: Pablito.
+// IDs: ULID guardado como uuid (ADR-006). Estados como texto con CHECK en la migración.
+// waiter_id y los *_device_id no llevan relación de Prisma (como pairing_codes.created_by):
+// el servicio valida que existan.
+
+model Zone {
+  id       String  @id @db.Uuid
+  branchId String  @map("branch_id") @db.Uuid
+  name     String
+  sort     Int     @default(0)
+  active   Boolean @default(true)
+
+  branch Branch        @relation(fields: [branchId], references: [id])
+  tables DiningTable[]
+
+  @@index([branchId])
+  @@map("zones")
+}
+
+model DiningTable {
+  id                 String  @id @db.Uuid
+  zoneId             String  @map("zone_id") @db.Uuid
+  name               String
+  capacity           Int     @db.SmallInt
+  shape              String  @default("SQUARE")
+  posX               Int?    @map("pos_x")
+  posY               Int?    @map("pos_y")
+  width              Int?
+  height             Int?
+  status             String  @default("LIBRE")
+  /// Mesa dada de baja (SC-27): las ocupaciones viejas la siguen referenciando
+  active             Boolean @default(true)
+  currentOccupancyId String? @unique @map("current_occupancy_id") @db.Uuid
+  version            Int     @default(0)
+
+  zone             Zone        @relation(fields: [zoneId], references: [id])
+  currentOccupancy Occupancy?  @relation("CurrentOccupancy", fields: [currentOccupancyId], references: [id])
+  occupancies      Occupancy[] @relation("TableOccupancies")
+
+  @@map("dining_tables")
+}
+
+model Occupancy {
+  id              String    @id @db.Uuid
+  branchId        String    @map("branch_id") @db.Uuid
+  tableId         String?   @map("table_id") @db.Uuid
+  orderTypeId     String    @map("order_type_id") @db.Uuid
+  waiterId        String    @map("waiter_id") @db.Uuid
+  guests          Int       @db.SmallInt
+  customerName    String?   @map("customer_name")
+  customerPhone   String?   @map("customer_phone")
+  status          String    @default("ABIERTA")
+  mergedIntoId    String?   @map("merged_into_id") @db.Uuid
+  /// Dispositivo "a cargo" sin conexión (Docs/09)
+  ownerDeviceId   String    @map("owner_device_id") @db.Uuid
+  openedAt        DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt        DateTime? @map("closed_at") @db.Timestamptz(6)
+  businessDate    DateTime  @map("business_date") @db.Date
+  createdDeviceId String    @map("created_device_id") @db.Uuid
+  version         Int       @default(0)
+
+  branch        Branch       @relation(fields: [branchId], references: [id])
+  table         DiningTable? @relation("TableOccupancies", fields: [tableId], references: [id])
+  currentOf     DiningTable? @relation("CurrentOccupancy")
+  orderType     OrderType    @relation(fields: [orderTypeId], references: [id])
+  mergedInto    Occupancy?   @relation("MergedOccupancies", fields: [mergedIntoId], references: [id])
+  mergedSources Occupancy[]  @relation("MergedOccupancies")
+  bills         Bill[]
+
+  // El índice único parcial (una ocupación ABIERTA por mesa) va a mano en la migración
+  @@index([branchId, status])
+  @@index([tableId])
+  @@index([businessDate])
+  @@map("occupancies")
+}

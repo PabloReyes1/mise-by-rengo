@@ -101,20 +101,23 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.5 Mesas y ocupaciones
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/floor` | Zonas, mesas con estado derivado y resumen de ocupación (sin ítems) | Autenticado |
-| POST/PUT | `/api/zones[/:id]`, `/api/tables[/:id]` | | `config.tables` |
-| POST | `/api/occupancies` | `{ id, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 | `table.open` |
+| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Los estados derivados (con pedido en cocina, lista, pre-cuenta) se agregan en H2 | Autenticado |
+| GET | `/api/zones` | Todas las zonas de la sucursal, también las inactivas | `config.tables` |
+| POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
+| POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |
+| PUT | `/api/tables/:id` | Mismos campos opcionales + `blocked?` (bloquear/desbloquear), `active?` (dar de baja) y `version` → `409 STALE_VERSION` si cambió (SC-31) | `config.tables` |
+| POST | `/api/occupancies` | `{ id, billId?, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 (`201`). Reenviar el mismo `id` responde `200` con la misma ocupación (SC-28, SC-29). Contrato v1: `shared/contracts/floor` | `table.open` |
 | GET | `/api/occupancies?status=ABIERTA` | Ocupaciones abiertas de la sucursal | Autenticado |
-| GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos | Mesero dueño o `table.view_all` |
+| GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos (en H1 solo cuentas; pedidos en H2, pagos en H3) | Mesero dueño o `table.view_all` |
 | POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId }` — une mesas | `table.merge` |
 | POST | `/api/occupancies/:id/move` | `{ targetTableId }` | `table.move` |
 | POST | `/api/occupancies/:id/transfer` | `{ waiterId }` | `table.transfer_waiter` |
-| PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño |
+| PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño o `table.view_all` |
 
 ### 2.6 Pedidos y KDS
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, modifiers:[...], components:[...], note }] }` → `{ id, folio, roundNumber, items }` | `order.create` |
+| POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, unitPrice, modifiers:[{ modifierId, priceDelta }], components:[{ comboGroupId, productId, priceDelta, modifiers }], note }] }` → `{ id, folio, roundNumber, items }`. `unitPrice` y `priceDelta` son el precio que vio el mesero al vender; el servidor los respeta (doc 09 §6.3). Contrato v1: `shared/contracts/orders` | `order.create` |
 | GET | `/api/kds/orders?status=ENVIADO,EN_PREPARACION,LISTO` | Cola FIFO de la estación | `kds.operate` |
 | POST | `/api/orders/:id/accept` | Marca `accepted_at` (idempotente: conserva la primera) | `kds.operate` |
 | POST | `/api/orders/:id/ready` | Pedido completo listo | `kds.operate` |

@@ -1,0 +1,8 @@
+# /etc/caddy/Caddyfile del servidor (Docs/13-operacion.md §1).
+# Se instala una sola vez. Cada cliente agrega su propio archivo en /etc/caddy/clients/.
+{
+	# Correo para avisos de Let's Encrypt: se reemplaza al instalar
+	email __CORREO_OPERADOR__
+}
+
+import /etc/caddy/clients/*.caddy

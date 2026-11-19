@@ -200,7 +200,9 @@ erDiagram
 ### 4.4 Mesas y operación
 
 **`zones`**: id, branch_id, name, sort, active.
-**`dining_tables`**: id, zone_id, name ("5", "T2"), capacity, shape, pos_x, pos_y, width, height, status (`LIBRE`, `OCUPADA`, `UNIDA`, `BLOQUEADA`), current_occupancy_id, version.
+**`dining_tables`**: id, zone_id, name ("5", "T2"), capacity (1–99), shape (`SQUARE`, `ROUND`, `RECTANGLE`; SC-26), pos_x, pos_y, width, height, status (`LIBRE`, `OCUPADA`, `UNIDA`, `BLOQUEADA`), active (dar de baja sin borrar; SC-27), current_occupancy_id (único; `CHECK`: la mesa está `OCUPADA` si y solo si lo tiene), version.
+
+Implementado en H1: `backend/prisma/schema/floor.prisma` y `billing.prisma` (migración `h1_floor_billing`, con los `CHECK` de estados y el índice único parcial). `waiter_id`, `owner_device_id`, `created_device_id` y, en `bills`, `paid_by`, `cash_register_id` y `shift_id` no tienen llave foránea de Prisma: son de otros módulos y los valida el servicio.
 
 **`occupancies`**
 | Columna | Tipo | Nota |
