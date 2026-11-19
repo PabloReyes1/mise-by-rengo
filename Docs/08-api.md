@@ -11,7 +11,7 @@
 | Fechas | ISO 8601 en UTC (`2026-11-11T18:04:00Z`); el frontend convierte a la zona de la sucursal |
 | Autenticación | `Authorization: Bearer <accessToken>` + cabecera `X-Device-Id` |
 | Sucursal | `X-Branch-Id` (validada contra las sucursales del usuario) |
-| Idempotencia | Toda operación que crea o cambia estado operativo acepta `Idempotency-Key` (obligatoria para dispositivos de servicio). Repetir la misma clave devuelve la misma respuesta |
+| Idempotencia | Toda operación que crea o cambia estado operativo acepta `Idempotency-Key` (obligatoria para dispositivos de servicio). Repetir la misma clave devuelve la misma respuesta (mismo código y cuerpo, con la cabecera `Idempotent-Replay: true`). **Implementado en H1** (módulo `sync`): aplica a peticiones con sesión; la clave tiene de 16 a 64 caracteres `[0-9A-Za-z_-]` (`400 VALIDATION_ERROR` si no); se guardan las respuestas `2xx` (`APLICADA`) y `400/403/404/409/423` (`RECHAZADA`); no se guardan `401`, `402`, `426`, `429` ni `5xx`, que el dispositivo reintenta con la misma clave. Una clave usada por otro dispositivo o en otra ruta → `400 VALIDATION_ERROR` (SC-35) |
 | Concurrencia | Recursos con `version`; las modificaciones envían `If-Match: <version>` o `version` en el cuerpo → `409 STALE_VERSION` si cambió |
 | Validación | Zod en cada ruta; error `400 VALIDATION_ERROR` con `details[]` |
 | Paginación | `?limit=50&cursor=<id>`; máximo 200 |

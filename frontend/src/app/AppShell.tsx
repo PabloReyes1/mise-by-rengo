@@ -3,6 +3,7 @@
 import { LogOut } from 'lucide-react';
 import { Navigate, Outlet, useNavigate } from 'react-router';
 import { usePublicConfig } from '../core/config/index.js';
+import { useOutbox } from '../core/offline/index.js';
 import { sessionStore, useDevice, useSession } from '../core/session/index.js';
 import { ConnectionIndicator } from '../core/ui/index.js';
 import type { DeviceArea } from './device-areas.js';
@@ -14,6 +15,8 @@ export function AppShell({ area }: { area: DeviceArea }) {
   const session = useSession();
   const config = usePublicConfig();
   const navigate = useNavigate();
+  // Acciones guardadas en el dispositivo que faltan por enviar (core/offline, Pablito)
+  const outbox = useOutbox();
 
   if (!device) return <Navigate to="/emparejar" replace />;
   if (!session) return <Navigate to="/entrar" replace />;
@@ -33,7 +36,7 @@ export function AppShell({ area }: { area: DeviceArea }) {
           </p>
           <h1 className="truncate text-lg font-bold">{area.title}</h1>
         </div>
-        <ConnectionIndicator status={status} />
+        <ConnectionIndicator status={status} pending={outbox.pending.length} />
         <span className="hidden text-sm font-semibold md:block">{session.user.fullName}</span>
         <button
           type="button"

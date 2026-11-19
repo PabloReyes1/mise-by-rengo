@@ -110,6 +110,11 @@ Estado: ⏳ por revisar · ✅ confirmado · 🔁 cambiado
 | SC-32 | Abrir a nombre de otro mesero (`waiterId`) solo pide `table.open`; el mesero debe estar activo y asignado a la sucursal. La sucursal de la petición es la de `X-Branch-Id` o, si no viene, la del dispositivo | módulo floor | H1 | ⏳ |
 | SC-33 | Operar la mesa de otro mesero exige `table.view_all`, salvo que la acción llegue con la 🔑 de quien sí puede: esa autorización vale también para la mesa ajena | módulo floor | H1 | ⏳ |
 | SC-34 | Unir mesas: solo mesas (no para llevar); las cuentas de la mesa unida se renombran "Cuenta 1 · Mesa 6"; los comensales se suman (máximo 99); si a la mesa unida ya le habían unido otras, pasan a la principal (un solo nivel). No hay "separar mesas" en el MVP | módulo floor | H1 | ⏳ |
+| SC-35 | Idempotencia en H1: la respuesta se guarda en `sync_operations` **después** de la acción (no en la misma transacción, regla 5 del doc 09 §4.2). Si dos envíos con la misma clave llegan a la vez, los protege la regla de negocio (ids del dispositivo, `version`, índice único de mesa abierta). La misma transacción llega con `sync/push` en H4. Una clave usada por otro dispositivo u otra ruta → `400 VALIDATION_ERROR` | doc 08 §1, módulo sync | H4 | ⏳ |
+| SC-36 | Transferir mesa: la lista de meseros sale de `GET /api/auth/device-users` (usuarios activos de la sucursal **con PIN**). Cuando exista la administración de usuarios (H3, Deniscito) se puede cambiar a una lista propia | frontend `modules/mesero` | H3 | ⏳ |
+| SC-37 | Mesa bloqueada en el mapa: fondo `surface`, texto `primary` e ícono de candado. El doc 18 §5.1 proponía texto `accent`, que no llega al contraste AA sobre `surface` | doc 18 §5.1, `TableCard` | H1 | ⏳ |
+| SC-38 | Las acciones de mesa que piden 🔑 (operar la mesa de otro mesero) muestran por ahora "Esta acción necesita la autorización de un gerente": la ventana de 🔑 (PIN del gerente) es de `modules/auth` (Deniscito). El backend ya acepta `authorization` | frontend `modules/mesero` | H1 | ⏳ |
+| SC-39 | Mientras no haya tiempo real (H2), el mapa, las mesas abiertas y el detalle se vuelven a leer cada 10 s. Las mutaciones que encolan usan `networkMode: 'always'`: sin conexión TanStack Query las pausaría y la acción nunca llegaría a la outbox | frontend `modules/mesero`, `core/offline` | H2 | ⏳ |
 
 ## 3. Resueltas
 

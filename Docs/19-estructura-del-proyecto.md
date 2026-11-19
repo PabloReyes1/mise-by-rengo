@@ -173,9 +173,11 @@ Reglas:
 | `core/ui/Field.tsx` | `TextInput`, `Select`, `Switch` y `Badge`, con error = ícono + texto |
 | `modules/auth/` | Emparejar (`/emparejar`) y entrar (`/entrar`, PIN o contraseña según el dispositivo, SC-22) |
 | `modules/admin/` | `/admin/restaurante` (datos, regional, tema y color propio con revisión de contraste en vivo, logo), `/admin/menu` (categorías, productos, agotados, fotos, combos, modificadores) y `/admin/dispositivos` (código para emparejar) |
+| `core/offline/` | Outbox (`outbox.ts`, lógica pura y probada), base local IndexedDB con Dexie (`db.ts`) y `runOperation`/`useOutbox` (`index.ts`). Doc 09 §4.2.1 |
+| `modules/mesero/` | `/mesero` (mapa por zonas, abrir mesa, para llevar, acciones rechazadas) y `/mesero/ocupacion/:id` (comensales, cuentas, trasladar, unir, transferir). `api/floor-api.ts` encola con `runOperation` |
 | `app/` | `StartRedirect` (`/` → emparejar, entrar o el área del dispositivo) y `AppShell` con el nombre del restaurante, el usuario y Salir; las áreas piden sesión |
 
-Dependencias: React 19, React Router, TanStack Query, Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
+Dependencias: React 19, React Router, TanStack Query, Dexie (IndexedDB, `core/offline`), Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
 
 ## 5. `shared/`
 

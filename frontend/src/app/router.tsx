@@ -3,6 +3,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 import { AdminLayout, DevicesPage, MenuPage, RestaurantPage } from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
+import { FloorPage, OccupancyPage } from '../modules/mesero/index.js';
 import { AppShell } from './AppShell.js';
 import { DEVICE_AREAS } from './device-areas.js';
 import { NotFound } from './NotFound.js';
@@ -10,6 +11,11 @@ import { PendingModule } from './PendingModule.js';
 import { StartRedirect } from './StartRedirect.js';
 
 const areaChildren: Record<string, RouteObject[]> = {
+  // Mesero (Pablito, H1)
+  '/mesero': [
+    { index: true, element: <FloorPage /> },
+    { path: 'ocupacion/:id', element: <OccupancyPage /> },
+  ],
   '/admin': [
     {
       element: <AdminLayout />,
