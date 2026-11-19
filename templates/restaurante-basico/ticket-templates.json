@@ -1,0 +1,22 @@
+{
+  "$comment": "Plantillas de los impresos (Docs/11). Papel de 80 mm por defecto; 58 mm se cambia por impresora.",
+  "ticketTemplates": [
+    { "docType": "COMANDA", "header": "", "footer": "", "showLogo": false, "paperWidth": 80 },
+    {
+      "docType": "PRECUENTA",
+      "header": "",
+      "footer": "Esta no es una factura.",
+      "showLogo": true,
+      "paperWidth": 80
+    },
+    {
+      "docType": "RECIBO",
+      "header": "",
+      "footer": "Gracias por su visita.",
+      "showLogo": true,
+      "paperWidth": 80
+    },
+    { "docType": "CORTE", "header": "", "footer": "", "showLogo": false, "paperWidth": 80 },
+    { "docType": "MOVIMIENTO", "header": "", "footer": "", "showLogo": false, "paperWidth": 80 }
+  ]
+}

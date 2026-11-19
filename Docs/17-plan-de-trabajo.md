@@ -36,6 +36,8 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 
 5–8 días hábiles `[SUPUESTO]` (S-43), al aprobar la documentación. **Los cimientos los hace Deniscito (P2)** (RENGO, 2026-11-12): son lo que tiene que existir antes de que Pablito tome sus módulos. Pablito revisa cada entregable y avanza en lo suyo que no depende de los cimientos.
 
+> **Avance (2026-11-12):** Semana 0 de Deniscito completa (entregables 1 a 5 y 7, y los contratos v1 de `auth`, `catalog` y `config` del entregable 6; el de `orders` es de Pablito). **H1 de Deniscito adelantado:** `auth`, `audit`, `config` + `admin` (restaurante, dispositivos) y `catalog` + `admin` (menú), con pantallas, y los temas que pasan el validador (PA-057 para los otros 3). Pendiente de H1 para Deniscito: `core/print` (después de la prueba con la impresora, R-01). Supuestos asumidos por Claude en doc 16 §2b, a revisar al cerrar H1.
+
 | # | Entregable | Quién |
 |---|---|---|
 | 1 | Archivos de configuración de la raíz: `package.json` y `pnpm-workspace.yaml` (pnpm, doc 19 §7), `tsconfig`, lint, formato, Vitest, reglas entre módulos con dependency-cruiser (doc 19 §8), `.gitignore`, `.env.example` | P2 |
@@ -125,7 +127,7 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | `core/offline`: Dexie, outbox (toda acción pasa por ella desde el primer día) | `config` + `admin`: restaurante, sucursal, licencia y módulos, mesas y zonas (pantalla de configuración) |
 | `scripts/nuevo-cliente.sh`, plantillas de Caddy y pm2, servidor de staging | `core/print`: transportes `epos-lan` y `webusb`, página de prueba; `audit` |
 
-**Integración H1:** en staging, emparejar el celular, iniciar sesión, configurar el menú real y abrir mesas. PR-023, PR-024, PR-100, PR-303, PR-400, PR-402, PR-403, PR-500.
+**Integración H1:** en staging, emparejar el celular, iniciar sesión, configurar el menú real y abrir mesas. PR-023, PR-024, PR-100, PR-303, PR-400, PR-402, PR-403, PR-500. **Al cerrar H1:** revisar los supuestos SC con "Revisar en H1" (doc 16 §2b).
 
 ### H2 — Servicio (4 semanas)
 
@@ -135,7 +137,7 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | `billing` (parte de sala): crear cuentas y mover ítems | `realtime`: Socket.IO, salas, `seq`, reconexión con `lastSeq` |
 | `mesero`: aviso "listo" con vibración, marcar entregado | `print/documents`: comanda normal, ADICIONAL y de cancelación |
 
-**Integración H2:** servicio completo con conexión, de abrir la mesa a entregar. PR-002 a PR-009, PR-013, PR-015, PR-101, PR-103, PR-104, PR-108.
+**Integración H2:** servicio completo con conexión, de abrir la mesa a entregar. PR-002 a PR-009, PR-013, PR-015, PR-101, PR-103, PR-104, PR-108. **Al cerrar H2:** revisar los supuestos SC con "Revisar en H2" (doc 16 §2b).
 
 ### H3 — Cobro y caja (3 semanas)
 
@@ -146,7 +148,7 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | Impresos: pre-cuenta, recibo, corte, movimientos; cajón | `print`: transporte `qz` si la caja es Windows |
 | NIT/CF en la cuenta y el recibo (sin FEL, PA-002) | |
 
-**Integración H3:** PR-001 completo, PR-010 a PR-012, PR-014, PR-016 a PR-019, PR-102, PR-107.
+**Integración H3:** PR-001 completo, PR-010 a PR-012, PR-014, PR-016 a PR-019, PR-102, PR-107. **Al cerrar H3:** revisar los supuestos SC con "Revisar en H3" (doc 16 §2b).
 
 ### H4 — Sin internet y reportes (4 semanas)
 
@@ -155,10 +157,10 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 | `sync` + `core/offline`: `sync/push` y `sync/pull`, folios temporales, regla "a cargo", conflictos y su pantalla en `admin` (P2 da el lugar en el menú), QR de pre-cuenta, registro de cortes | `reports` + `reportes`: vistas `semantic`, métricas, dashboard, reportes del MVP, CSV/XLSX |
 | `scripts/`: `desplegar.sh`, `respaldo.sh`, `restaurar-cliente.sh`, `monitor.sh` | KDS sin conexión: banner, "LLEGÓ TARDE", impresión local de la comanda desde el celular |
 
-**Integración H4:** PR-200 a PR-220 con 2–3 dispositivos reales, PR-020 a PR-022, PR-026, PR-302, PR-502 a PR-506.
+**Integración H4:** PR-200 a PR-220 con 2–3 dispositivos reales, PR-020 a PR-022, PR-026, PR-302, PR-502 a PR-506. **Al cerrar H4:** revisar los supuestos SC con "Revisar en H4" (doc 16 §2b).
 
 ### H5 — Staging, pruebas y UAT (3 semanas, juntos)
-P1: E2E de sala y caja, pruebas sin internet. P2: E2E de cocina y admin, carga (k6), seguridad, impresión en 58 y 80 mm. Juntos: instalación en el restaurante, capacitación y operación en paralelo con papel (doc 14 §9).
+Antes de UAT se revisan los supuestos SC que sigan ⏳ (doc 16 §2b). P1: E2E de sala y caja, pruebas sin internet. P2: E2E de cocina y admin, carga (k6), seguridad, impresión en 58 y 80 mm. Juntos: instalación en el restaurante, capacitación y operación en paralelo con papel (doc 14 §9).
 
 ## 6. Riesgos del reparto
 

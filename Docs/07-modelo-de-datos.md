@@ -180,6 +180,7 @@ erDiagram
 **`user_roles`**: user_id, role_id. **`user_branches`**: user_id, branch_id.
 **`devices`**: id, branch_id, name, type (`WAITER`, `CASH`, `KDS`, `ADMIN`), device_token_hash, offline_prefix (ej. `M3`), platform (user agent resumido), last_seen_at, app_version, revoked_at.
 **`device_sessions`**: id, device_id, user_id, refresh_token_hash, expires_at, revoked_at, ip.
+**`pairing_codes`** (SC-02): id, branch_id, code_hash (sha256 del código de 6 dígitos, único), expires_at (10 min), used_at, created_by, created_at.
 **`printers`**: id, branch_id, name, transport (`WEBUSB`, `WEBSERIAL`, `WEBBLUETOOTH`, `EPOS_LAN`, `QZ`), address (IP, nombre QZ o identificador USB vendor/product), paper_width, codepage, cut, drawer_kick boolean, active.
 **`device_printer_routes`**: device_id, doc_type, printer_id, mode (`DIRECT` / `DELEGATE`), copies.
 

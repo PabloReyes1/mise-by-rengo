@@ -6,3 +6,12 @@ packages:
 
 # Falla la instalación si la versión de Node no cumple "engines" (ADR-012: Node 24)
 engineStrict: true
+
+# Paquetes a los que se les permite correr scripts de instalación (pnpm los bloquea por defecto).
+# Agregar uno nuevo solo si hace falta, con su motivo.
+allowBuilds:
+  # Prisma descarga el motor de migraciones (schema engine)
+  '@prisma/engines': true
+  prisma: true
+  # esbuild (lo usa tsx en desarrollo) verifica su binario de plataforma
+  esbuild: true

@@ -1,0 +1,10 @@
+{
+  "$comment": "SOLO DESARROLLO. Usuario para trabajar en local antes de que exista el login real (Docs/17 §2). El seed solo lo crea con la opción explícita de desarrollo; nuevo-cliente.sh NUNCA lo carga.",
+  "devUser": {
+    "username": "dev",
+    "fullName": "Usuario de desarrollo",
+    "password": "desarrollo-local",
+    "pin": "0000",
+    "roles": ["Administrador"]
+  }
+}

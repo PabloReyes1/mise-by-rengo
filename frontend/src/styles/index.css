@@ -1,0 +1,149 @@
+/*
+ * Sistema visual de Mise by Rengo: Botanical Graphite (Docs/18).
+ * Los colores se definen UNA vez aquí como tokens; los componentes los usan por nombre
+ * (bg-primary, text-secondary, ...), nunca en hex. applyTheme() los cambia en tiempo de ejecución.
+ * Tipografía y espaciado: escala 12/14/16/20/24/32 y 4/8/12/16/24/32 (skill `claude`).
+ */
+@import 'tailwindcss';
+
+/*
+ * Inter variable, servida desde la app (funciona sin internet). Solo los alfabetos latinos:
+ * el service worker precarga cada archivo, y los demás alfabetos solo gastarían datos (S-14).
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('@fontsource-variable/inter/files/inter-latin-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
+@theme {
+  /* Sin la paleta por defecto de Tailwind: solo existen los colores del tema (Docs/18 §2) */
+  --color-*: initial;
+
+  /* Valores por defecto = tema botanical-graphite (la prueba de temas verifica que coincidan) */
+  --color-primary: #243a35;
+  --color-secondary: #526d61;
+  --color-accent: #a5a58d;
+  --color-surface: #e9e5d8;
+  --color-background: #f8f7f2;
+  --color-success: #38845b;
+  --color-warning: #d69b3d;
+  --color-error: #c65353;
+  /* Único color fuera de la paleta: blanco, solo para texto sobre fondos oscuros (PA-049 b) */
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Escala tipográfica fija (interfaz de operación): 12/14/16/20/24/32 */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  /* 20 px: en negrita cuenta como texto grande para WCAG (≥ 18.66 px) */
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 2.5rem;
+
+  --radius-*: initial;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-full: 9999px;
+
+  /* Una sola elevación, solo para lo que flota (modales, menús). Teñida con primary. */
+  --shadow-*: initial;
+  --shadow-overlay:
+    0 2px 6px color-mix(in oklab, var(--color-primary) 10%, transparent),
+    0 16px 40px -12px color-mix(in oklab, var(--color-primary) 32%, transparent);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    background-color: var(--color-background);
+    color: var(--color-primary);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    /* Sin espera de doble toque en botones táctiles */
+    touch-action: manipulation;
+    text-size-adjust: 100%;
+    accent-color: var(--color-secondary);
+    caret-color: var(--color-primary);
+    scrollbar-color: var(--color-accent) transparent;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-secondary) 24%, transparent);
+    color: var(--color-primary);
+  }
+
+  /* Foco de teclado: anillo de 2 px secondary (Docs/18 §4.1) */
+  :focus-visible {
+    outline: 2px solid var(--color-secondary);
+    outline-offset: 2px;
+  }
+
+  a {
+    color: var(--color-secondary);
+    text-decoration-line: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+
+  a:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  /* Montos, folios y horas: cifras del mismo ancho para que las columnas no bailen */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 > ⚠️ **IMPORTANTE — REGLA DEL PROYECTO:** No se escribe ninguna línea de código hasta que esta documentación esté terminada y aprobada. La documentación vive en `Docs/` en formato `.md` y **se actualiza cada vez que se hace un cambio**. Registra cada cambio en el [Control de cambios](README.md#control-de-cambios).
 
-> Estado: **Aprobada por RENGO** (paleta, PA-048, PA-049 y PA-050 resueltas el 2026-11-11). El sistema de temas (§8) es **propuesta**; los 5 temas adicionales (§8.4) y sus tonos derivados están **aprobados** (PA-053, PA-054).
+> Estado: **Aprobada por RENGO** (paleta, PA-048, PA-049 y PA-050 resueltas el 2026-11-11). El sistema de temas (§8) está **implementado** con Botanical Graphite como único tema (Semana 0, 2026-11-12); los 5 temas adicionales (§8.4) y sus tonos derivados están **aprobados** (PA-053, PA-054).
 
 ## 1. Objetivo
 Botanical Graphite es el sistema visual de **Mise by Rengo** en todos los módulos (mesero, caja, KDS, admin, reportes), pantallas, formularios, menús y componentes. Debe transmitir una plataforma gastronómica **moderna, profesional, elegante y versátil**, apta para cualquier tipo de restaurante.
@@ -105,7 +105,17 @@ Series en este orden: `primary`, `secondary`, `accent`, `surface` con borde `pri
 ### 5.5 Tickets impresos
 Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc 11).
 
-## 6. Implementación (cuando se apruebe la documentación)
+## 6. Implementación
+
+> **Hecho en la Semana 0 (bloque 4, 2026-11-12):** tokens en `frontend/src/styles/index.css` (Tailwind 4 sin su paleta por defecto: solo existen los colores del tema y el blanco), temas en `frontend/src/styles/themes/`, validador de contraste en `shared/domain/theme` (lo usarán también el backend y la prueba de cada tema nuevo) y componentes base en `frontend/src/core/ui` (doc 19 §4). Catálogo visual en `/_ui` (solo desarrollo).
+>
+> **Decisiones de implementación:**
+> - **Tipografía** (de la skill `claude`): una sola familia, **Inter** variable, con cifras tabulares para montos, horas y folios. Escala fija 12/14/16/20/24/32 px; 20 px en negrita cuenta como texto grande para WCAG. Espaciado 4/8/12/16/24/32; radios 4 y 8 px; sin sombras salvo en lo que flota (modales).
+> - **Botones:** 48 px (md) o 56 px (lg) de alto (RNF-062). El destructivo siempre usa 20 px en negrita (PA-049 a). Deshabilitado: `surface` + `accent`, `aria-disabled` y cursor.
+> - **Indicador de conexión (§5.3):** `warning` sobre fondo claro no llega a 3:1 como ícono, así que el ícono de cada estado va dentro de un círculo de su color (blanco sobre `success`/`error`, `primary` sobre `warning`) y el texto siempre es `primary`.
+> - **`theme-color`** del navegador = `background` (coincide con la barra superior de la app).
+> - Revisión con `web-design-guidelines` aplicada (2026-11-12): sin espera de doble toque, animaciones solo de `transform`/`opacity`, enlace para saltar al contenido, áreas seguras del celular.
+
 - Los tokens se definen una sola vez como variables CSS (`--color-primary`, `--color-secondary`, `--color-accent`, `--color-surface`, `--color-background`, `--color-success`, `--color-warning`, `--color-error`) y se exponen en el tema de Tailwind con esos mismos nombres.
 - El frontend aplica el tema que devuelve `GET /api/config/public` (doc 06 §3.4): `theme_id` (por defecto `botanical-graphite`) y, si existe, `color_primary_override`.
 - **El cliente solo puede cambiar `primary`** (PA-048). `secondary`, `accent`, `surface`, `background` y los colores funcionales son fijos. Al guardar un `primary` nuevo, el backend valida que cumpla: blanco sobre `primary` ≥ 4.5, `primary` sobre `background` ≥ 4.5 y `primary` sobre `surface` ≥ 4.5; si no cumple, se rechaza con un mensaje que dice qué falla.
@@ -121,7 +131,7 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 | PA-053 | ✅ Resuelta 2026-11-12 | RENGO entregó 5 paletas más; asignación de tokens y contraste en §8.4 |
 | PA-054 | ✅ Resuelta 2026-11-12 | Se aprueban los tonos derivados ◆ de §8.4 |
 
-## 8. Sistema de temas (propuesta)
+## 8. Sistema de temas (implementado 2026-11-12)
 
 **Pregunta de RENGO:** ¿qué tan complicado es tener varios temas?
 
@@ -129,7 +139,7 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 
 ### 8.1 Cómo funciona
 1. **Tokens como variables CSS.** Los componentes solo usan `var(--color-primary)` (vía Tailwind). Ningún componente sabe qué tema está activo.
-2. **Un tema = un archivo de datos.** Cada tema es un objeto con los 8 tokens en `frontend/src/styles/themes/<tema>.ts`, por ejemplo:
+2. **Un tema = un objeto de datos.** Cada tema es un objeto con los 8 tokens en `shared/domain/theme/themes.ts` (desde 2026-11-12, SC-21: el backend también los necesita para validar el `primary` del cliente), por ejemplo:
    ```ts
    export const botanicalGraphite = {
      id: "botanical-graphite",

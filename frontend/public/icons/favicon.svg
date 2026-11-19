@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Ícono PROVISIONAL de Mise (primary #243A35 + blanco). Se reemplaza por el logo que entregue RENGO. -->
+  <rect width="512" height="512" rx="112" fill="#243A35"/>
+  <path d="M136 360V168l120 128 120-128v192" fill="none" stroke="#FFFFFF" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

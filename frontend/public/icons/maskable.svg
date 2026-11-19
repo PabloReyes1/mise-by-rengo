@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Variante maskable: fondo completo y la marca dentro de la zona segura (80 %). PROVISIONAL. -->
+  <rect width="512" height="512" fill="#243A35"/>
+  <path d="M170 336V192l86 92 86-92v144" fill="none" stroke="#FFFFFF" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -117,7 +117,7 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 - Esquemas por base: `public` (tablas de la app) y `semantic` (vistas para reportes y chatbot).
 
 ### 3.4 Frontend (PWA)
-- React + Vite + TypeScript, Tailwind CSS, TanStack Query, Dexie (IndexedDB), `vite-plugin-pwa` (Workbox).
+- React + Vite + TypeScript, Tailwind CSS, TanStack Query, Dexie (IndexedDB), `vite-plugin-pwa` (Workbox). Rutas con **React Router**; íconos con `lucide-react`; fuente **Inter** servida desde la app (funciona sin internet). Detalle de los archivos en doc 19 §4.
 - **Una sola compilación** para todos los clientes. Llama a la API con URL relativa `/api/...`; el dominio determina el cliente.
 - Al cargar pide `GET /api/config/public` (nombre, logo, colores, textos, módulos, regionales) y aplica colores como variables CSS (`--color-primary`).
 - Aplicaciones dentro de la misma PWA (rutas): `/mesero`, `/caja`, `/kds`, `/admin`, `/reportes`. El tipo de dispositivo registrado decide la ruta inicial.
@@ -244,7 +244,7 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
   - La versión se fija en el repositorio (`.nvmrc` y `engines` en `package.json`) y en el servidor (instalación desde el repositorio oficial de Node, doc 13 §1).
 - **Por qué no Node 26:** lleva menos de un mes como LTS, Prisma 7 estable no lo soporta oficialmente y hay que verificar los binarios de argon2. Node 24 tiene soporte de seguridad hasta abril de 2028, suficiente para el MVP y la Fase 2.
 - **Plan de actualización:** pasar a Node 26 cuando Prisma lo soporte en una versión estable, después de probarlo en staging, y siempre antes de 2028-04-30. La actualización es un despliegue normal (doc 13 §4) porque todos los clientes usan el mismo runtime.
-- **Pendiente de confirmar en la Semana 0:** el esquema Prisma en varios archivos (`backend/prisma/schema/`, doc 19) con Prisma 7 y `prisma.config.ts`, y que Prisma 7 ya no carga el `.env` solo (el backend lo carga desde `process.cwd()`, regla R1).
+- **Confirmado en la Semana 0 (2026-11-12, Prisma 7.10.1):** el esquema Prisma en varios archivos (`backend/prisma/schema/`, doc 19) funciona con `prisma.config.ts`. Prisma 7 ya no carga el `.env` solo: lo cargan `prisma.config.ts` y el backend desde `process.cwd()` (regla R1), con `process.loadEnvFile` de Node, sin `dotenv`. Ojo: en npm la etiqueta `latest` de `prisma` ya es la 8 (*release candidate*); se instala `prisma@^7` de forma explícita.
 - **Fuentes:** calendario oficial de Node.js (`nodejs/Release`), requisitos de Prisma 7 y 8 en prisma.io, anuncio de Vite 8, guía de migración de Fastify 5 y blog de React 19.3.
 
 ## 6. Seguridad (resumen)

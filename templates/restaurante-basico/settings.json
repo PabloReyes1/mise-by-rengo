@@ -1,0 +1,12 @@
+{
+  "$comment": "Configuración inicial del cliente. Todo es editable desde Configuración (regla 4 del proyecto).",
+  "settings": {
+    "themeId": "botanical-graphite",
+    "locale": "es-GT",
+    "currency": "GTQ",
+    "timeZone": "America/Guatemala",
+    "discountsEnabled": false
+  },
+  "branch": { "name": "Principal" },
+  "kitchenStation": { "name": "Cocina", "isDefault": true }
+}

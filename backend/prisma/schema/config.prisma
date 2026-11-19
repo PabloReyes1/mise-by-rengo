@@ -1,0 +1,122 @@
+// Módulo config (Docs/07 §4.1). Dueño: Deniscito.
+// IDs: ULID guardado como uuid (ADR-006). Estados como texto con CHECK en la migración (Docs/07).
+
+model ClientSettings {
+  id                   String   @id @db.Uuid
+  legalName            String   @default("") @map("legal_name")
+  tradeName            String   @map("trade_name")
+  nit                  String   @default("")
+  logoMediaId          String?  @map("logo_media_id") @db.Uuid
+  currencyCode         String   @default("GTQ") @map("currency_code")
+  currencySymbol       String   @default("Q") @map("currency_symbol")
+  decimals             Int      @default(2) @db.SmallInt
+  locale               String   @default("es-GT")
+  timezone             String   @default("America/Guatemala")
+  businessDayCutoff    String   @default("04:00") @map("business_day_cutoff")
+  tipsEnabled          Boolean  @default(false) @map("tips_enabled")
+  tipSuggestedPct      Decimal? @map("tip_suggested_pct") @db.Decimal(5, 2)
+  tipEditable          Boolean  @default(true) @map("tip_editable")
+  tipAppliesTakeaway   Boolean  @default(false) @map("tip_applies_takeaway")
+  tipBase              String   @default("AFTER_DISCOUNT") @map("tip_base")
+  tipDistribution      String   @default("WAITER") @map("tip_distribution")
+  discountsEnabled     Boolean  @default(false) @map("discounts_enabled")
+  soldoutOnSend        String   @default("ANY_USER_CONFIRMS") @map("soldout_on_send")
+  tableCleaningState   Boolean  @default(false) @map("table_cleaning_state")
+  kitchenTicketOrder   String   @default("CART") @map("kitchen_ticket_order")
+  themeId              String   @default("botanical-graphite") @map("theme_id")
+  colorPrimaryOverride String?  @map("color_primary_override")
+  kdsThresholds        Json     @default("{\"warnMin\": 10, \"lateMin\": 20, \"from\": \"SENT\"}") @map("kds_thresholds")
+  kdsSound             Json     @default("{\"tone\": \"bell\", \"volume\": 0.8, \"repeatSec\": 30}") @map("kds_sound")
+  cashDiffThreshold    Decimal  @default(0) @map("cash_diff_threshold") @db.Decimal(12, 2)
+  autoPrintReceipt     Boolean  @default(false) @map("auto_print_receipt")
+  offlinePolicy        Json     @default("{}") @map("offline_policy")
+  uiTexts              Json     @default("{}") @map("ui_texts")
+  settingsVersion      Int      @default(1) @map("settings_version")
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("client_settings")
+}
+
+model License {
+  id                   String    @id @db.Uuid
+  plan                 String
+  status               String    @default("ACTIVA")
+  modules              Json      @default("{}")
+  limits               Json      @default("{}")
+  validUntil           DateTime? @map("valid_until") @db.Date
+  graceDays            Int       @default(0) @map("grace_days")
+  updatedByPlatformAt  DateTime  @default(now()) @map("updated_by_platform_at") @db.Timestamptz(6)
+
+  @@map("license")
+}
+
+model Branch {
+  id          String  @id @db.Uuid
+  name        String
+  address     String  @default("")
+  phone       String  @default("")
+  nitOverride String? @map("nit_override")
+  timezone    String?
+  active      Boolean @default(true)
+  folioPrefix String  @default("") @map("folio_prefix")
+
+  ticketTemplates TicketTemplate[]
+  servicePeriods  ServicePeriod[]
+  userBranches    UserBranch[]
+  devices         Device[]
+  pairingCodes    PairingCode[]
+  kitchenStations KitchenStation[]
+
+  @@map("branches")
+}
+
+model ServicePeriod {
+  id        String @id @db.Uuid
+  branchId  String @map("branch_id") @db.Uuid
+  name      String
+  weekday   Int    @db.SmallInt
+  startTime String @map("start_time")
+  endTime   String @map("end_time")
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@index([branchId])
+  @@map("service_periods")
+}
+
+model TicketTemplate {
+  id         String  @id @db.Uuid
+  branchId   String  @map("branch_id") @db.Uuid
+  docType    String  @map("doc_type")
+  header     String  @default("")
+  footer     String  @default("")
+  showLogo   Boolean @default(true) @map("show_logo")
+  paperWidth Int     @default(80) @map("paper_width") @db.SmallInt
+  options    Json    @default("{}")
+
+  branch Branch @relation(fields: [branchId], references: [id])
+
+  @@unique([branchId, docType])
+  @@map("ticket_templates")
+}
+
+model OrderType {
+  id            String  @id @db.Uuid
+  code          String  @unique
+  name          String
+  requiresTable Boolean @map("requires_table")
+  active        Boolean @default(true)
+
+  @@map("order_types")
+}
+
+model Reason {
+  id     String  @id @db.Uuid
+  type   String
+  name   String
+  active Boolean @default(true)
+  sort   Int     @default(0)
+
+  @@index([type])
+  @@map("reasons")
+}

@@ -34,6 +34,7 @@
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
+| 500 | `INTERNAL_ERROR` (error inesperado; el mensaje es genérico y el detalle solo va al log) |
 
 ### Autorización 🔑 en la misma petición
 Si la acción requiere un permiso que el usuario no tiene, el servidor responde `403 AUTHORIZATION_REQUIRED` con el permiso necesario. El frontend pide el PIN de otro usuario y repite la petición con:
@@ -58,10 +59,13 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/devices/pair` | `{ code, name, type }` → `{ deviceId, deviceToken, offlinePrefix }` | Código válido |
 | POST | `/api/auth/login` | `{ username, password }` → `{ accessToken, refreshToken, user, permissions, branches }` | Dispositivo |
 | POST | `/api/auth/pin` | `{ userId, pin }` en dispositivo registrado | Dispositivo |
+| GET | `/api/auth/device-users` | Usuarios activos con PIN de la sucursal del dispositivo `[{ id, fullName }]`, para elegir antes del PIN (SC-07) | Dispositivo |
 | POST | `/api/auth/refresh` | Rota el refresh token | — |
 | POST | `/api/auth/logout` | Revoca la sesión | Autenticado |
 | GET | `/api/auth/pin-cache` | Hashes de PIN de usuarios de la sucursal con permisos de autorización (para validar 🔑 offline; ver doc 09) | Dispositivo de caja/gerente |
 | DELETE | `/api/devices/:id` | Revoca dispositivo | `config.devices` |
+
+**"Dispositivo"** = cabeceras `X-Device-Id` + `X-Device-Token` (el `deviceToken` que entregó `/api/devices/pair`, SC-01). El primer dispositivo de un cliente se empareja con un código generado en el servidor: `pnpm --filter @mise/backend pairing-code` (SC-14). `POST /api/devices/pair`, login, PIN y refresh tienen límite de intentos por IP (SC-09).
 
 ### 2.3 Configuración
 | Método | Ruta | Permiso |
@@ -78,6 +82,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET | `/api/permissions` (catálogo) | `config.roles` |
 | GET/POST/PUT | `/api/devices`, `/api/printers`, `/api/devices/:id/printer-routes` | `config.devices` |
 | GET | `/api/license` | `config.restaurant` |
+| GET | `/api/config/logo?v=<settingsVersion>` | Público; WebP con caché de un año (SC-19) |
 | GET | `/api/bootstrap?since=<settingsVersion>` | Paquete para offline: configuración, menú (sin imágenes), mesas, roles, métodos, motivos, plantillas | Autenticado |
 
 ### 2.4 Menú

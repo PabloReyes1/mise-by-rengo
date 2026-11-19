@@ -1,0 +1,20 @@
+{
+  "$comment": "Motivos iniciales por tipo (RF-028, Docs/07 reasons). Cada catálogo es independiente y editable.",
+  "reasons": [
+    { "type": "CANCEL_ITEM", "name": "Error al tomar el pedido" },
+    { "type": "CANCEL_ITEM", "name": "El cliente cambió de opinión" },
+    { "type": "CANCEL_ITEM", "name": "Producto agotado" },
+    { "type": "CANCEL_ITEM", "name": "Demora en cocina" },
+    { "type": "REOPEN_BILL", "name": "Error en el monto cobrado" },
+    { "type": "REOPEN_BILL", "name": "Faltó agregar un ítem" },
+    { "type": "DISCOUNT", "name": "Cortesía de la casa" },
+    { "type": "DISCOUNT", "name": "Cliente frecuente" },
+    { "type": "DISCOUNT", "name": "Compensación por demora" },
+    { "type": "CASH_WITHDRAWAL", "name": "Pago a proveedor" },
+    { "type": "CASH_WITHDRAWAL", "name": "Depósito al banco" },
+    { "type": "CASH_DEPOSIT", "name": "Cambio para la caja" },
+    { "type": "CASH_DEPOSIT", "name": "Reposición de fondo" },
+    { "type": "CONFLICT", "name": "Revisado y corregido" },
+    { "type": "CONFLICT", "name": "Aceptado como quedó" }
+  ]
+}

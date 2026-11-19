@@ -9,6 +9,7 @@
   },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
+    "build": "pnpm --filter @mise/shared build && pnpm --filter @mise/backend build && pnpm --filter @mise/frontend build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

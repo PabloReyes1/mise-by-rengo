@@ -1,6 +1,9 @@
 # Dependencias
 node_modules/
 
+# Cliente de Prisma generado (prisma generate)
+backend/src/generated/
+
 # Compilados y reportes
 dist/
 coverage/
@@ -27,3 +30,7 @@ Thumbs.db
 
 # Claude Code: configuración personal
 .claude/settings.local.json
+
+# Impeccable (revisión de diseño): solo se sube la configuración compartida
+.impeccable/*
+!.impeccable/config.json

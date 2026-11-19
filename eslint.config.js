@@ -19,6 +19,7 @@ export default tseslint.config(
       'Docs/**',
       '.claude/**',
       'backend/prisma/migrations/**',
+      'backend/src/generated/**',
     ],
   },
 
@@ -62,6 +63,18 @@ export default tseslint.config(
   {
     files: ['frontend/src/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
+  },
+
+  // Pruebas: res.json() y los datos de prueba son `any`; el código de producción sigue estricto
+  {
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
   },
 
   // Doc 18: los colores solo se usan por token, nunca hex sueltos

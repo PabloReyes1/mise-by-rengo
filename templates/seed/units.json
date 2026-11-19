@@ -1,0 +1,11 @@
+{
+  "$comment": "Unidades de medida (Docs/07 §4.6). Las conversiones por insumo se configuran por cliente.",
+  "units": [
+    { "code": "kg", "name": "Kilogramo", "dimension": "MASS" },
+    { "code": "g", "name": "Gramo", "dimension": "MASS" },
+    { "code": "l", "name": "Litro", "dimension": "VOLUME" },
+    { "code": "ml", "name": "Mililitro", "dimension": "VOLUME" },
+    { "code": "u", "name": "Unidad", "dimension": "COUNT" },
+    { "code": "oz", "name": "Onza", "dimension": "MASS" }
+  ]
+}

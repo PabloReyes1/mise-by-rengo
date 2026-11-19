@@ -1,0 +1,8 @@
+{
+  "$comment": "Métodos de pago iniciales (RF-027). Solo el efectivo da cambio. El cliente los edita.",
+  "paymentMethods": [
+    { "name": "Efectivo", "kind": "CASH", "givesChange": true, "requiresReference": false },
+    { "name": "Tarjeta", "kind": "CARD", "givesChange": false, "requiresReference": true },
+    { "name": "Transferencia", "kind": "TRANSFER", "givesChange": false, "requiresReference": true }
+  ]
+}

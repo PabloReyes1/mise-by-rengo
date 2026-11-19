@@ -1,0 +1,7 @@
+{
+  "$comment": "Tipos de orden (Docs/07 order_types). Delivery no se crea: queda como valor posible futuro.",
+  "orderTypes": [
+    { "code": "MESA", "name": "Mesa", "requiresTable": true },
+    { "code": "PARA_LLEVAR", "name": "Para llevar", "requiresTable": false }
+  ]
+}

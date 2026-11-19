@@ -1,0 +1,157 @@
+{
+  "$comment": "Menú DE EJEMPLO (opcional al dar de alta un cliente, Docs/13 §2 paso 6). También es el menú de desarrollo mientras no existe la pantalla de admin. Precios con impuestos incluidos, como string decimal.",
+  "categories": [
+    { "key": "entradas", "name": "Entradas" },
+    { "key": "platos-fuertes", "name": "Platos fuertes" },
+    { "key": "bebidas", "name": "Bebidas" },
+    { "key": "postres", "name": "Postres" },
+    { "key": "combos", "name": "Combos" }
+  ],
+  "modifierGroups": [
+    {
+      "key": "termino",
+      "name": "Término de la carne",
+      "required": true,
+      "minSelect": 1,
+      "maxSelect": 1,
+      "modifiers": [
+        { "name": "Término medio", "priceDelta": "0.00" },
+        { "name": "Tres cuartos", "priceDelta": "0.00" },
+        { "name": "Bien cocido", "priceDelta": "0.00" }
+      ]
+    },
+    {
+      "key": "extras",
+      "name": "Extras",
+      "required": false,
+      "minSelect": 0,
+      "maxSelect": 3,
+      "modifiers": [
+        { "name": "Aguacate", "priceDelta": "8.00" },
+        { "name": "Queso fresco", "priceDelta": "6.00" },
+        { "name": "Tortillas extra", "priceDelta": "4.00" }
+      ]
+    },
+    {
+      "key": "tamano-bebida",
+      "name": "Tamaño",
+      "required": true,
+      "minSelect": 1,
+      "maxSelect": 1,
+      "modifiers": [
+        { "name": "Normal", "priceDelta": "0.00" },
+        { "name": "Grande", "priceDelta": "5.00" }
+      ]
+    }
+  ],
+  "products": [
+    {
+      "key": "guacamol",
+      "sku": "ENT-001",
+      "name": "Guacamol con totopos",
+      "category": "entradas",
+      "price": "38.00"
+    },
+    {
+      "key": "chiles-rellenos",
+      "sku": "ENT-002",
+      "name": "Chiles rellenos",
+      "category": "entradas",
+      "price": "52.00"
+    },
+    {
+      "key": "pepian",
+      "sku": "PF-001",
+      "name": "Pepián de pollo",
+      "category": "platos-fuertes",
+      "price": "64.00",
+      "modifierGroups": ["extras"]
+    },
+    {
+      "key": "jocon",
+      "sku": "PF-002",
+      "name": "Jocón",
+      "category": "platos-fuertes",
+      "price": "58.00",
+      "modifierGroups": ["extras"]
+    },
+    {
+      "key": "churrasco",
+      "sku": "PF-003",
+      "name": "Churrasco",
+      "category": "platos-fuertes",
+      "price": "95.00",
+      "modifierGroups": ["termino", "extras"]
+    },
+    {
+      "key": "horchata",
+      "sku": "BEB-001",
+      "name": "Horchata",
+      "category": "bebidas",
+      "price": "17.50",
+      "modifierGroups": ["tamano-bebida"]
+    },
+    {
+      "key": "limonada",
+      "sku": "BEB-002",
+      "name": "Limonada",
+      "category": "bebidas",
+      "price": "15.00",
+      "modifierGroups": ["tamano-bebida"]
+    },
+    {
+      "key": "cafe",
+      "sku": "BEB-003",
+      "name": "Café de olla",
+      "category": "bebidas",
+      "price": "12.00"
+    },
+    {
+      "key": "rellenitos",
+      "sku": "POS-001",
+      "name": "Rellenitos de plátano",
+      "category": "postres",
+      "price": "22.00"
+    },
+    {
+      "key": "mole-platano",
+      "sku": "POS-002",
+      "name": "Mole de plátano",
+      "category": "postres",
+      "price": "24.00"
+    },
+    {
+      "key": "menu-del-dia",
+      "sku": "CMB-001",
+      "name": "Menú del día",
+      "category": "combos",
+      "price": "75.00",
+      "isCombo": true
+    }
+  ],
+  "combos": [
+    {
+      "product": "menu-del-dia",
+      "groups": [
+        {
+          "name": "Plato fuerte",
+          "minSelect": 1,
+          "maxSelect": 1,
+          "options": [
+            { "product": "pepian", "priceDelta": "0.00", "default": true },
+            { "product": "jocon", "priceDelta": "0.00" }
+          ]
+        },
+        {
+          "name": "Bebida",
+          "minSelect": 1,
+          "maxSelect": 1,
+          "options": [
+            { "product": "horchata", "priceDelta": "0.00", "default": true },
+            { "product": "limonada", "priceDelta": "0.00" }
+          ]
+        }
+      ]
+    }
+  ]
+}
