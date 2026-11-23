@@ -55,3 +55,18 @@ export function imageFromTransfer(data: DataTransfer | null): File | null {
   }
   return null;
 }
+
+/**
+ * Algunos navegadores copian la imagen como HTML (<img src="data:image/...">) y no como archivo:
+ * se toma el data: URL (como en DENGO-POS, arreglo 3 de la demo de H2).
+ */
+export async function imageFromHtml(data: DataTransfer | null): Promise<Blob | null> {
+  const html = data?.getData('text/html');
+  const match = html?.match(/<img[^>]+src=["']?(data:image\/[^"'\s>]+)/i);
+  if (!match?.[1]) return null;
+  try {
+    return await (await fetch(match[1])).blob();
+  } catch {
+    return null;
+  }
+}

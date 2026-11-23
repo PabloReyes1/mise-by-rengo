@@ -41,7 +41,12 @@ export function MenuPage() {
     return (
       <ProductEditor
         menu={data}
-        product={view.product}
+        // Siempre el producto vigente del menú (p. ej. con la foto recién subida)
+        product={
+          view.product
+            ? (data.products.find((p) => p.id === view.product!.id) ?? view.product)
+            : null
+        }
         categoryId={current?.id ?? ''}
         onClose={() => setView({ kind: 'list' })}
       />

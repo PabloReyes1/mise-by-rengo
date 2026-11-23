@@ -4,6 +4,7 @@ import { THEMES, themeById, validatePrimaryOverride } from '@mise/shared/domain/
 import { Check, CircleAlert } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '../../../core/api/index.js';
+import { usePublicConfig } from '../../../core/config/index.js';
 import {
   Button,
   Card,
@@ -75,6 +76,7 @@ function ContrastCheck({ color, themeId }: { color: string; themeId: string }) {
 
 export function RestaurantPage() {
   const settings = useSettings();
+  const publicConfig = usePublicConfig();
   const license = useLicense();
   const save = useSaveSettings();
   const logo = useUploadLogo();
@@ -274,14 +276,31 @@ export function RestaurantPage() {
           label="Logo del restaurante"
           name="logo"
           busy={logo.isPending}
+          error={
+            logo.error
+              ? logo.error instanceof ApiError
+                ? logo.error.message
+                : 'No se pudo subir el logo'
+              : null
+          }
           onImage={(file) => logo.mutate(file)}
+          preview={
+            publicConfig.data?.logoUrl ? (
+              <img
+                src={publicConfig.data.logoUrl}
+                alt="Logo actual"
+                width={96}
+                height={96}
+                className="size-24 rounded-md border border-accent object-contain"
+              />
+            ) : (
+              <span className="flex size-24 items-center justify-center rounded-md border border-dashed border-secondary text-sm text-secondary">
+                Sin logo
+              </span>
+            )
+          }
         />
         {logo.isSuccess && <p className="text-sm">Logo actualizado.</p>}
-        {logo.error && (
-          <p role="alert" className="text-sm">
-            {logo.error instanceof ApiError ? logo.error.message : 'No se pudo subir el logo'}
-          </p>
-        )}
       </Section>
 
       <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t border-accent bg-background px-4 py-3">
