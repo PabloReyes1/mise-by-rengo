@@ -168,3 +168,38 @@ export const receiptSchema = z.object({
   occupancyClosed: z.boolean(),
 });
 export type Receipt = z.infer<typeof receiptSchema>;
+
+// ---------------------------------------------------------------------------
+// Descuentos (Docs/03 §5 regla 2, Docs/05 §4). H3 #19, reasignado a Deniscito.
+// ---------------------------------------------------------------------------
+
+// POST /api/bills/:id/discounts (discount.apply; por encima del tope del rol pide
+// discount.apply_unlimited o 🔑). Uno por cuenta y uno por ítem: aplicar otro lo reemplaza.
+export const applyDiscountRequestSchema = z.object({
+  id: idSchema,
+  target: z.enum(['BILL', 'ITEM']),
+  itemId: idSchema.optional(),
+  kind: z.enum(['PCT', 'AMOUNT']),
+  /** Porcentaje ("10.00") o monto ("25.00") */
+  value: moneySchema,
+  reasonId: idSchema,
+  authorization: authorizationSchema.optional(),
+});
+export type ApplyDiscountRequest = z.infer<typeof applyDiscountRequestSchema>;
+
+export const appliedDiscountSchema = z.object({
+  id: idSchema,
+  target: z.enum(['BILL', 'ITEM']),
+  itemId: idSchema.nullable(),
+  kind: z.enum(['PCT', 'AMOUNT']),
+  value: moneySchema,
+  amount: moneySchema,
+  reasonName: z.string(),
+});
+export type AppliedDiscount = z.infer<typeof appliedDiscountSchema>;
+
+export const billDiscountsResponseSchema = z.object({
+  bill: billSchema,
+  discounts: z.array(appliedDiscountSchema),
+});
+export type BillDiscountsResponse = z.infer<typeof billDiscountsResponseSchema>;

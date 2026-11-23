@@ -61,7 +61,7 @@ function assertOpenOccupancy(o: { status: string }) {
 }
 
 /** Cuenta de la sucursal que se puede cambiar: ni pagada ni eliminada. */
-async function editableBill(tx: Tx, branchId: string, billId: string, a: Actor) {
+export async function editableBill(tx: Tx, branchId: string, billId: string, a: Actor) {
   const bill = await tx.bill.findUnique({ where: { id: billId } });
   if (!bill) throw new AppError('NOT_FOUND', 'La cuenta no existe');
   const occupancy = await operableOccupancy(tx, branchId, bill.occupancyId, a);

@@ -4,6 +4,8 @@ import {
   createBillRequestSchema,
   moveBillItemsRequestSchema,
   moveBillItemsResponseSchema,
+  applyDiscountRequestSchema,
+  billDiscountsResponseSchema,
   occupancyBillsResponseSchema,
   payBillRequestSchema,
   paymentMethodSchema,
@@ -19,6 +21,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
+import { AppError } from '../../core/errors.js';
 import { toDbId } from '../../core/ids.js';
 import { announce, REALTIME_EVENTS as EV } from '../realtime/index.js';
 import { authorize } from '../auth/index.js';
@@ -31,6 +34,7 @@ import {
   splitOrderItem,
   updateBill,
 } from './billing.service.js';
+import { applyDiscount, getDiscounts, removeDiscount } from './discount.service.js';
 import { getReceipt, listPaymentMethods, payBill } from './payment.service.js';
 
 const params = z.object({ id: idSchema });
@@ -124,6 +128,61 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       announce(app, b, EV.billUpdated, ['branch'], {
         billIds: [result.original.billId, result.created.billId],
       });
+      return result;
+    },
+  );
+
+  // Descuentos (Docs/03 §5 regla 2, H3 #19): por encima del tope pide discount.apply_unlimited o 🔑
+  const unlimitedGuard = authorize('discount.apply_unlimited');
+  app.get(
+    '/api/bills/:id/discounts',
+    {
+      preHandler: [authenticate, tableAuthorization],
+      schema: { params, response: { 200: billDiscountsResponseSchema } },
+    },
+    async (req) => getDiscounts(prisma, await branch(req), req.params.id, actor(req)),
+  );
+  app.post(
+    '/api/bills/:id/discounts',
+    {
+      preHandler: [authenticate, authorize('discount.apply'), tableAuthorization],
+      schema: {
+        params,
+        body: applyDiscountRequestSchema,
+        response: { 200: billDiscountsResponseSchema },
+      },
+    },
+    async (req, reply) => {
+      const b = await branch(req);
+      const unlimited = req.auth!.permissions.includes('discount.apply_unlimited');
+      let result;
+      try {
+        result = await applyDiscount(prisma, b, req.params.id, req.body, actor(req), unlimited);
+      } catch (error) {
+        // Pasa el tope: si viene 🔑 de alguien con discount.apply_unlimited, se aplica
+        if (
+          !(error instanceof AppError) ||
+          error.code !== 'AUTHORIZATION_REQUIRED' ||
+          !req.body.authorization
+        )
+          throw error;
+        await unlimitedGuard.call(app, req, reply);
+        result = await applyDiscount(prisma, b, req.params.id, req.body, actor(req), true);
+      }
+      announce(app, b, EV.billUpdated, ['branch'], { occupancyId: result.bill.occupancyId });
+      return result;
+    },
+  );
+  app.delete(
+    '/api/discounts/:id',
+    {
+      preHandler: [authenticate, authorize('discount.apply')],
+      schema: { params, response: { 200: billDiscountsResponseSchema } },
+    },
+    async (req) => {
+      const b = await branch(req);
+      const result = await removeDiscount(prisma, b, req.params.id, actor(req));
+      announce(app, b, EV.billUpdated, ['branch'], { occupancyId: result.bill.occupancyId });
       return result;
     },
   );
