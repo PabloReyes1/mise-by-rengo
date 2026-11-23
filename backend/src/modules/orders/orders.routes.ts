@@ -12,6 +12,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
+import { announce, REALTIME_EVENTS as EV } from '../realtime/index.js';
 import { authorize } from '../auth/index.js';
 import { requestBranchId, tableAuthorization, type Actor } from '../floor/index.js';
 import { cancelOrderItem, deliverOrder, listOccupancyOrders, sendOrder } from './orders.service.js';
@@ -40,7 +41,10 @@ export const ordersRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { body: sendOrderRequestSchema, response: { 200: orderSchema, 201: orderSchema } },
     },
     async (req, reply) => {
-      const { order, created } = await sendOrder(prisma, await branch(req), req.body, actor(req));
+      const b = await branch(req);
+      const { order, created } = await sendOrder(prisma, b, req.body, actor(req));
+      // Tiempo real (reasignado a Deniscito): la cocina y la sala se enteran del pedido nuevo
+      if (created) announce(app, b, EV.orderSent, ['kds', 'branch'], order);
       return reply.status(created ? 201 : 200).send(order);
     },
   );
@@ -60,7 +64,12 @@ export const ordersRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       preHandler: [authenticate, authorize('order.deliver'), tableAuthorization],
       schema: { params, body: deliverOrderRequestSchema, response: { 200: orderSchema } },
     },
-    async (req) => deliverOrder(prisma, await branch(req), req.params.id, actor(req)),
+    async (req) => {
+      const b = await branch(req);
+      const order = await deliverOrder(prisma, b, req.params.id, actor(req));
+      announce(app, b, EV.orderDelivered, ['branch'], order);
+      return order;
+    },
   );
 
   app.post(
@@ -69,7 +78,12 @@ export const ordersRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       preHandler: [authenticate, authorize('order.cancel_sent'), tableAuthorization],
       schema: { params, body: cancelOrderItemRequestSchema, response: { 200: orderSchema } },
     },
-    async (req) => cancelOrderItem(prisma, await branch(req), req.params.id, req.body, actor(req)),
+    async (req) => {
+      const b = await branch(req);
+      const order = await cancelOrderItem(prisma, b, req.params.id, req.body, actor(req));
+      announce(app, b, EV.orderItemCancelled, ['kds', 'branch'], { itemId: req.params.id, order });
+      return order;
+    },
   );
 
   done();

@@ -435,3 +435,18 @@ describe('unir, trasladar y transferir (RF-105 a RF-107)', () => {
     expect(await prisma.auditLog.count({ where: { action: 'table.transfer' } })).toBe(1);
   });
 });
+
+describe('tiempo real (Docs/08 §3.1)', () => {
+  it('abrir una mesa publica occupancy.opened para toda la sucursal', async () => {
+    const res = await open(waiter);
+    expect(res.statusCode).toBe(201);
+    // Se publica sin esperar a la respuesta
+    let event = null;
+    for (let i = 0; i < 50 && !event; i++) {
+      event = await prisma.realtimeEvent.findFirst({ where: { event: 'occupancy.opened' } });
+      if (!event) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(event?.rooms).toEqual(['branch']);
+    expect((event?.payload as { id: string }).id).toBe(res.json().id);
+  });
+});

@@ -381,3 +381,17 @@ describe('cancelar ítem (POST /api/order-items/:id/cancel, Docs/05 §7)', () =>
     expect(res.json().status).toBe('ENTREGADO');
   });
 });
+
+describe('tiempo real (Docs/08 §3.1)', () => {
+  it('enviar una ronda publica order.sent para cocina y sala', async () => {
+    const res = await send([item('Café de olla')]);
+    expect(res.statusCode).toBe(201);
+    let event = null;
+    for (let i = 0; i < 50 && !event; i++) {
+      event = await prisma.realtimeEvent.findFirst({ where: { event: 'order.sent' } });
+      if (!event) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(event?.rooms).toEqual(['kds', 'branch']);
+    expect((event?.payload as { id: string }).id).toBe(res.json().id);
+  });
+});

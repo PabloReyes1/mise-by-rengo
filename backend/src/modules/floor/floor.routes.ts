@@ -21,6 +21,7 @@ import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
 import { authorize } from '../auth/index.js';
+import { REALTIME_EVENTS as EV } from '../realtime/index.js';
 import {
   createTable,
   getFloor,
@@ -55,6 +56,18 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   const { prisma } = app;
   const branch = (req: FastifyRequest) => requestBranchId(prisma, req.auth!);
   const tablesAdmin = [authenticate, authorize('config.tables')];
+  // Tiempo real (reasignado a Deniscito): cada cambio de mesa llega a toda la sucursal
+  const emit =
+    (event: string) =>
+    <T extends { branchId: string }>(occupancy: T): T => {
+      void app.realtime.publish({
+        branchId: occupancy.branchId,
+        event,
+        rooms: ['branch'],
+        data: occupancy,
+      });
+      return occupancy;
+    };
 
   // Mapa de mesas de la sucursal
   app.get(
@@ -120,6 +133,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
         req.body,
         actor(req),
       );
+      if (created) emit(EV.occupancyOpened)(occupancy);
       // 201 al crear; 200 si es un reenvío del mismo id (idempotente)
       return reply.status(created ? 201 : 200).send(occupancy);
     },
@@ -143,7 +157,10 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       preHandler: [authenticate, tableAuthorization],
       schema: { params, body: updateOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
-    async (req) => updateGuests(prisma, await branch(req), req.params.id, req.body, actor(req)),
+    async (req) =>
+      updateGuests(prisma, await branch(req), req.params.id, req.body, actor(req)).then(
+        emit(EV.occupancyUpdated),
+      ),
   );
 
   // Unir, trasladar y transferir (🔑 si falta el permiso)
@@ -160,7 +177,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
         req.params.id,
         req.body.sourceOccupancyId,
         actor(req),
-      ),
+      ).then(emit(EV.occupancyMerged)),
   );
   app.post(
     '/api/occupancies/:id/move',
@@ -169,7 +186,13 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { params, body: moveOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) =>
-      moveOccupancy(prisma, await branch(req), req.params.id, req.body.targetTableId, actor(req)),
+      moveOccupancy(
+        prisma,
+        await branch(req),
+        req.params.id,
+        req.body.targetTableId,
+        actor(req),
+      ).then(emit(EV.occupancyMoved)),
   );
   app.post(
     '/api/occupancies/:id/transfer',
@@ -178,7 +201,13 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { params, body: transferOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) =>
-      transferOccupancy(prisma, await branch(req), req.params.id, req.body.waiterId, actor(req)),
+      transferOccupancy(
+        prisma,
+        await branch(req),
+        req.params.id,
+        req.body.waiterId,
+        actor(req),
+      ).then(emit(EV.occupancyTransferred)),
   );
 
   done();

@@ -9,7 +9,7 @@ import {
   type RealtimeEnvelope,
   type RealtimeRoom,
 } from '@mise/shared/contracts/realtime';
-import type { FastifyPluginCallback } from 'fastify';
+import type { FastifyInstance, FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { Server } from 'socket.io';
 import { verifyAccessToken } from '../../core/auth.js';
@@ -26,6 +26,20 @@ import {
 
 export { REALTIME_EVENTS };
 export type { PublishInput };
+
+/**
+ * Para las rutas de otros módulos: publica el evento sin esperar, después de guardar el cambio.
+ * `dbBranchId` es la sucursal como la da requestBranchId (uuid de la base).
+ */
+export function announce(
+  app: FastifyInstance,
+  dbBranchId: string,
+  event: string,
+  rooms: RealtimeRoom[],
+  data: unknown,
+): void {
+  void app.realtime.publish({ branchId: toApiId(dbBranchId), event, rooms, data });
+}
 
 declare module 'fastify' {
   interface FastifyInstance {

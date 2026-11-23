@@ -14,6 +14,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
+import { announce, REALTIME_EVENTS as EV } from '../realtime/index.js';
 import { authorize } from '../auth/index.js';
 import { requestBranchId, tableAuthorization, type Actor } from '../floor/index.js';
 import {
@@ -62,13 +63,9 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       },
     },
     async (req, reply) => {
-      const { bill, created } = await createBill(
-        prisma,
-        await branch(req),
-        req.params.id,
-        req.body,
-        actor(req),
-      );
+      const b = await branch(req);
+      const { bill, created } = await createBill(prisma, b, req.params.id, req.body, actor(req));
+      if (created) announce(app, b, EV.billUpdated, ['branch'], { occupancyId: bill.occupancyId });
       return reply.status(created ? 201 : 200).send(bill);
     },
   );
@@ -79,7 +76,12 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       preHandler: split,
       schema: { params, body: updateBillRequestSchema, response: { 200: billSchema } },
     },
-    async (req) => updateBill(prisma, await branch(req), req.params.id, req.body, actor(req)),
+    async (req) => {
+      const b = await branch(req);
+      const bill = await updateBill(prisma, b, req.params.id, req.body, actor(req));
+      announce(app, b, EV.billUpdated, ['branch'], { occupancyId: bill.occupancyId });
+      return bill;
+    },
   );
 
   app.post(
@@ -88,9 +90,13 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       preHandler: split,
       schema: { body: moveBillItemsRequestSchema, response: { 200: moveBillItemsResponseSchema } },
     },
-    async (req) => ({
-      bills: await moveBillItems(prisma, await branch(req), req.body, actor(req)),
-    }),
+    async (req) => {
+      const b = await branch(req);
+      const bills = await moveBillItems(prisma, b, req.body, actor(req));
+      for (const occupancyId of new Set(bills.map((x) => x.occupancyId)))
+        announce(app, b, EV.billUpdated, ['branch'], { occupancyId });
+      return { bills };
+    },
   );
 
   app.post(
@@ -103,7 +109,14 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
         response: { 200: splitOrderItemResponseSchema },
       },
     },
-    async (req) => splitOrderItem(prisma, await branch(req), req.params.id, req.body, actor(req)),
+    async (req) => {
+      const b = await branch(req);
+      const result = await splitOrderItem(prisma, b, req.params.id, req.body, actor(req));
+      announce(app, b, EV.billUpdated, ['branch'], {
+        billIds: [result.original.billId, result.created.billId],
+      });
+      return result;
+    },
   );
 
   done();
