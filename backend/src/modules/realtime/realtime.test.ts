@@ -41,7 +41,7 @@ async function loginOn(type: 'WAITER' | 'KDS'): Promise<Session> {
 }
 
 /** Conecta y junta lo que llega por el canal "event". */
-function open(auth: Record<string, unknown>) {
+function open(auth: object) {
   const socket = connect(url, {
     path: REALTIME_PATH,
     auth,
