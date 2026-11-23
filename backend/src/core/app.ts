@@ -11,6 +11,8 @@ import type { PrismaClient } from '../generated/prisma/client.js';
 import { authModule } from '../modules/auth/index.js';
 import { catalogModule } from '../modules/catalog/index.js';
 import { configModule } from '../modules/config/index.js';
+import { floorModule } from '../modules/floor/index.js';
+import { syncModule } from '../modules/sync/index.js';
 import { systemModule } from '../modules/system/index.js';
 import type { Env } from './env.js';
 import { AppError, registerErrorHandlers } from './errors.js';
@@ -85,8 +87,11 @@ export async function buildApp(options: BuildAppOptions): Promise<App> {
   if (options.prisma) {
     app.decorate('prisma', options.prisma);
     await app.register(configModule, { licenseCacheMs: options.licenseCacheMs ?? 30_000 });
+    // Idempotency-Key para todas las acciones (módulo sync, Pablito)
+    await app.register(syncModule);
     await app.register(authModule);
     await app.register(catalogModule);
+    await app.register(floorModule);
   }
 
   await options.register?.(app);

@@ -1,0 +1,35 @@
+// Módulo billing (Docs/07 §4.4, cuentas). Dueño: Pablito.
+// En H1 solo nace la Cuenta 1 al abrir la mesa (RF-101). Descuentos y pagos llegan en H3;
+// cash_register_id y shift_id quedan sin relación hasta que exista el módulo cash.
+
+model Bill {
+  id              String    @id @db.Uuid
+  occupancyId     String    @map("occupancy_id") @db.Uuid
+  name            String
+  status          String    @default("ABIERTA")
+  /// Folio de recibo, al cobrar
+  folio           String?
+  subtotal        Decimal   @default(0) @db.Decimal(12, 2)
+  discountTotal   Decimal   @default(0) @map("discount_total") @db.Decimal(12, 2)
+  tipPct          Decimal?  @map("tip_pct") @db.Decimal(5, 2)
+  tipAmount       Decimal   @default(0) @map("tip_amount") @db.Decimal(12, 2)
+  total           Decimal   @default(0) @db.Decimal(12, 2)
+  paidAt          DateTime? @map("paid_at") @db.Timestamptz(6)
+  paidBy          String?   @map("paid_by") @db.Uuid
+  cashRegisterId  String?   @map("cash_register_id") @db.Uuid
+  shiftId         String?   @map("shift_id") @db.Uuid
+  reopenCount     Int       @default(0) @map("reopen_count")
+  precheckCount   Int       @default(0) @map("precheck_count")
+  /// NIT o CF (único punto de extensión FEL en el MVP)
+  customerNit     String?   @map("customer_nit")
+  customerTaxName String?   @map("customer_tax_name")
+  ownerDeviceId   String    @map("owner_device_id") @db.Uuid
+  createdDeviceId String    @map("created_device_id") @db.Uuid
+  version         Int       @default(0)
+
+  occupancy Occupancy @relation(fields: [occupancyId], references: [id])
+
+  @@unique([folio])
+  @@index([occupancyId])
+  @@map("bills")
+}

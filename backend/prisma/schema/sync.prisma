@@ -1,0 +1,20 @@
+// Módulo sync (Docs/07 §4.7, Docs/09 §4). Dueño: Pablito.
+// H1: registro de idempotencia de cada acción enviada con `Idempotency-Key` (Docs/08 §1).
+// sync_conflicts, folio_sequences y connectivity_logs llegan en H4 con sync/push y sync/pull.
+
+model SyncOperation {
+  idempotencyKey  String    @id @map("idempotency_key")
+  deviceId        String    @map("device_id") @db.Uuid
+  /// En H1, "MÉTODO /ruta" (ej. "POST /api/occupancies"); en H4, el tipo de la outbox
+  opType          String    @map("op_type")
+  entityId        String?   @map("entity_id")
+  receivedAt      DateTime  @default(now()) @map("received_at") @db.Timestamptz(6)
+  clientCreatedAt DateTime? @map("client_created_at") @db.Timestamptz(6)
+  clientSeq       Int?      @map("client_seq")
+  status          String
+  /// Respuesta guardada para repetirla igual: { statusCode, body }
+  result          Json
+
+  @@index([deviceId, receivedAt])
+  @@map("sync_operations")
+}

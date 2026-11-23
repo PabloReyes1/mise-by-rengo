@@ -173,9 +173,11 @@ Reglas:
 | `core/ui/Field.tsx` | `TextInput`, `Select`, `Switch` y `Badge`, con error = ícono + texto |
 | `modules/auth/` | Emparejar (`/emparejar`) y entrar (`/entrar`, PIN o contraseña según el dispositivo, SC-22) |
 | `modules/admin/` | `/admin/restaurante` (datos, regional, tema y color propio con revisión de contraste en vivo, logo), `/admin/menu` (categorías, productos, agotados, fotos, combos, modificadores) y `/admin/dispositivos` (código para emparejar) |
+| `core/offline/` | Outbox (`outbox.ts`, lógica pura y probada), base local IndexedDB con Dexie (`db.ts`) y `runOperation`/`useOutbox` (`index.ts`). Doc 09 §4.2.1 |
+| `modules/mesero/` | `/mesero` (mapa por zonas, abrir mesa, para llevar, acciones rechazadas) y `/mesero/ocupacion/:id` (comensales, cuentas, trasladar, unir, transferir). `api/floor-api.ts` encola con `runOperation` |
 | `app/` | `StartRedirect` (`/` → emparejar, entrar o el área del dispositivo) y `AppShell` con el nombre del restaurante, el usuario y Salir; las áreas piden sesión |
 
-Dependencias: React 19, React Router, TanStack Query, Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
+Dependencias: React 19, React Router, TanStack Query, Dexie (IndexedDB, `core/offline`), Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
 
 ## 5. `shared/`
 
@@ -211,8 +213,8 @@ shared/
 | `templates/seed/` | Datos base del producto, iguales para todo cliente: permisos, unidades, tipos de orden |
 | `templates/restaurante-basico/` | Plantilla de onboarding: roles, métodos de pago, motivos, plantillas de ticket, estación, menú de ejemplo. También es el **menú de desarrollo** para trabajar sin la pantalla de admin. `dev-user.json` es **solo de desarrollo**: el seed lo crea únicamente con la opción de desarrollo y `nuevo-cliente.sh` nunca lo carga |
 | (formato de `templates/`) | Archivos JSON con un campo `$comment`. `backend/src/core/templates.ts` los lee y valida (formato con Zod y referencias cruzadas: permisos de cada rol, categorías y grupos de cada producto, SKU únicos, combos). Las referencias usan claves de texto (ej. `"category": "bebidas"`); el seed asigna los ULID al cargar. Hecho en la Semana 0, bloque 5 (2026-11-12) |
-| `templates/caddy/` | Plantilla del bloque Caddy por cliente (doc 13 §2.2) |
-| `templates/pm2/` | Plantilla de la app pm2 por cliente (doc 13 §2.3) |
+| `templates/caddy/` | `Caddyfile` del servidor (se instala una vez, doc 13 §1) y `cliente.caddy`, el bloque por cliente con `__DOMINIO__`, `__PUERTO__` y `__NOMBRE__` que llena `nuevo-cliente.sh` (doc 13 §2.2) |
+| `templates/pm2/` | `ecosystem.config.cjs`, uno solo para todo el servidor: arma una app por cliente leyendo `clients/registry.csv` (doc 13 §1 y §2.3) |
 | `tests/e2e/` | Playwright: flujos completos y pruebas sin internet (doc 14 §2–§4, §7) |
 | `tests/load/` | k6: carga (doc 14 §5) |
 

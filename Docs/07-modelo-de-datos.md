@@ -200,7 +200,9 @@ erDiagram
 ### 4.4 Mesas y operación
 
 **`zones`**: id, branch_id, name, sort, active.
-**`dining_tables`**: id, zone_id, name ("5", "T2"), capacity, shape, pos_x, pos_y, width, height, status (`LIBRE`, `OCUPADA`, `UNIDA`, `BLOQUEADA`), current_occupancy_id, version.
+**`dining_tables`**: id, zone_id, name ("5", "T2"), capacity (1–99), shape (`SQUARE`, `ROUND`, `RECTANGLE`; SC-26), pos_x, pos_y, width, height, status (`LIBRE`, `OCUPADA`, `UNIDA`, `BLOQUEADA`), active (dar de baja sin borrar; SC-27), current_occupancy_id (único; `CHECK`: lo tiene si y solo si la mesa está `OCUPADA` o `UNIDA`. En una mesa `UNIDA` apunta a su propia ocupación, ya `FUSIONADA`, cuyo `merged_into_id` lleva a la de la mesa principal; migración `h1_floor_merge`), version.
+
+Implementado en H1: `backend/prisma/schema/floor.prisma` y `billing.prisma` (migración `h1_floor_billing`, con los `CHECK` de estados y el índice único parcial). `waiter_id`, `owner_device_id`, `created_device_id` y, en `bills`, `paid_by`, `cash_register_id` y `shift_id` no tienen llave foránea de Prisma: son de otros módulos y los valida el servicio.
 
 **`occupancies`**
 | Columna | Tipo | Nota |
@@ -317,7 +319,7 @@ Fórmulas: `costo = Σ cantidad_convertida × (1 + merma%) × costo_unitario`; `
 | before, after | jsonb | Solo campos cambiados |
 | reason_id, note | | |
 
-**`sync_operations`**: idempotency_key (PK, texto), device_id, op_type, entity_id, received_at, client_created_at, client_seq, status (`APLICADA`, `DUPLICADA`, `CONFLICTO`, `RECHAZADA`), result jsonb.
+**`sync_operations`**: idempotency_key (PK, texto), device_id, op_type, entity_id, received_at, client_created_at, client_seq, status (`APLICADA`, `DUPLICADA`, `CONFLICTO`, `RECHAZADA`), result jsonb. *Implementada en H1 (migración `h1_sync_operations`, índice `(device_id, received_at)`): `result` guarda `{ statusCode, body }` de la respuesta para repetirla tal cual. `client_created_at` y `client_seq` se llenan desde H4 con `sync/push` (SC-35).*
 **`sync_conflicts`**: id, branch_id, type (`PAGO_DUPLICADO`, `CANCELACION_SOBRE_PAGADA`, `MESA_DOBLE`, `CORTE_DIFERENTE` (el esperado recalculado por el servidor no coincide con el del corte provisional), `ITEM_EN_CUENTA_PAGADA`, `PRECIO_CAMBIADO`, ...), entities jsonb, detail jsonb, status (`ABIERTO`, `RESUELTO`), resolution, resolved_by, resolved_at.
 **`folio_sequences`**: branch_id, doc_type (`ORDER`, `BILL`), last_value. Folio definitivo con `UPDATE ... RETURNING` en la transacción.
 **`connectivity_logs`**: id, device_id, offline_from, offline_to, duration_s, pending_ops_max, network_type, notes.

@@ -66,6 +66,9 @@ model Branch {
   devices         Device[]
   pairingCodes    PairingCode[]
   kitchenStations KitchenStation[]
+  // Relaciones inversas del módulo floor (Pablito, floor.prisma)
+  zones           Zone[]
+  occupancies     Occupancy[]
 
   @@map("branches")
 }
@@ -106,6 +109,9 @@ model OrderType {
   name          String
   requiresTable Boolean @map("requires_table")
   active        Boolean @default(true)
+
+  // Relación inversa del módulo floor (Pablito, floor.prisma)
+  occupancies Occupancy[]
 
   @@map("order_types")
 }

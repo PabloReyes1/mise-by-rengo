@@ -1,0 +1,61 @@
+# Bloque de Caddy de un cliente (Docs/13-operacion.md §2.2, Docs/06 §3.1).
+# nuevo-cliente.sh lo copia a /etc/caddy/clients/<nombre>.caddy y reemplaza:
+#   __DOMINIO__  dominio del cliente (ej. pos.lafonda.com)
+#   __PUERTO__   puerto del backend del cliente (3001–3999)
+#   __NOMBRE__   nombre del cliente en minúsculas (para el log)
+# No editar a mano en el servidor: cambiar esta plantilla y volver a generar.
+
+__DOMINIO__ {
+	encode zstd gzip
+
+	request_body {
+		max_size 10MB
+	}
+
+	header {
+		# Sin includeSubDomains: el dominio puede ser del cliente y tener otros subdominios sin HTTPS
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# connect-src https: y wss: porque la PWA habla con impresoras ePOS en la red local
+		# (https://<ip de la impresora>) y con QZ Tray (wss://localhost) (Docs/06 ADR-003)
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/__NOMBRE__.log {
+			roll_size 10MiB
+			roll_keep 14
+		}
+	}
+
+	# API y tiempo real → backend del cliente (solo escucha en 127.0.0.1)
+	handle /api/* {
+		reverse_proxy 127.0.0.1:__PUERTO__ {
+			flush_interval -1
+		}
+	}
+
+	handle /socket.io/* {
+		reverse_proxy 127.0.0.1:__PUERTO__ {
+			flush_interval -1
+		}
+	}
+
+	# Frontend (PWA): el mismo build para todos los clientes
+	handle {
+		root * /opt/mise/app/frontend/dist
+
+		# Archivos con hash: se guardan un año
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+
+		# Todo lo demás (index.html, sw.js, manifest, rutas de la SPA): siempre se revalida
+		@notAssets not path /assets/*
+		header @notAssets Cache-Control "no-cache"
+
+		try_files {path} /index.html
+		file_server
+	}
+}

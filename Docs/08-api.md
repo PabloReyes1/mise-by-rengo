@@ -11,7 +11,7 @@
 | Fechas | ISO 8601 en UTC (`2026-11-11T18:04:00Z`); el frontend convierte a la zona de la sucursal |
 | Autenticación | `Authorization: Bearer <accessToken>` + cabecera `X-Device-Id` |
 | Sucursal | `X-Branch-Id` (validada contra las sucursales del usuario) |
-| Idempotencia | Toda operación que crea o cambia estado operativo acepta `Idempotency-Key` (obligatoria para dispositivos de servicio). Repetir la misma clave devuelve la misma respuesta |
+| Idempotencia | Toda operación que crea o cambia estado operativo acepta `Idempotency-Key` (obligatoria para dispositivos de servicio). Repetir la misma clave devuelve la misma respuesta (mismo código y cuerpo, con la cabecera `Idempotent-Replay: true`). **Implementado en H1** (módulo `sync`): aplica a peticiones con sesión; la clave tiene de 16 a 64 caracteres `[0-9A-Za-z_-]` (`400 VALIDATION_ERROR` si no); se guardan las respuestas `2xx` (`APLICADA`) y `400/403/404/409/423` (`RECHAZADA`); no se guardan `401`, `402`, `426`, `429` ni `5xx`, que el dispositivo reintenta con la misma clave. Una clave usada por otro dispositivo o en otra ruta → `400 VALIDATION_ERROR` (SC-35) |
 | Concurrencia | Recursos con `version`; las modificaciones envían `If-Match: <version>` o `version` en el cuerpo → `409 STALE_VERSION` si cambió |
 | Validación | Zod en cada ruta; error `400 VALIDATION_ERROR` con `details[]` |
 | Paginación | `?limit=50&cursor=<id>`; máximo 200 |
@@ -101,20 +101,23 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.5 Mesas y ocupaciones
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/floor` | Zonas, mesas con estado derivado y resumen de ocupación (sin ítems) | Autenticado |
-| POST/PUT | `/api/zones[/:id]`, `/api/tables[/:id]` | | `config.tables` |
-| POST | `/api/occupancies` | `{ id, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 | `table.open` |
+| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Los estados derivados (con pedido en cocina, lista, pre-cuenta) se agregan en H2 | Autenticado |
+| GET | `/api/zones` | Todas las zonas de la sucursal, también las inactivas | `config.tables` |
+| POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
+| POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |
+| PUT | `/api/tables/:id` | Mismos campos opcionales + `blocked?` (bloquear/desbloquear), `active?` (dar de baja) y `version` → `409 STALE_VERSION` si cambió (SC-31) | `config.tables` |
+| POST | `/api/occupancies` | `{ id, billId?, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 (`201`). Reenviar el mismo `id` responde `200` con la misma ocupación (SC-28, SC-29). Contrato v1: `shared/contracts/floor` | `table.open` |
 | GET | `/api/occupancies?status=ABIERTA` | Ocupaciones abiertas de la sucursal | Autenticado |
-| GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos | Mesero dueño o `table.view_all` |
-| POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId }` — une mesas | `table.merge` |
-| POST | `/api/occupancies/:id/move` | `{ targetTableId }` | `table.move` |
-| POST | `/api/occupancies/:id/transfer` | `{ waiterId }` | `table.transfer_waiter` |
-| PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño |
+| GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos (en H1 solo cuentas; pedidos en H2, pagos en H3) | Mesero dueño o `table.view_all` |
+| POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId, authorization? }` — une la mesa de `sourceOccupancyId` a la de `:id`: sus cuentas pasan a `:id` ("Cuenta 1 · Mesa 6"), se suman los comensales, la origen queda `FUSIONADA` y su mesa `UNIDA` (SC-34) | `table.merge` |
+| POST | `/api/occupancies/:id/move` | `{ targetTableId, authorization? }` — a una mesa `LIBRE`; la anterior queda `LIBRE` y la bitácora guarda las dos (`409 TABLE_OCCUPIED` si no está libre) | `table.move` |
+| POST | `/api/occupancies/:id/transfer` | `{ waiterId, authorization? }` — el mesero debe estar activo en la sucursal; queda en la bitácora | `table.transfer_waiter` |
+| PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño o `table.view_all` |
 
 ### 2.6 Pedidos y KDS
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, modifiers:[...], components:[...], note }] }` → `{ id, folio, roundNumber, items }` | `order.create` |
+| POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, unitPrice, modifiers:[{ modifierId, priceDelta }], components:[{ comboGroupId, productId, priceDelta, modifiers }], note }] }` → `{ id, folio, roundNumber, items }`. `unitPrice` y `priceDelta` son el precio que vio el mesero al vender; el servidor los respeta (doc 09 §6.3). Contrato v1: `shared/contracts/orders` | `order.create` |
 | GET | `/api/kds/orders?status=ENVIADO,EN_PREPARACION,LISTO` | Cola FIFO de la estación | `kds.operate` |
 | POST | `/api/orders/:id/accept` | Marca `accepted_at` (idempotente: conserva la primera) | `kds.operate` |
 | POST | `/api/orders/:id/ready` | Pedido completo listo | `kds.operate` |
