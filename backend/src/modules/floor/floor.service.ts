@@ -163,6 +163,30 @@ export async function getFloor(prisma: PrismaClient, branchId: string): Promise<
     prisma,
     zones.flatMap((z) => z.tables.flatMap((t) => (shown(t) ? [shown(t)!.waiterId] : []))),
   );
+  // Estado derivado de cada ocupación (Docs/05 §5.1): pedidos en cocina o listos, pre-cuenta
+  const occupancyIds = [
+    ...new Set(zones.flatMap((z) => z.tables.flatMap((t) => (shown(t) ? [shown(t)!.id] : [])))),
+  ];
+  const [activeOrders, prechecks] = await Promise.all([
+    prisma.order.findMany({
+      where: {
+        occupancyId: { in: occupancyIds },
+        status: { in: ['ENVIADO', 'EN_PREPARACION', 'LISTO'] },
+      },
+      select: { occupancyId: true, status: true },
+    }),
+    prisma.bill.findMany({
+      where: { occupancyId: { in: occupancyIds }, status: 'PRECUENTA' },
+      select: { occupancyId: true },
+    }),
+  ]);
+  const service = (occupancyId: string): FloorTable['service'] => {
+    const statuses = activeOrders.filter((o) => o.occupancyId === occupancyId).map((o) => o.status);
+    if (statuses.includes('LISTO')) return 'LISTA';
+    if (statuses.length > 0) return 'EN_COCINA';
+    if (prechecks.some((b) => b.occupancyId === occupancyId)) return 'PRECUENTA';
+    return null;
+  };
   return {
     zones: zones.map((z) => ({
       ...toZone(z),
@@ -187,6 +211,7 @@ export async function getFloor(prisma: PrismaClient, branchId: string): Promise<
               t.status === 'UNIDA' && main
                 ? { tableId: toApiId(main.id), tableName: main.name }
                 : null,
+            service: occ && t.status === 'OCUPADA' ? service(occ.id) : null,
           };
         }),
     })),

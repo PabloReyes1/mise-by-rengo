@@ -22,6 +22,7 @@ const base: FloorTable = {
   version: 0,
   occupancy: null,
   joinedTo: null,
+  service: null,
 };
 
 const occupancy = {
@@ -114,5 +115,18 @@ describe('GuestsStepper (1 a 99)', () => {
     await userEvent.clear(input);
     await userEvent.tab();
     expect(input).toHaveValue('4');
+  });
+});
+
+describe('TableCard: estados derivados (Docs/18 §5.1)', () => {
+  it('una mesa con pedido listo lo dice en texto, no solo con color', () => {
+    render(
+      <TableCard
+        table={{ ...base, status: 'OCUPADA', occupancy, service: 'LISTA' }}
+        isMine
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Mesa 5, Lista para entregar/ })).toBeInTheDocument();
   });
 });

@@ -209,6 +209,11 @@ export const floorTableSchema = diningTableSchema.extend({
   occupancy: occupancySummarySchema.nullable(),
   /** Solo en mesas UNIDA: la mesa principal ("Unida a 5") */
   joinedTo: z.object({ tableId: idSchema, tableName: z.string() }).nullable(),
+  /**
+   * Estado derivado de una mesa ocupada (Docs/05 §5.1, Docs/18 §5.1): LISTA si hay un pedido listo
+   * para entregar, EN_COCINA si hay pedidos en cocina, PRECUENTA si se imprimió la pre-cuenta.
+   */
+  service: z.enum(['LISTA', 'EN_COCINA', 'PRECUENTA']).nullable(),
 });
 export type FloorTable = z.infer<typeof floorTableSchema>;
 

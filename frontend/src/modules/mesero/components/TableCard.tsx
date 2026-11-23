@@ -1,7 +1,7 @@
 // Tarjeta de una mesa en el mapa (RF-109, Docs/18 §5.1): color + ícono + texto, nunca solo color.
-// Los estados derivados (con pedido en cocina, lista, pre-cuenta) llegan con orders en H2.
+// Estados derivados de una mesa ocupada (service): lista, con pedido en cocina, pre-cuenta.
 import type { FloorTable } from '@mise/shared/contracts/floor';
-import { Armchair, Link2, Lock, Users } from 'lucide-react';
+import { Armchair, BellRing, ChefHat, Link2, Lock, Receipt, Users } from 'lucide-react';
 import { cx } from '../../../core/ui/index.js';
 
 const STATE = {
@@ -32,6 +32,28 @@ const STATE = {
   },
 } as const;
 
+/** Docs/18 §5.1 (reasignado a Deniscito, doc 17 §3.1). Siempre con texto e ícono. */
+const SERVICE = {
+  EN_COCINA: {
+    label: 'Con pedido en cocina',
+    Icon: ChefHat,
+    card: 'bg-surface border-2 border-warning text-primary',
+    meta: 'text-primary',
+  },
+  LISTA: {
+    label: 'Lista para entregar',
+    Icon: BellRing,
+    card: 'bg-success border-2 border-success text-white',
+    meta: 'text-white',
+  },
+  PRECUENTA: {
+    label: 'Pre-cuenta impresa',
+    Icon: Receipt,
+    card: 'bg-accent border-2 border-accent text-primary',
+    meta: 'text-primary',
+  },
+} as const;
+
 export interface TableCardProps {
   table: FloorTable;
   /** Mesa de otro mesero: se ve, pero se marca */
@@ -40,7 +62,8 @@ export interface TableCardProps {
 }
 
 export function TableCard({ table, isMine, onSelect }: TableCardProps) {
-  const { label, Icon, card, meta } = STATE[table.status];
+  const { label, Icon, card, meta } =
+    table.status === 'OCUPADA' && table.service ? SERVICE[table.service] : STATE[table.status];
   const occ = table.occupancy;
   const blocked = table.status === 'BLOQUEADA';
   const detail =

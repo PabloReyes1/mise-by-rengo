@@ -102,7 +102,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.5 Mesas y ocupaciones
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Los estados derivados (con pedido en cocina, lista, pre-cuenta) se agregan en H2 | Autenticado |
+| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Cada mesa ocupada trae `service`: `LISTA` (pedido listo para entregar), `EN_COCINA` (pedidos en cocina) o `PRECUENTA` (pre-cuenta impresa), en ese orden de prioridad (hecho 2026-11-23) | Autenticado |
 | GET | `/api/zones` | Todas las zonas de la sucursal, también las inactivas | `config.tables` |
 | POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
 | POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |

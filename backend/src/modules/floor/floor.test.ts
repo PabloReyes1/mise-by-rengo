@@ -450,3 +450,33 @@ describe('tiempo real (Docs/08 §3.1)', () => {
     expect((event?.payload as { id: string }).id).toBe(res.json().id);
   });
 });
+
+describe('estado derivado en el mapa (Docs/05 §5.1)', () => {
+  it('una mesa con pedido en cocina sale EN_COCINA; sin pedidos, null', async () => {
+    const res = await open(waiter);
+    const occ = res.json();
+    const floor = async () =>
+      (await app.inject({ method: 'GET', url: '/api/floor', headers: waiter }))
+        .json()
+        .zones.flatMap((z: { tables: { id: string; service: string | null }[] }) => z.tables)
+        .find((t: { id: string }) => t.id === tableId);
+    expect((await floor()).service).toBeNull();
+    const menu = (await app.inject({ method: 'GET', url: '/api/menu', headers: admin })).json();
+    const cafe = menu.products.find((p: { name: string }) => p.name === 'Café de olla');
+    await post('/api/orders', waiter, {
+      id: newId(),
+      occupancyId: occ.id,
+      clientSentAt: new Date().toISOString(),
+      items: [
+        {
+          id: newId(),
+          billId: occ.bills[0].id,
+          productId: cafe.id,
+          quantity: 1,
+          unitPrice: cafe.price,
+        },
+      ],
+    });
+    expect((await floor()).service).toBe('EN_COCINA');
+  });
+});
