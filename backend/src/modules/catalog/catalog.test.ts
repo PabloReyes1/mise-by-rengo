@@ -173,7 +173,10 @@ describe('modificadores por categoría (2026-11-23)', () => {
 
   it('cada grupo dice en qué categorías está disponible', async () => {
     const m = await menu();
-    const termino = byName(m.modifierGroups, 'Término de la carne');
+    const termino = byName(
+      m.modifierGroups as (Named & { categoryIds: string[] })[],
+      'Término de la carne',
+    );
     expect(termino.categoryIds).toEqual([byName(m.categories, 'Platos fuertes').id]);
   });
 
@@ -197,10 +200,12 @@ describe('modificadores por categoría (2026-11-23)', () => {
 
   it('al quitar una categoría del grupo, sus productos dejan de usarlo', async () => {
     const m = await menu();
-    const extras = byName(m.modifierGroups, 'Extras') as Named & {
-      categoryIds: string[];
-      modifiers: { id: string; name: string; priceDelta: string }[];
-    };
+    const extras = byName<
+      Named & {
+        categoryIds: string[];
+        modifiers: { id: string; name: string; priceDelta: string }[];
+      }
+    >(m.modifierGroups, 'Extras');
     const platos = byName(m.categories, 'Platos fuertes').id;
     const res = await app.inject({
       method: 'PUT',

@@ -37,7 +37,12 @@ describe('contratos v1', () => {
   });
 
   it('grupo de modificadores: el mínimo no puede pasar al máximo (RF-013)', () => {
-    const base = { name: 'Extras', required: false, modifiers: [] };
+    const base = {
+      name: 'Extras',
+      required: false,
+      categoryIds: ['01JD4K7P0000000000000000A1'],
+      modifiers: [],
+    };
     expect(saveModifierGroupSchema.safeParse({ ...base, minSelect: 0, maxSelect: 3 }).success).toBe(
       true,
     );
