@@ -155,3 +155,74 @@ describe('retiros, depósitos y efectivo esperado', () => {
     expect(wrong.statusCode).toBe(400);
   });
 });
+
+describe('corte de caja (Docs/05 paso 13)', () => {
+  it('a ciegas: el cajero no ve el esperado al empezar; al cerrar sale la diferencia', async () => {
+    const shift = (await open(cashier, '500.00')).json();
+    await post(`/api/shifts/${shift.id}/movements`, admin, {
+      id: newId(),
+      type: 'RETIRO',
+      amount: '100.00',
+      reasonId: await reason('CASH_WITHDRAWAL'),
+    });
+    const start = (await post(`/api/shifts/${shift.id}/start-close`, cashier, {})).json();
+    expect(start).toMatchObject({ status: 'EN_CORTE', expectedCash: null });
+    const noComment = await post(`/api/shifts/${shift.id}/close`, cashier, {
+      countedCash: '390.00',
+    });
+    expect(noComment.json().error.message).toMatch(/comentario/);
+    const closed = (
+      await post(`/api/shifts/${shift.id}/close`, cashier, {
+        countedCash: '390.00',
+        comment: 'Faltante por cambio',
+      })
+    ).json();
+    expect(closed).toMatchObject({
+      status: 'CERRADO',
+      expectedCash: '400.00',
+      countedCash: '390.00',
+      difference: '-10.00',
+      closedByName: 'carlos',
+    });
+  });
+
+  it('el conteo por denominación tiene que sumar lo contado', async () => {
+    const shift = (await open(cashier, '300.00')).json();
+    const bad = await post(`/api/shifts/${shift.id}/close`, admin, {
+      countedCash: '300.00',
+      counts: [{ denomination: '100.00', quantity: 2 }],
+    });
+    expect(bad.json().error.message).toMatch(/suma 200\.00/);
+    const ok = await post(`/api/shifts/${shift.id}/close`, admin, {
+      countedCash: '300.00',
+      counts: [
+        { denomination: '100.00', quantity: 2 },
+        { denomination: '50.00', quantity: 2 },
+      ],
+    });
+    expect(ok.json()).toMatchObject({
+      difference: '0.00',
+      counts: [
+        { denomination: '100.00', quantity: 2 },
+        { denomination: '50.00', quantity: 2 },
+      ],
+    });
+  });
+
+  it('un turno cerrado es inmutable y se puede abrir otro en la caja', async () => {
+    const shift = (await open(cashier, '200.00')).json();
+    await post(`/api/shifts/${shift.id}/close`, admin, { countedCash: '200.00' });
+    const move = await post(`/api/shifts/${shift.id}/movements`, admin, {
+      id: newId(),
+      type: 'DEPOSITO',
+      amount: '10.00',
+      reasonId: await reason('CASH_DEPOSIT'),
+    });
+    expect(move.statusCode).toBe(400);
+    const report = (
+      await app.inject({ method: 'GET', url: `/api/shifts/${shift.id}/report`, headers: cashier })
+    ).json();
+    expect(report).toMatchObject({ status: 'CERRADO', countedCash: '200.00' });
+    expect((await open(cashier)).statusCode).toBe(201);
+  });
+});

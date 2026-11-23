@@ -82,3 +82,53 @@ export const shiftDetailSchema = shiftSummarySchema.extend({
   movements: z.array(cashMovementSchema),
 });
 export type ShiftDetail = z.infer<typeof shiftDetailSchema>;
+
+// ---------------------------------------------------------------------------
+// Corte de caja (Docs/05 paso 13, Docs/11 §4.4). H3 #20, reasignado a Deniscito.
+// ---------------------------------------------------------------------------
+
+// POST /api/shifts/:id/start-close (cash.close_shift): ABIERTO → EN_CORTE, ya no recibe efectivo
+
+export const denominationCountSchema = z.object({
+  denomination: moneySchema,
+  quantity: z.int().min(0).max(100_000),
+});
+
+// POST /api/shifts/:id/close (cash.close_shift)
+export const closeShiftRequestSchema = z.object({
+  countedCash: moneySchema,
+  /** Obligatorio si la caja cuenta por denominación (PA-025) */
+  counts: z.array(denominationCountSchema).max(30).optional(),
+  /** Obligatorio si la diferencia pasa el umbral (client_settings.cash_diff_threshold) */
+  comment: z.string().trim().max(500).optional(),
+});
+
+/** Reporte del corte, congelado al cerrar (reports_snapshot). */
+export const shiftReportSchema = z.object({
+  shiftId: idSchema,
+  cashRegisterName: z.string(),
+  status: z.enum(SHIFT_STATUSES),
+  openedByName: z.string(),
+  openedAt: isoDateTimeSchema,
+  closedByName: z.string().nullable(),
+  closedAt: isoDateTimeSchema.nullable(),
+  openingFloat: moneySchema,
+  salesByMethod: z.array(z.object({ method: z.string(), count: z.int(), amount: moneySchema })),
+  totalCollected: moneySchema,
+  tipsTotal: moneySchema,
+  cashSales: moneySchema,
+  deposits: z.object({ count: z.int(), amount: moneySchema }),
+  withdrawals: z.object({ count: z.int(), amount: moneySchema }),
+  reversals: z.object({ count: z.int(), amount: moneySchema }),
+  /** null antes de cerrar si quien cuenta no tiene cash.view_expected (corte a ciegas) */
+  expectedCash: moneySchema.nullable(),
+  countedCash: moneySchema.nullable(),
+  /** contado − esperado (negativo = faltante) */
+  difference: z.string().nullable(),
+  comment: z.string().nullable(),
+  counts: z.array(denominationCountSchema),
+  billsPaid: z.int(),
+  discountsTotal: moneySchema,
+  netSales: moneySchema,
+});
+export type ShiftReport = z.infer<typeof shiftReportSchema>;

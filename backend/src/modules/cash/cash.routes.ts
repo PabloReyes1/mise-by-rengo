@@ -1,6 +1,8 @@
 // Rutas de caja (Docs/08 §2.8). Dueño: Pablito; reasignado a Deniscito (doc 17 §3.1, H3 #18).
 import {
   cashRegistersResponseSchema,
+  closeShiftRequestSchema,
+  shiftReportSchema,
   createMovementRequestSchema,
   openShiftRequestSchema,
   shiftDetailSchema,
@@ -15,6 +17,7 @@ import { authorize } from '../auth/index.js';
 import { requestBranchId } from '../floor/index.js';
 import { announce } from '../realtime/index.js';
 import { addMovement, getShift, listCashRegisters, openShift, type Actor } from './cash.service.js';
+import { closeShift, getShiftReport, startClose } from './close.service.js';
 
 const params = z.object({ id: idSchema });
 
@@ -72,6 +75,37 @@ export const cashRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { params, body: createMovementRequestSchema, response: { 200: shiftDetailSchema } },
     },
     async (req) => addMovement(prisma, await branch(req), req.params.id, req.body, actor(req)),
+  );
+
+  // Corte (Docs/05 paso 13, H3 #20)
+  app.post(
+    '/api/shifts/:id/start-close',
+    {
+      preHandler: [authenticate, authorize('cash.close_shift')],
+      schema: { params, response: { 200: shiftReportSchema } },
+    },
+    async (req) => startClose(prisma, await branch(req), req.params.id, actor(req)),
+  );
+  app.post(
+    '/api/shifts/:id/close',
+    {
+      preHandler: [authenticate, authorize('cash.close_shift')],
+      schema: { params, body: closeShiftRequestSchema, response: { 200: shiftReportSchema } },
+    },
+    async (req) => {
+      const b = await branch(req);
+      const report = await closeShift(prisma, b, req.params.id, req.body, actor(req));
+      announce(app, b, 'shift.closed', ['cash'], { shiftId: report.shiftId });
+      return report;
+    },
+  );
+  app.get(
+    '/api/shifts/:id/report',
+    {
+      preHandler: [authenticate, authorize('cash.close_shift')],
+      schema: { params, response: { 200: shiftReportSchema } },
+    },
+    async (req) => getShiftReport(prisma, await branch(req), req.params.id, actor(req)),
   );
 
   done();
