@@ -1,0 +1,18 @@
+// Módulo realtime (Docs/07 §4, ADR-004). Dueño: Deniscito.
+// Cada evento lleva un seq creciente; al reconectar, el cliente manda su último seq y el servidor
+// reenvía lo que se perdió (retención 24 h, Docs/08 §3.3).
+
+model RealtimeEvent {
+  seq      BigInt   @id @default(autoincrement())
+  branchId String   @map("branch_id") @db.Uuid
+  event    String
+  /// Salas a las que se emitió ("branch", "kds", "cash", "user:<id>", "device:<id>"): al reenviar,
+  /// cada dispositivo solo recibe lo que le habría llegado (SC-53)
+  rooms    String[]
+  payload  Json
+  at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([branchId, seq])
+  @@index([at])
+  @@map("realtime_events")
+}

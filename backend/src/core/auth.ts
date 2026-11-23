@@ -65,7 +65,7 @@ export async function signAccessToken(
     .sign(key(secret));
 }
 
-async function verifyAccessToken(token: string, secret: string): Promise<AccessClaims> {
+export async function verifyAccessToken(token: string, secret: string): Promise<AccessClaims> {
   try {
     const { payload } = await jwtVerify(token, key(secret), { algorithms: [ALGORITHM] });
     const p = payloadSchema.parse(payload);

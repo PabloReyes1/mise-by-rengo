@@ -14,6 +14,7 @@ import { catalogModule } from '../modules/catalog/index.js';
 import { configModule } from '../modules/config/index.js';
 import { floorModule } from '../modules/floor/index.js';
 import { ordersModule } from '../modules/orders/index.js';
+import { realtimeModule } from '../modules/realtime/index.js';
 import { syncModule } from '../modules/sync/index.js';
 import { systemModule } from '../modules/system/index.js';
 import type { Env } from './env.js';
@@ -92,6 +93,8 @@ export async function buildApp(options: BuildAppOptions): Promise<App> {
     // Idempotency-Key para todas las acciones (módulo sync, Pablito)
     await app.register(syncModule);
     await app.register(authModule);
+    // Tiempo real (Socket.IO): app.realtime.publish para los demás módulos
+    await app.register(realtimeModule);
     await app.register(catalogModule);
     await app.register(floorModule);
     await app.register(ordersModule);
