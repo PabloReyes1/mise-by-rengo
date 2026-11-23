@@ -23,6 +23,7 @@ Detalle, tabla de contraste y reglas por módulo en [Docs/18-sistema-de-diseno.m
 | `background` | `#F8F7F2` | Fondo general |
 | `success` / `warning` / `error` | `#38845B` / `#D69B3D` / `#C65353` | Solo funcionales. `warning` siempre con texto `primary`, nunca blanco |
 
+- **Campos numéricos y contadores:** siempre `NumberInput` / `NumberStepper` de `core/ui` (dejan borrar y escribir; nunca `Number(e.target.value)` en cada tecla). Ver Docs/18 §6b.
 - Fondos claros, jerarquía consistente, sin colores fuera de la paleta, colores solo por token (nunca hex sueltos), contraste WCAG 2.2 AA y el estado nunca se comunica solo con color.
 - Implementar el sistema visual **no cambia la lógica ni la funcionalidad**.
 - En color manda Botanical Graphite; la skill `claude` queda como referencia de tipografía, espaciado y estilo.

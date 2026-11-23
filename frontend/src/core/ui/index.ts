@@ -22,3 +22,10 @@ export {
 export { applyKey, type KeypadKey, type KeypadOptions } from './keypad.js';
 export { Modal, type ModalProps } from './Modal.js';
 export { NumericKeypad, type NumericKeypadProps } from './NumericKeypad.js';
+export {
+  NumberInput,
+  NumberStepper,
+  parseIntInRange,
+  type NumberInputProps,
+  type NumberStepperProps,
+} from './NumberInput.js';

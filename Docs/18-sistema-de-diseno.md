@@ -122,6 +122,11 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 - Revisión de cada pantalla con la skill `web-design-guidelines` y verificación de contraste automática en las pruebas E2E.
 - La skill `claude` (`awesome-design-claude`) sigue siendo la referencia para tipografía, espaciado y estilo; **en color manda este documento**.
 
+## 6b. Reglas de formularios (obligatorias)
+
+1. **Campos numéricos:** se usan `NumberInput` o `NumberStepper` de `core/ui` (nunca `<input type="number">` con `Number(e.target.value)`). El campo guarda texto mientras se escribe, se puede borrar entero y escribir otro valor, y solo entrega el número cuando es válido; al salir del campo vacío o fuera de rango vuelve al último valor válido. Antes, convertir en cada tecla dejaba un 0 pegado que no se podía borrar (2026-11-23).
+2. **Contadores** (comensales, cantidad): `NumberStepper`, con − y + de 56 px **en el mismo lugar** donde se muestra el número (sin un botón "Cambiar" que abra otra ventana) y el número también se puede escribir.
+
 ## 7. Preguntas de este documento
 | ID | Estado | Respuesta |
 |---|---|---|

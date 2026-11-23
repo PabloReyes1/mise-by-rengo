@@ -87,13 +87,32 @@ function Stepper({ start }: { start: number }) {
 describe('GuestsStepper (1 a 99)', () => {
   it('no baja de 1', async () => {
     render(<Stepper start={1} />);
-    expect(screen.getByRole('button', { name: 'Uno menos' })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Uno más' }));
-    expect(screen.getByRole('status')).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: /uno menos/ })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: /uno más/ }));
+    expect(screen.getByRole('textbox', { name: 'Comensales' })).toHaveValue('2');
   });
 
   it('no pasa de 99', () => {
     render(<Stepper start={99} />);
-    expect(screen.getByRole('button', { name: 'Uno más' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /uno más/ })).toBeDisabled();
+  });
+
+  it('se puede borrar y escribir el número (no se queda un 0 pegado)', async () => {
+    render(<Stepper start={4} />);
+    const input = screen.getByRole('textbox', { name: 'Comensales' });
+    await userEvent.clear(input);
+    expect(input).toHaveValue('');
+    await userEvent.type(input, '12');
+    expect(input).toHaveValue('12');
+    await userEvent.click(screen.getByRole('button', { name: /uno más/ }));
+    expect(input).toHaveValue('13');
+  });
+
+  it('si queda vacío, al salir vuelve al último valor válido', async () => {
+    render(<Stepper start={4} />);
+    const input = screen.getByRole('textbox', { name: 'Comensales' });
+    await userEvent.clear(input);
+    await userEvent.tab();
+    expect(input).toHaveValue('4');
   });
 });

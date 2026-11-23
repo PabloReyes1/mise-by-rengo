@@ -3,7 +3,7 @@ import type { ComboGroup, MenuResponse, Product } from '@mise/shared/contracts/c
 import { ImageUp, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { Button, Card, Select, Switch, TextInput } from '../../../core/ui/index.js';
+import { Button, Card, NumberInput, Select, Switch, TextInput } from '../../../core/ui/index.js';
 import {
   toMoney,
   useSaveComboGroups,
@@ -251,19 +251,19 @@ function ComboEditor({ menu, product }: { menu: MenuResponse; product: Product }
               value={g.name}
               onChange={(e) => update(i, { ...g, name: e.target.value })}
             />
-            <TextInput
+            <NumberInput
               label="Mínimo"
-              type="number"
               min={0}
+              max={50}
               value={g.minSelect}
-              onChange={(e) => update(i, { ...g, minSelect: Number(e.target.value) })}
+              onChange={(n) => update(i, { ...g, minSelect: n })}
             />
-            <TextInput
+            <NumberInput
               label="Máximo"
-              type="number"
               min={1}
+              max={50}
               value={g.maxSelect}
-              onChange={(e) => update(i, { ...g, maxSelect: Number(e.target.value) })}
+              onChange={(n) => update(i, { ...g, maxSelect: n })}
             />
             <Button
               variant="outline"

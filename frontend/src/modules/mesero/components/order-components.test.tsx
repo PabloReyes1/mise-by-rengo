@@ -103,7 +103,7 @@ describe('ProductDialog: reglas de los grupos', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: /Queso fresco/ }));
     // Ya hay 2 de 2 y el tercero está agotado
     expect(screen.getByRole('checkbox', { name: /Tortillas extra/ })).toBeDisabled();
-    await userEvent.click(screen.getByRole('button', { name: 'Uno más' }));
+    await userEvent.click(screen.getByRole('button', { name: /uno más/ }));
     // (95 + 8 + 6) × 2 = 218
     const add = screen.getByRole('button', { name: /Agregar/ });
     expect(add).toHaveTextContent('218.00');

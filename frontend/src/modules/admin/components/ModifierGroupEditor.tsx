@@ -3,7 +3,7 @@ import type { ModifierGroup } from '@mise/shared/contracts/catalog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { Button, Switch, TextInput } from '../../../core/ui/index.js';
+import { Button, NumberInput, Switch, TextInput } from '../../../core/ui/index.js';
 import { toMoney, useSaveModifierGroup, type ModifierGroupDraft } from '../api/admin-api.js';
 
 export function ModifierGroupEditor({
@@ -86,20 +86,20 @@ export function ModifierGroupEditor({
         }
       />
       <div className="grid grid-cols-2 gap-4 sm:max-w-sm">
-        <TextInput
+        <NumberInput
           label="Mínimo"
-          type="number"
           min={0}
+          max={50}
           value={draft.minSelect}
           error={rangeError}
-          onChange={(e) => setDraft({ ...draft, minSelect: Number(e.target.value) })}
+          onChange={(n) => setDraft({ ...draft, minSelect: n })}
         />
-        <TextInput
+        <NumberInput
           label="Máximo"
-          type="number"
           min={1}
+          max={50}
           value={draft.maxSelect}
-          onChange={(e) => setDraft({ ...draft, maxSelect: Number(e.target.value) })}
+          onChange={(n) => setDraft({ ...draft, maxSelect: n })}
         />
       </div>
 
