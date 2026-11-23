@@ -1,6 +1,7 @@
 // Datos iniciales de un cliente nuevo (Docs/13 §2 pasos 6 y 7, RF-254).
 // Carga templates/seed + la plantilla elegida. Las tablas de otros módulos (métodos de pago,
-// unidades, mesas) se agregan aquí cuando existan, cada una por su dueño.
+// unidades) se agregan aquí cuando existan, cada una por su dueño. Las zonas y mesas de ejemplo
+// (tablas del módulo floor) solo se cargan con withTables (S-45).
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { newDbId } from './ids.js';
 import { hashSecret, temporaryPassword } from './secrets.js';
@@ -17,6 +18,8 @@ export interface SeedOptions {
   adminUsername: string;
   /** Cargar el menú de ejemplo de la plantilla */
   withMenu?: boolean;
+  /** Cargar las zonas y mesas de ejemplo de la plantilla (desarrollo y demos, S-45) */
+  withTables?: boolean;
   /** SOLO DESARROLLO: crear el usuario dev */
   devUser?: boolean;
 }
@@ -113,6 +116,27 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
           branches: { create: [{ branchId }] },
         },
       });
+    }
+
+    if (options.withTables) {
+      for (const [sort, zone] of t.tables.zones.entries()) {
+        await tx.zone.create({
+          data: {
+            id: newDbId(),
+            branchId,
+            name: zone.name,
+            sort,
+            tables: {
+              create: zone.tables.map((m) => ({
+                id: newDbId(),
+                name: m.name,
+                capacity: m.capacity,
+                shape: m.shape,
+              })),
+            },
+          },
+        });
+      }
     }
 
     if (options.withMenu) {

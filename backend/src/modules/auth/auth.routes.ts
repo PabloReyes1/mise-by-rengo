@@ -1,6 +1,7 @@
 // Rutas de auth (Docs/08 §2.2).
 import {
   DEVICE_TOKEN_HEADER,
+  deviceUsersQuerySchema,
   deviceUsersResponseSchema,
   loginRequestSchema,
   pairDeviceRequestSchema,
@@ -114,8 +115,10 @@ export const authRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
 
   app.get(
     '/api/auth/device-users',
-    { schema: { response: { 200: deviceUsersResponseSchema } } },
-    async (req) => deviceUsers(prisma, await device(req)),
+    {
+      schema: { querystring: deviceUsersQuerySchema, response: { 200: deviceUsersResponseSchema } },
+    },
+    async (req) => deviceUsers(prisma, await device(req), req.query.permission),
   );
 
   app.post(

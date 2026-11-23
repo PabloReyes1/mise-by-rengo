@@ -1,7 +1,14 @@
 // Rutas de la PWA (Docs/06 §3.4): una aplicación por tipo de dispositivo.
 // Cada módulo reemplaza su PendingModule cuando su dueño lo construya (Docs/17 §5).
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
-import { AdminLayout, DevicesPage, MenuPage, RestaurantPage } from '../modules/admin/index.js';
+import {
+  AdminLayout,
+  DevicesPage,
+  MenuPage,
+  PrintersPage,
+  RestaurantPage,
+  TablesPage,
+} from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
 import { FloorPage, OccupancyPage } from '../modules/mesero/index.js';
 import { AppShell } from './AppShell.js';
@@ -23,7 +30,9 @@ const areaChildren: Record<string, RouteObject[]> = {
         { index: true, element: <Navigate to="/admin/menu" replace /> },
         { path: 'restaurante', element: <RestaurantPage /> },
         { path: 'menu', element: <MenuPage /> },
+        { path: 'mesas', element: <TablesPage /> },
         { path: 'dispositivos', element: <DevicesPage /> },
+        { path: 'impresoras', element: <PrintersPage /> },
       ],
     },
   ],

@@ -68,6 +68,23 @@ const menuSchema = z.object({
   ),
 });
 
+/** Zonas y mesas de ejemplo (S-45). Mismos límites que el contrato de floor. */
+const tablesSchema = z.object({
+  zones: z.array(
+    z.object({
+      key,
+      name: z.string().trim().min(1).max(60),
+      tables: z.array(
+        z.object({
+          name: z.string().trim().min(1).max(20),
+          capacity: z.number().int().min(1).max(99),
+          shape: z.enum(['SQUARE', 'ROUND', 'RECTANGLE']).default('SQUARE'),
+        }),
+      ),
+    }),
+  ),
+});
+
 const templateSchema = z.object({
   roles: z.array(
     z.object({
@@ -128,7 +145,8 @@ const devUserSchema = z.object({
 
 export type Seed = z.infer<typeof seedSchema>;
 export type Menu = z.infer<typeof menuSchema>;
-export type Template = z.infer<typeof templateSchema> & { seed: Seed; menu: Menu };
+export type Tables = z.infer<typeof tablesSchema>;
+export type Template = z.infer<typeof templateSchema> & { seed: Seed; menu: Menu; tables: Tables };
 export type DevUser = z.infer<typeof devUserSchema>;
 
 function readJson(dir: string, file: string): Record<string, unknown> {
@@ -158,7 +176,12 @@ export function loadTemplate(templatesDir: string, name: string): Template {
     ...readJson(dir, 'reasons.json'),
     ...readJson(dir, 'ticket-templates.json'),
   });
-  return { ...template, seed, menu: parseMenu(readJson(dir, 'menu.json')) };
+  return {
+    ...template,
+    seed,
+    menu: parseMenu(readJson(dir, 'menu.json')),
+    tables: tablesSchema.parse(readJson(dir, 'tables.json')),
+  };
 }
 
 /** SOLO DESARROLLO: el usuario local. Nunca se carga al dar de alta un cliente. */
@@ -220,6 +243,14 @@ export function validateTemplate(t: Template): string[] {
         }
       }
     }
+  }
+  for (const key of duplicates(t.tables.zones.map((z) => z.key))) {
+    problems.push(`Zona repetida: ${key}`);
+  }
+  // Los meseros dicen "la 5": el nombre no se repite en la sucursal, sin importar mayúsculas (SC-30)
+  const tableNames = t.tables.zones.flatMap((z) => z.tables.map((m) => m.name.toLowerCase()));
+  for (const name of duplicates(tableNames)) {
+    problems.push(`Mesa repetida: ${name}`);
   }
   return problems;
 }

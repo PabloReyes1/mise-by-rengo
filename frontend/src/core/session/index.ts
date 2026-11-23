@@ -6,6 +6,14 @@ import type { DeviceType, PairDeviceResponse, SessionResponse } from '@mise/shar
 import { useSyncExternalStore } from 'react';
 import { apiFetch, configureApi } from '../api/index.js';
 
+export {
+  AuthorizationDialog,
+  authorizationRequired,
+  useAuthorizationPrompt,
+  type AuthorizationDialogProps,
+  type AuthorizationRequest,
+} from './AuthorizationDialog.js';
+
 /** Dispositivo emparejado; el nombre se guarda solo en este equipo */
 export type Device = PairDeviceResponse & { name?: string };
 export type Session = SessionResponse;

@@ -62,7 +62,11 @@ export const sessionResponseSchema = z.object({
 });
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
 
-// GET /api/auth/device-users (dispositivo, SC-07): usuarios para elegir antes del PIN
+// GET /api/auth/device-users (dispositivo, SC-07): usuarios para elegir antes del PIN.
+// Con `?permission=` solo quienes tienen ese permiso: los que pueden autorizar una 🔑 (SC-40).
+export const deviceUsersQuerySchema = z.object({
+  permission: z.string().trim().min(1).max(60).optional(),
+});
 export const deviceUsersResponseSchema = z.array(z.object({ id: idSchema, fullName: z.string() }));
 
 /** Autorización 🔑 en la misma petición (Docs/08 §1): vale para una sola acción. */

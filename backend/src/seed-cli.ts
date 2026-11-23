@@ -1,5 +1,5 @@
 // Comando del seed (Docs/13 §2 pasos 6 y 7). Lo usa nuevo-cliente.sh; en desarrollo, a mano:
-//   pnpm --filter @mise/backend seed -- --trade-name "La Fonda" --admin admin --with-menu --dev-user
+//   pnpm --filter @mise/backend seed -- --trade-name "La Fonda" --admin admin --with-menu --with-tables --dev-user
 // Lee DATABASE_URL del .env de la carpeta actual, igual que el backend.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,6 +15,7 @@ const { values } = parseArgs({
     plan: { type: 'string', default: 'MVP' },
     admin: { type: 'string', default: 'admin' },
     'with-menu': { type: 'boolean', default: false },
+    'with-tables': { type: 'boolean', default: false },
     'dev-user': { type: 'boolean', default: false },
   },
 });
@@ -23,7 +24,10 @@ if (existsSync('.env')) process.loadEnvFile('.env');
 const databaseUrl = process.env['DATABASE_URL'];
 if (!databaseUrl || !values['trade-name']) {
   console.error(
-    tagged('BOOT', 'Uso: seed --trade-name "Nombre" [--admin admin] [--with-menu] [--dev-user]'),
+    tagged(
+      'BOOT',
+      'Uso: seed --trade-name "Nombre" [--admin admin] [--with-menu] [--with-tables] [--dev-user]',
+    ),
   );
   console.error(tagged('BOOT', 'Requiere DATABASE_URL en el .env de la carpeta actual'));
   process.exit(1);
@@ -39,6 +43,7 @@ try {
     plan: values.plan,
     adminUsername: values.admin,
     withMenu: values['with-menu'],
+    withTables: values['with-tables'],
     devUser: values['dev-user'],
   });
   console.log(tagged('BOOT', `Cliente sembrado con la plantilla ${values.template}.`));

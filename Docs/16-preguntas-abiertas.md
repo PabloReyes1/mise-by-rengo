@@ -19,7 +19,7 @@ Al resolver una pregunta: muévela a la sección 3 con la respuesta y la fecha, 
 
 ## 2. Supuestos
 
-RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 (todos los demás). Se dejan aquí para no perder el número. La marca `[SUPUESTO]` ya se quitó de los documentos. **Siguen abiertos S-43 (duración de la Semana 0) y S-44 (contenido de la plantilla).**
+RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 (todos los demás). Se dejan aquí para no perder el número. La marca `[SUPUESTO]` ya se quitó de los documentos. **Siguen abiertos S-43 (duración de la Semana 0), S-44 (contenido de la plantilla) y S-45 (zonas y mesas de ejemplo).**
 
 | ID | Supuesto | Documento |
 |---|---|---|
@@ -67,6 +67,7 @@ RENGO confirmó los supuestos el 2026-11-11 (los que corrigió) y el 2026-11-12 
 | S-42 | **Confirmado:** Kit de hardware de trabajo (TM-m30III / TM-T20III Ethernet, TP-Link ER605 + router 4G) mientras RENGO elige | 06 §7 |
 | S-43 | La Semana 0 dura 5–8 días hábiles con una sola persona (Deniscito) haciendo los cimientos | 17 §2 |
 | S-44 | Contenido de la plantilla `restaurante-basico`: métodos de pago (Efectivo, Tarjeta y Transferencia; tarjeta y transferencia piden referencia), nombres de los motivos, pies de los tickets ("Esta no es una factura.", "Gracias por su visita."), papel de 80 mm, sucursal "Principal", estación "Cocina", la onza como unidad de masa, y el menú de ejemplo. Todo lo edita el cliente | `templates/restaurante-basico`, `templates/seed` |
+| S-45 | Zonas y mesas de ejemplo de `restaurante-basico` (`tables.json`): Salón (mesas 1 a 8), Terraza (T1 a T4) y Barra (Barra 1 a 3), 15 mesas en total como el primer cliente (§3 del doc 15). Solo se cargan con `--with-tables` (desarrollo y demos); un cliente real configura las suyas en Configuración › Mesas | `templates/restaurante-basico/tables.json`, `seed-cli.ts` |
 
 ## 2b. Supuestos de implementación (asumidos por Claude)
 
@@ -115,6 +116,11 @@ Estado: ⏳ por revisar · ✅ confirmado · 🔁 cambiado
 | SC-37 | Mesa bloqueada en el mapa: fondo `surface`, texto `primary` e ícono de candado. El doc 18 §5.1 proponía texto `accent`, que no llega al contraste AA sobre `surface` | doc 18 §5.1, `TableCard` | H1 | ⏳ |
 | SC-38 | Las acciones de mesa que piden 🔑 (operar la mesa de otro mesero) muestran por ahora "Esta acción necesita la autorización de un gerente": la ventana de 🔑 (PIN del gerente) es de `modules/auth` (Deniscito). El backend ya acepta `authorization` | frontend `modules/mesero` | H1 | ⏳ |
 | SC-39 | Mientras no haya tiempo real (H2), el mapa, las mesas abiertas y el detalle se vuelven a leer cada 10 s. Las mutaciones que encolan usan `networkMode: 'always'`: sin conexión TanStack Query las pausaría y la acción nunca llegaría a la outbox | frontend `modules/mesero`, `core/offline` | H2 | ⏳ |
+| SC-40 | Ventana 🔑: está en `core/session` (no en `modules/auth`) porque la usan varios módulos y un módulo del frontend no importa otro (doc 19 §8). Lista solo a quienes tienen el permiso que falta (`GET /api/auth/device-users?permission=`); si hay una sola persona, va directo a su PIN. Si el PIN falla, el mensaje queda en la ventana y se puede reintentar; el bloqueo por intentos es el del login | `core/session/AuthorizationDialog.tsx`, doc 08 §2.2 | H1 | ⏳ |
+| SC-41 | Configuración › Mesas muestra las mesas activas de las zonas activas (lee `GET /api/floor`; el doc 08 no tiene una lista de mesas para administración). Una mesa dada de baja no se reactiva: se crea otra con el mismo nombre. Las mesas de una zona inactiva se ven al activarla | `modules/admin` (`TablesPage`) | H1 | ⏳ |
+| SC-42 | Con 🔑, la acción se repite **por la outbox** con `{ authorization }` en el cuerpo: el PIN queda en IndexedDB solo mientras la operación está pendiente y el servidor lo valida al aplicarla (sin conexión, la validación local con `pin_cache` llega en H4, doc 09 §7) | `core/session`, `core/offline` | H4 | ⏳ |
+| SC-43 | Hasta la administración de impresoras y rutas (H3: `/api/printers`, `/api/devices/:id/printer-routes`), cada dispositivo guarda sus impresoras en `localStorage` con los mismos campos de `printers` (doc 07) y las configura en Configuración › Impresoras. En H3 se pasan al servidor | `core/print/printers.ts`, `/admin/impresoras` | H3 | ⏳ |
+| SC-44 | Detalles de impresión a validar con la impresora real (R-01): en ePOS el corte siempre es `<cut type="feed"/>` (total o parcial lo decide la impresora); el zumbador es `ESC B 2 1` en ESC/POS y `<sound pattern="pattern_a"/>` en ePOS; el servicio ePOS se llama con `devid=local_printer`; los acentos en ePOS los convierte la impresora. Los textos se acomodan en `core/print/layout.ts` y no con las tablas de la librería, para que ESC/POS, ePOS y la vista previa salgan iguales | `core/print` | H1 | ⏳ |
 
 ## 3. Resueltas
 

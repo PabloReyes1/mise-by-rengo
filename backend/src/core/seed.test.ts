@@ -80,6 +80,25 @@ describe('seedClient (Docs/13 §2 pasos 6 y 7)', () => {
     expect(pepian.modifierGroups).toHaveLength(1);
   });
 
+  it('sin --with-tables no crea zonas ni mesas', async () => {
+    await seedClient(prisma, { ...base, adminUsername: 'admin', withMenu: true });
+    expect(await prisma.zone.count()).toBe(0);
+    expect(await prisma.diningTable.count()).toBe(0);
+  });
+
+  it('con --with-tables crea las zonas y mesas de ejemplo, libres y en orden (S-45)', async () => {
+    await seedClient(prisma, { ...base, adminUsername: 'admin', withTables: true });
+    const zones = await prisma.zone.findMany({
+      orderBy: { sort: 'asc' },
+      include: { tables: true },
+    });
+    expect(zones.map((z) => z.name)).toEqual(['Salón', 'Terraza', 'Barra']);
+    expect(zones.flatMap((z) => z.tables)).toHaveLength(15);
+    expect(zones.flatMap((z) => z.tables).every((m) => m.status === 'LIBRE' && m.active)).toBe(
+      true,
+    );
+  });
+
   it('el usuario de desarrollo solo se crea si se pide', async () => {
     await seedClient(prisma, { ...base, adminUsername: 'admin' });
     expect(await prisma.user.findUnique({ where: { username: 'dev' } })).toBeNull();

@@ -168,16 +168,18 @@ Reglas:
 
 | Lugar | Qué tiene |
 |---|---|
-| `core/session/` | `sessionStore`: dispositivo emparejado y sesión en `localStorage` (SC-13), cabeceras de cada petición, refresco automático del token vencido y cierre de sesión; `useDevice`, `useSession`, `hasPermission`, `homePathFor` |
+| `core/session/` | `sessionStore`: dispositivo emparejado y sesión en `localStorage` (SC-13), cabeceras de cada petición, refresco automático del token vencido y cierre de sesión; `useDevice`, `useSession`, `hasPermission`, `homePathFor`. Ventana de autorización 🔑 (`AuthorizationDialog`, `useAuthorizationPrompt`, `authorizationRequired`, SC-40) |
 | `core/config/` | `usePublicConfig` (aplica el tema real del restaurante) y `useRegional` (moneda, idioma y zona para formatear) |
 | `core/ui/Field.tsx` | `TextInput`, `Select`, `Switch` y `Badge`, con error = ícono + texto |
 | `modules/auth/` | Emparejar (`/emparejar`) y entrar (`/entrar`, PIN o contraseña según el dispositivo, SC-22) |
-| `modules/admin/` | `/admin/restaurante` (datos, regional, tema y color propio con revisión de contraste en vivo, logo), `/admin/menu` (categorías, productos, agotados, fotos, combos, modificadores) y `/admin/dispositivos` (código para emparejar) |
+| `modules/admin/` | `/admin/restaurante` (datos, regional, tema y color propio con revisión de contraste en vivo, logo), `/admin/menu` (categorías, productos, agotados, fotos, combos, modificadores), `/admin/mesas` (zonas y mesas: crear, editar, bloquear, dar de baja; SC-41) y `/admin/dispositivos` (código para emparejar) |
+| `core/print/` | `layout.ts` (`PrintDocument`: texto, par texto/monto, reglas; se acomoda a 48 o 32 columnas y da la vista previa en texto), `escpos.ts` (bytes ESC/POS con `@point-of-sale/receipt-printer-encoder`), `epos-xml.ts` (XML ePOS-Print), `print-service.ts` (`printDocument`: transporte de la impresora, 2 reintentos de 1 s y 3 s, `PrintError` con mensaje en español), `printers.ts` (impresoras del dispositivo en `localStorage` hasta H3, SC-43), `transports/epos-lan.ts` y `transports/webusb.ts`, `documents/test-page.ts`. Hecho 2026-11-22; pendiente de validar con la impresora real (R-01) |
+| `modules/admin/` (impresoras) | `/admin/impresoras` (permiso `config.devices`): impresoras de este dispositivo y página de prueba con vista previa |
 | `core/offline/` | Outbox (`outbox.ts`, lógica pura y probada), base local IndexedDB con Dexie (`db.ts`) y `runOperation`/`useOutbox` (`index.ts`). Doc 09 §4.2.1 |
 | `modules/mesero/` | `/mesero` (mapa por zonas, abrir mesa, para llevar, acciones rechazadas) y `/mesero/ocupacion/:id` (comensales, cuentas, trasladar, unir, transferir). `api/floor-api.ts` encola con `runOperation` |
 | `app/` | `StartRedirect` (`/` → emparejar, entrar o el área del dispositivo) y `AppShell` con el nombre del restaurante, el usuario y Salir; las áreas piden sesión |
 
-Dependencias: React 19, React Router, TanStack Query, Dexie (IndexedDB, `core/offline`), Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
+Dependencias: React 19, React Router, TanStack Query, Dexie (IndexedDB, `core/offline`), `@point-of-sale/receipt-printer-encoder` (ESC/POS, `core/print`), Tailwind CSS 4, `lucide-react` (íconos), `@fontsource-variable/inter`, `vite-plugin-pwa`; pruebas con Vitest + jsdom + Testing Library. Comandos: `pnpm --filter @mise/frontend dev` (puerto 5173) y `build`.
 
 ## 5. `shared/`
 
@@ -211,7 +213,7 @@ shared/
 |---|---|
 | `scripts/` | `nuevo-cliente.sh`, `desplegar.sh`, `respaldo.sh`, `restaurar-cliente.sh`, `monitor.sh`, `suspender-cliente.sh`, `reactivar-cliente.sh`, `baja-cliente.sh`, `licencia.sh`, `listar-clientes.sh`, `verificar-migracion.sh` (doc 13) |
 | `templates/seed/` | Datos base del producto, iguales para todo cliente: permisos, unidades, tipos de orden |
-| `templates/restaurante-basico/` | Plantilla de onboarding: roles, métodos de pago, motivos, plantillas de ticket, estación, menú de ejemplo. También es el **menú de desarrollo** para trabajar sin la pantalla de admin. `dev-user.json` es **solo de desarrollo**: el seed lo crea únicamente con la opción de desarrollo y `nuevo-cliente.sh` nunca lo carga |
+| `templates/restaurante-basico/` | Plantilla de onboarding: roles, métodos de pago, motivos, plantillas de ticket, estación, menú de ejemplo y zonas y mesas de ejemplo (`tables.json`, solo con `--with-tables`, S-45). También es el **menú de desarrollo** para trabajar sin la pantalla de admin. `dev-user.json` es **solo de desarrollo**: el seed lo crea únicamente con la opción de desarrollo y `nuevo-cliente.sh` nunca lo carga |
 | (formato de `templates/`) | Archivos JSON con un campo `$comment`. `backend/src/core/templates.ts` los lee y valida (formato con Zod y referencias cruzadas: permisos de cada rol, categorías y grupos de cada producto, SKU únicos, combos). Las referencias usan claves de texto (ej. `"category": "bebidas"`); el seed asigna los ULID al cargar. Hecho en la Semana 0, bloque 5 (2026-11-12) |
 | `templates/caddy/` | `Caddyfile` del servidor (se instala una vez, doc 13 §1) y `cliente.caddy`, el bloque por cliente con `__DOMINIO__`, `__PUERTO__` y `__NOMBRE__` que llena `nuevo-cliente.sh` (doc 13 §2.2) |
 | `templates/pm2/` | `ecosystem.config.cjs`, uno solo para todo el servidor: arma una app por cliente leyendo `clients/registry.csv` (doc 13 §1 y §2.3) |
