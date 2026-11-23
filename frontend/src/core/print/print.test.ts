@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ticketHtml } from './browser-print.js';
 import { testPage } from './documents/test-page.js';
 import { encodeEposPrint, eposEnvelope } from './epos-xml.js';
 import { encodeEscPos } from './escpos.js';
@@ -210,15 +211,24 @@ describe('printDocument (Docs/11 §3)', () => {
   });
 });
 
+describe('diálogo del sistema (ADR-003, 2026-11-23)', () => {
+  it('arma el ticket con el ancho del papel, escapa el texto y respeta negrita y alineación', () => {
+    const html = ticketHtml(
+      { title: 'Prueba', lines: [{ kind: 'text', text: 'A & <B>', bold: true, align: 'center' }] },
+      58,
+    );
+    expect(html).toContain('@page { size: 58mm auto; margin: 0; }');
+    expect(html).toContain(
+      '<div style="text-align:center;font-weight:700;">A &amp; &lt;B&gt;</div>',
+    );
+  });
+});
+
 describe('página de prueba (Docs/11 §4.5)', () => {
-  it('trae dispositivo, impresora, transporte, ancho y caracteres especiales, y cabe en 58 mm', () => {
-    const page = testPage({
-      printer: { ...printer, paperWidth: 58 },
-      deviceName: 'Caja 1',
-      printedAt: '22/11/2026 21:40',
-    });
+  it('trae dispositivo, ancho y caracteres especiales, y cabe en 58 mm', () => {
+    const page = testPage({ deviceName: 'Caja 1', printedAt: '22/11/2026 21:40', paperWidth: 58 });
     const text = renderText(page, 58);
-    for (const piece of ['Caja 1', 'Cocina', 'epos-lan', '58 mm', 'ñ Ñ á é í ó ú', '¿Señor Muñoz?'])
+    for (const piece of ['Caja 1', '58 mm', 'ñ Ñ á é í ó ú', '¿Señor Muñoz?'])
       expect(text).toContain(piece);
     expect(Math.max(...text.split('\n').map((l) => l.length))).toBeLessThanOrEqual(32 + 16);
     expect(layoutRows(page, 58).every((r) => r.text.length <= 32)).toBe(true);

@@ -159,7 +159,8 @@ El archivo `/etc/caddy/Caddyfile` importa `/etc/caddy/clients/*.caddy` (un bloqu
 - **Notas:** Usar la versión de Prisma con cliente en TypeScript sin motor binario (*query compiler* / driver adapter `@prisma/adapter-pg`) si está estable a la fecha de inicio, porque reduce RAM y elimina el binario por proceso. Versiones aprobadas en **ADR-012** (PA-020). `connection_limit` por cliente en `DATABASE_URL`.
 
 ### ADR-003 — Impresión térmica
-- **Estado:** Propuesto (requiere validación con hardware real, PA-021).
+- **Estado:** Actualizado por RENGO el 2026-11-23: **se imprime con el diálogo del sistema.** No se configuran impresoras en Mise: el documento se arma como ticket de 58 u 80 mm (`core/print`, `printWithDialog`) y se abre el diálogo de imprimir del navegador, donde se elige cualquier impresora instalada (USB, red, AirPrint en iPhone, Mopria en Android). Funciona sin internet si la impresora se alcanza por la red local o el cable. **Consecuencia:** nada sale solo; hay que tocar "Imprimir" cada vez (también la comanda). La impresión directa de abajo (ESC/POS, ePOS, WebUSB) queda **en reserva** en el código, con sus pruebas, por si después se necesita que la comanda salga sola. Lo que sigue es la decisión anterior.
+- **Estado anterior:** Propuesto (requería validación con hardware real, PA-021).
 - **Contexto:** Sin servidor local, la comanda debe salir aunque no haya internet. Los meseros pueden usar iPhone. **Safari en iPhone/iPad no soporta WebUSB, Web Serial ni Web Bluetooth.** Un navegador no puede abrir sockets TCP crudos (puerto 9100).
 - **Opciones evaluadas:**
 

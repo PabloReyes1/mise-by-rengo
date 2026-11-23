@@ -2,6 +2,8 @@
 
 > ⚠️ **IMPORTANTE — REGLA DEL PROYECTO:** No se escribe ninguna línea de código hasta que esta documentación esté terminada y aprobada. La documentación vive en `Docs/` en formato `.md` y **se actualiza cada vez que se hace un cambio**. Registra cada cambio en el [Control de cambios](README.md#control-de-cambios).
 
+> **Cambio (2026-11-23, RENGO):** se imprime con el **diálogo del sistema** (ADR-003 actualizado): no hay pantalla de impresoras; `printWithDialog(documento, 58|80)` abre el diálogo y se elige cualquier impresora. Se quitó Configuración › Impresoras; la prueba está en Configuración › Dispositivos › "Probar impresión". Los transportes directos de abajo quedan en reserva.
+>
 > **Avance (2026-11-22):** `core/print` hecho para H1 (transportes `epos-lan` y `webusb`, página de prueba en Configuración › Impresoras). Falta validarlo con la impresora real (R-01); los detalles a confirmar están en SC-44 del doc 16. Los impresos se describen con `PrintDocument` (`core/print/layout.ts`) y se imprimen con `printDocument`.
 
 ## 1. Principios

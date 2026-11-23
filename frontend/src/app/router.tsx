@@ -5,7 +5,6 @@ import {
   AdminLayout,
   DevicesPage,
   MenuPage,
-  PrintersPage,
   RestaurantPage,
   TablesPage,
 } from '../modules/admin/index.js';
@@ -33,7 +32,6 @@ const areaChildren: Record<string, RouteObject[]> = {
         { path: 'menu', element: <MenuPage /> },
         { path: 'mesas', element: <TablesPage /> },
         { path: 'dispositivos', element: <DevicesPage /> },
-        { path: 'impresoras', element: <PrintersPage /> },
       ],
     },
   ],

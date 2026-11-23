@@ -1,10 +1,13 @@
 // Configuración › Dispositivos: código para emparejar un dispositivo nuevo (ADR-008).
 // La lista de dispositivos y revocarlos desde la app llegan en H3 (admin completo).
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Printer } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
+import { useRegional } from '../../../core/config/index.js';
+import { formatDateTime } from '../../../core/format/index.js';
+import { printWithDialog, testPage, type PaperWidth } from '../../../core/print/index.js';
 import { useDevice } from '../../../core/session/index.js';
-import { Button, Card } from '../../../core/ui/index.js';
+import { Button, Card, Select } from '../../../core/ui/index.js';
 import { useCreatePairingCode } from '../api/admin-api.js';
 
 function useCountdown(until: string | undefined): number {
@@ -72,6 +75,48 @@ export function DevicesPage() {
           {create.data && !expired ? 'Generar otro código' : 'Generar código'}
         </Button>
       </Card>
+
+      <PrintTestCard deviceName={device?.name ?? 'Este dispositivo'} />
     </div>
+  );
+}
+
+/** Imprime la página de prueba con el diálogo del sistema (ADR-003 actualizado, 2026-11-23). */
+function PrintTestCard({ deviceName }: { deviceName: string }) {
+  const regional = useRegional();
+  const [width, setWidth] = useState<PaperWidth>(80);
+  return (
+    <Card className="flex flex-col gap-4">
+      <h2 className="text-lg font-bold">Probar impresión</h2>
+      <p className="text-base">
+        No hay que configurar impresoras: al imprimir se abre el diálogo del sistema y eliges la
+        impresora que quieras (USB, red o AirPrint).
+      </p>
+      <Select
+        label="Papel"
+        value={String(width)}
+        options={[
+          { value: '80', label: '80 mm' },
+          { value: '58', label: '58 mm' },
+        ]}
+        onChange={(e) => setWidth(e.target.value === '58' ? 58 : 80)}
+      />
+      <Button
+        variant="secondary"
+        icon={<Printer />}
+        onClick={() =>
+          void printWithDialog(
+            testPage({
+              deviceName,
+              paperWidth: width,
+              printedAt: formatDateTime(new Date().toISOString(), regional),
+            }),
+            width,
+          )
+        }
+      >
+        Imprimir página de prueba
+      </Button>
+    </Card>
   );
 }
