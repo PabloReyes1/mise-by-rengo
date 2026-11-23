@@ -82,6 +82,7 @@ export function UsersPage() {
           roles={roles.data}
           branches={session?.branches ?? []}
           selfId={session?.user.id ?? null}
+          ownPermissions={session?.permissions ?? []}
           onClose={() => setEditing(null)}
         />
       )}

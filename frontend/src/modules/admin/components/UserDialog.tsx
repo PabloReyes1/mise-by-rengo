@@ -11,7 +11,7 @@ import {
 import { newId } from '@mise/shared/domain/ids';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { Badge, Button, Modal, Switch, TextInput } from '../../../core/ui/index.js';
+import { Badge, Button, cx, Modal, Switch, TextInput } from '../../../core/ui/index.js';
 import { useCreateUser, useSetUserPin, useUpdateUser } from '../api/users-api.js';
 
 function errorText(e: unknown) {
@@ -28,6 +28,8 @@ export interface UserDialogProps {
   branches: { id: string; name: string }[];
   /** Quien edita no puede desactivarse a sí mismo */
   selfId: string | null;
+  /** Permisos de quien edita: no puede dar roles con permisos que no tiene (SC-61) */
+  ownPermissions: string[];
   onClose: () => void;
 }
 
@@ -35,7 +37,15 @@ function toggle(list: string[], id: string, on: boolean) {
   return on ? [...list, id] : list.filter((x) => x !== id);
 }
 
-export function UserDialog({ user, roles, branches, selfId, onClose }: UserDialogProps) {
+export function UserDialog({
+  user,
+  roles,
+  branches,
+  selfId,
+  ownPermissions,
+  onClose,
+}: UserDialogProps) {
+  const canGive = (r: Role) => r.permissions.every((p) => ownPermissions.includes(p));
   const [fullName, setFullName] = useState(user?.fullName ?? '');
   const [username, setUsername] = useState(user?.username ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -183,15 +193,24 @@ export function UserDialog({ user, roles, branches, selfId, onClose }: UserDialo
             {roles.map((r) => (
               <label
                 key={r.id}
-                className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-surface"
+                className={cx(
+                  'flex min-h-12 items-center gap-3 rounded-md px-2',
+                  canGive(r) ? 'cursor-pointer hover:bg-surface' : 'cursor-not-allowed',
+                )}
               >
                 <input
                   type="checkbox"
                   className="size-5"
                   checked={roleIds.includes(r.id)}
+                  disabled={!canGive(r)}
                   onChange={(e) => setRoleIds(toggle(roleIds, r.id, e.target.checked))}
                 />
-                <span className="text-base">{r.name}</span>
+                <span className="flex flex-col">
+                  <span className="text-base">{r.name}</span>
+                  {!canGive(r) && (
+                    <span className="text-sm text-secondary">Tiene permisos que tú no tienes</span>
+                  )}
+                </span>
               </label>
             ))}
           </div>

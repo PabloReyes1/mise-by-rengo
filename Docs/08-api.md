@@ -30,7 +30,7 @@
 | 402 | `LICENSE_SUSPENDED`, `LICENSE_READ_ONLY` |
 | 403 | `FORBIDDEN`, `AUTHORIZATION_REQUIRED` (pide 🔑), `MODULE_DISABLED`, `BRANCH_FORBIDDEN`, `DEVICE_REVOKED` |
 | 404 | `NOT_FOUND` |
-| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN` (no puede quedar sin nadie activo que administre usuarios) |
+| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE` (no puede quedar sin nadie activo que administre usuarios) |
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
@@ -79,8 +79,9 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (admin H3) | `config.payments` |
 | GET/POST/PUT | `/api/payment-methods` | `config.payments` |
 | GET/POST/PUT | `/api/users`, `/api/users/:id`, `POST /api/users/:id/pin` | `config.users` |
-| GET/POST/PUT | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users`, para asignar roles) |
-| GET | `/api/permissions` (catálogo) | `config.roles` |
+| GET/POST/PUT/DELETE | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users` o `config.discounts`) |
+| PUT | `/api/roles/:id/discount-limits` | `config.discounts` (S-05) |
+| GET | `/api/permissions` (catálogo) | `config.roles`, `config.users` o `config.discounts` |
 | GET/POST/PUT | `/api/devices`, `/api/printers`, `/api/devices/:id/printer-routes` | `config.devices` |
 | GET | `/api/license` | `config.restaurant` |
 | GET | `/api/config/logo?v=<settingsVersion>` | Público; WebP con caché de un año (SC-19) |
@@ -93,6 +94,15 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 - `POST /api/users/:id/pin` `{ pin }` pone o cambia el PIN; `{ pin: null }` lo quita.
 - `GET /api/roles` → `[{ id, name, description, isSystem, permissions, maxDiscountPct, maxDiscountAmount, userCount }]`.
 - Todo cambio queda en auditoría (`user.create`, `user.update`, `user.pin_set`, `user.pin_removed`) sin secretos.
+- Nadie da ni toca permisos que no tiene: asignar un rol con permisos que tú no tienes, o editar o poner PIN a un usuario con permisos que tú no tienes → 403 `FORBIDDEN` con `details.missing` (SC-61). Con 🔑 cuentan también los permisos de quien autoriza.
+
+**Roles y permisos (H3 #21, 2026-11-23, SC-62):**
+- `GET /api/permissions` → `[{ code, description }]`: el catálogo del producto (Docs/03 §3), el mismo de `templates/seed/permissions.json` (en código: `PERMISSIONS` de `shared/contracts/auth`).
+- `POST /api/roles` `{ id, name, description?, permissions }` → 201 (200 si el `id` ya existía). `PUT /api/roles/:id` `{ name, description?, permissions }` reemplaza los permisos. Nombre repetido (sin importar mayúsculas) → 409 `ROLE_NAME_TAKEN`; código fuera del catálogo → 400. El rol de sistema (Administrador) no se renombra. Si nadie activo quedaría con `config.users` o `config.roles` → 409 `LAST_ADMIN` (`details.permission`).
+- `DELETE /api/roles/:id` → 204. No se borra el rol de sistema (400) ni uno que tenga usuarios (409 `ROLE_IN_USE`).
+- `PUT /api/roles/:id/discount-limits` `{ maxDiscountPct, maxDiscountAmount }` (`config.discounts`, S-05): porcentaje de 0 a 100; `null` = sin tope en esa medida.
+- Los permisos van en el token de acceso: un cambio de rol se aplica cuando la sesión se renueva (≤ 15 min) o al volver a entrar.
+- Auditoría: `role.create`, `role.update`, `role.delete`, `role.discount_limits`.
 
 ### 2.4 Menú
 | Método | Ruta | Descripción | Permiso |

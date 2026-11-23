@@ -189,4 +189,28 @@ describe('usuarios (RF-030, H3 #21)', () => {
     expect(typeof mesero.isSystem).toBe('boolean');
     expect(mesero.userCount).toBeGreaterThanOrEqual(0);
   });
+  it('el gerente no crea administradores ni toca al administrador (SC-61)', async () => {
+    await createTestUser('gina', 'Gerente', { password: 'clave-gerente-1' });
+    const gina = await loginAs('gina', 'clave-gerente-1');
+    const boss = await call(
+      'POST',
+      '/api/users',
+      gina,
+      newWaiter({ roleIds: [roleId('Administrador')] }),
+    );
+    expect(boss.statusCode).toBe(403);
+    expect(boss.json().error.details.missing).toContain('config.roles');
+    expect((await call('POST', '/api/users', gina, newWaiter())).statusCode).toBe(201);
+    const dev = (await call('GET', '/api/users', admin))
+      .json()
+      .find((u: { username: string }) => u.username === 'dev');
+    const takeover = await call('PUT', `/api/users/${dev.id}`, gina, {
+      ...dev,
+      password: 'me-quedo-con-todo',
+    });
+    expect(takeover.statusCode).toBe(403);
+    expect((await call('POST', `/api/users/${dev.id}/pin`, gina, { pin: '1234' })).statusCode).toBe(
+      403,
+    );
+  });
 });

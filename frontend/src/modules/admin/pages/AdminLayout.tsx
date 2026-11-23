@@ -9,11 +9,15 @@ const SECTIONS = [
   { to: '/admin/mesas', label: 'Mesas', permission: 'config.tables' },
   { to: '/admin/dispositivos', label: 'Dispositivos', permission: 'config.devices' },
   { to: '/admin/usuarios', label: 'Usuarios', permission: 'config.users' },
+  // Quien solo fija topes de descuento (config.discounts, S-05) también entra a Roles
+  { to: '/admin/roles', label: 'Roles', permission: ['config.roles', 'config.discounts'] },
 ];
 
 export function AdminLayout() {
   const session = useSession();
-  const visible = SECTIONS.filter((s) => hasPermission(session, s.permission));
+  const visible = SECTIONS.filter((s) =>
+    [s.permission].flat().some((p) => hasPermission(session, p)),
+  );
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <nav aria-label="Administración" className="-mx-4 overflow-x-auto px-4">

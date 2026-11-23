@@ -6,6 +6,7 @@ import {
   DevicesPage,
   MenuPage,
   RestaurantPage,
+  RolesPage,
   TablesPage,
   UsersPage,
 } from '../modules/admin/index.js';
@@ -53,6 +54,7 @@ const areaChildren: Record<string, RouteObject[]> = {
         { path: 'mesas', element: <TablesPage /> },
         { path: 'dispositivos', element: <DevicesPage /> },
         { path: 'usuarios', element: <UsersPage /> },
+        { path: 'roles', element: <RolesPage /> },
       ],
     },
   ],
