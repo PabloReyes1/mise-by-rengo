@@ -146,6 +146,8 @@ export const openOccupancyRequestSchema = z.object({
   waiterId: idSchema.optional(),
   customerName: z.string().trim().max(80).optional(),
   customerPhone: z.string().trim().max(30).optional(),
+  /** 🔑 si quien abre no tiene table.open */
+  authorization: authorizationSchema.optional(),
 });
 export type OpenOccupancyRequest = z.infer<typeof openOccupancyRequestSchema>;
 
@@ -155,10 +157,12 @@ export const listOccupanciesQuerySchema = z.object({
 });
 export const occupancyListSchema = z.array(occupancySchema);
 
-// PATCH /api/occupancies/:id (mesero dueño o table.view_all)
+// PATCH /api/occupancies/:id (mesero dueño, table.view_all o 🔑 de quien lo tenga)
 export const updateOccupancyRequestSchema = z.object({
   guests: guestsSchema,
   version: versionSchema,
+  /** 🔑 para cambiar la mesa de otro mesero (SC-33) */
+  authorization: authorizationSchema.optional(),
 });
 export type UpdateOccupancyRequest = z.infer<typeof updateOccupancyRequestSchema>;
 

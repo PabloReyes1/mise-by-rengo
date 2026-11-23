@@ -5,8 +5,11 @@ import { useSyncExternalStore } from 'react';
 import { ApiError, apiFetch } from '../api/index.js';
 import { sessionStore } from '../session/index.js';
 import { dexieStore, requestPersistentStorage } from './db.js';
+
+export { draftStore } from './db.js';
 import {
   createOutbox,
+  OutboxRejectedError,
   type NewOutboxOp,
   type OutboxOp,
   type OutboxSnapshot,
@@ -28,11 +31,17 @@ export {
  * entrar), licencia, versión, límite de intentos y errores del servidor. Los demás son de negocio.
  */
 const RETRY_STATUS = new Set([0, 401, 402, 408, 426, 429]);
+/**
+ * Con estado que se reintenta, pero son rechazo de negocio: un PIN 🔑 incorrecto (401) no se
+ * arregla reintentando y trabaría la cola con el PIN guardado (SC-45).
+ */
+const REJECT_CODES = new Set(['PIN_INVALID']);
 
 export function classify(error: unknown): SendResult {
   if (error instanceof ApiError) {
     const e = { code: error.code, message: error.message, details: error.details };
-    const retry = RETRY_STATUS.has(error.status) || error.status >= 500;
+    const retry =
+      !REJECT_CODES.has(error.code) && (RETRY_STATUS.has(error.status) || error.status >= 500);
     return { ok: false, retry, error: e };
   }
   return {
@@ -120,6 +129,12 @@ export async function runOperation<T>(
       result.then((data): OperationOutcome<T> => ({ status: 'applied', data })),
       queued,
     ]);
+  } catch (error) {
+    // Rechazada mientras la pantalla esperaba: la pantalla muestra el error, así que sale de la
+    // cola. Si quedara como RECHAZADA, el reintento con 🔑 (misma entidad) se rechazaría como
+    // dependiente. Las que se rechazan después de quedar guardadas siguen en la lista (SC-45).
+    if (error instanceof OutboxRejectedError) await outbox.dismiss(seq);
+    throw error;
   } finally {
     unsubscribe();
   }

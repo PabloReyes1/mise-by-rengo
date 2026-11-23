@@ -10,7 +10,7 @@ import {
   TablesPage,
 } from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
-import { FloorPage, OccupancyPage } from '../modules/mesero/index.js';
+import { FloorPage, OccupancyPage, OrderPage } from '../modules/mesero/index.js';
 import { AppShell } from './AppShell.js';
 import { DEVICE_AREAS } from './device-areas.js';
 import { NotFound } from './NotFound.js';
@@ -22,6 +22,7 @@ const areaChildren: Record<string, RouteObject[]> = {
   '/mesero': [
     { index: true, element: <FloorPage /> },
     { path: 'ocupacion/:id', element: <OccupancyPage /> },
+    { path: 'ocupacion/:id/pedido', element: <OrderPage /> },
   ],
   '/admin': [
     {

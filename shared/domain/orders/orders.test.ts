@@ -26,6 +26,7 @@ describe('estados del pedido (doc 05 §5.3, doc 07)', () => {
     ['LISTO', 'ENTREGADO'],
     ['ENVIADO', 'CANCELADO'],
     ['EN_PREPARACION', 'CANCELADO'],
+    ['LISTO', 'CANCELADO'], // todos los ítems cancelados como merma (PA-055)
   ] as const)('permite %s → %s', (from, to) => {
     expect(canOrderTransition(from, to)).toBe(true);
   });

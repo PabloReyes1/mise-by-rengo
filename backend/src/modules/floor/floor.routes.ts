@@ -37,6 +37,7 @@ import {
   updateTable,
   type Actor,
 } from './floor.service.js';
+import { tableAuthorization } from './table-authorization.js';
 
 const params = z.object({ id: idSchema });
 
@@ -139,7 +140,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   app.patch(
     '/api/occupancies/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, tableAuthorization],
       schema: { params, body: updateOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) => updateGuests(prisma, await branch(req), req.params.id, req.body, actor(req)),
@@ -149,7 +150,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   app.post(
     '/api/occupancies/:id/merge',
     {
-      preHandler: [authenticate, authorize('table.merge')],
+      preHandler: [authenticate, authorize('table.merge'), tableAuthorization],
       schema: { params, body: mergeOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) =>
@@ -164,7 +165,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   app.post(
     '/api/occupancies/:id/move',
     {
-      preHandler: [authenticate, authorize('table.move')],
+      preHandler: [authenticate, authorize('table.move'), tableAuthorization],
       schema: { params, body: moveOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) =>
@@ -173,7 +174,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   app.post(
     '/api/occupancies/:id/transfer',
     {
-      preHandler: [authenticate, authorize('table.transfer_waiter')],
+      preHandler: [authenticate, authorize('table.transfer_waiter'), tableAuthorization],
       schema: { params, body: transferOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) =>

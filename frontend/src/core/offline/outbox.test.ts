@@ -171,4 +171,11 @@ describe('qué errores se reintentan', () => {
       });
     }
   });
+
+  it('un PIN 🔑 incorrecto (401) no traba la cola: se rechaza', () => {
+    expect(classify(new ApiError(401, 'PIN_INVALID', 'PIN incorrecto'))).toMatchObject({
+      retry: false,
+    });
+    expect(classify(new ApiError(401, 'TOKEN_EXPIRED', 'x'))).toMatchObject({ retry: true });
+  });
 });

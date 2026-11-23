@@ -3,6 +3,7 @@ import type { FloorTable, Occupancy } from '@mise/shared/contracts/floor';
 import { CircleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Button, Modal } from '../../../core/ui/index.js';
+import { useAuthorizedAction } from '../api/authorized-action.js';
 import { useOpenTable } from '../api/floor-api.js';
 import { actionError } from './errors.js';
 import { GuestsStepper } from './GuestsStepper.js';
@@ -46,15 +47,15 @@ function OpenTableForm({
 }: OpenTableDialogProps & { table: FloorTable }) {
   const [guests, setGuests] = useState(Math.min(table.capacity, 99));
   const open = useOpenTable();
+  const authorized = useAuthorizedAction();
   const error = actionError(open.error);
 
   const submit = () => {
-    open.mutate(
+    authorized.run(
+      open,
       { tableId: table.id, tableName: table.name, orderTypeCode: 'MESA', guests },
-      {
-        onSuccess: (outcome) =>
-          outcome.status === 'applied' ? onOpened(outcome.data) : onQueued(),
-      },
+      `Abrir la mesa ${table.name}`,
+      { onDone: (outcome) => (outcome.status === 'applied' ? onOpened(outcome.data) : onQueued()) },
     );
   };
 
@@ -75,6 +76,8 @@ function OpenTableForm({
           Abrir mesa
         </Button>
       </div>
+      {/* La ventana 🔑 se abre encima de esta (diálogos nativos apilados) */}
+      {authorized.dialog}
     </div>
   );
 }

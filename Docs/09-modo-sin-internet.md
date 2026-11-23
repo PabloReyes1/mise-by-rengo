@@ -109,6 +109,7 @@ El estado no se basa solo en `navigator.onLine` (poco fiable):
 - Mientras no exista `sync/push` (H4), **cada acción se envía a su propia ruta REST con la cabecera `Idempotency-Key`**; el servidor la registra en `sync_operations` (doc 08 §1). Las reglas 4 a 8 llegan en H4 sin cambiar a quien encola.
 - Se reintentan (bloquean la cola) la falta de red y las respuestas `401`, `402`, `408`, `426`, `429` y `5xx`; el resto de `4xx` es rechazo de negocio.
 - Los módulos usan `runOperation`: devuelve `applied` con la respuesta del servidor o `queued` si el primer intento falló por la red (la pantalla avisa "la acción quedó guardada en este celular"). Las mutaciones de TanStack Query que encolan usan `networkMode: 'always'` (SC-39).
+- 🔑: `401 PIN_INVALID` no se reintenta, y una acción rechazada mientras la pantalla esperaba sale de la cola para que el reintento con la autorización no quede como dependiente (SC-45).
 - La barra superior muestra cuántas acciones están pendientes; el mapa de mesas lista las rechazadas con su motivo y "Entendido". Antes de cerrar la página con pendientes, el navegador pide confirmación (§9).
 
 ### 4.3 Tipos de operaciones offline permitidas

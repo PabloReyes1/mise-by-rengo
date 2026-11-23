@@ -175,7 +175,7 @@ Reglas:
 | `modules/admin/` | `/admin/restaurante` (datos, regional, tema y color propio con revisión de contraste en vivo, logo), `/admin/menu` (categorías, productos, agotados, fotos, combos, modificadores), `/admin/mesas` (zonas y mesas: crear, editar, bloquear, dar de baja; SC-41) y `/admin/dispositivos` (código para emparejar) |
 | `core/print/` | `layout.ts` (`PrintDocument`: texto, par texto/monto, reglas; se acomoda a 48 o 32 columnas y da la vista previa en texto), `escpos.ts` (bytes ESC/POS con `@point-of-sale/receipt-printer-encoder`), `epos-xml.ts` (XML ePOS-Print), `print-service.ts` (`printDocument`: transporte de la impresora, 2 reintentos de 1 s y 3 s, `PrintError` con mensaje en español), `printers.ts` (impresoras del dispositivo en `localStorage` hasta H3, SC-43), `transports/epos-lan.ts` y `transports/webusb.ts`, `documents/test-page.ts`. Hecho 2026-11-22; pendiente de validar con la impresora real (R-01) |
 | `modules/admin/` (impresoras) | `/admin/impresoras` (permiso `config.devices`): impresoras de este dispositivo y página de prueba con vista previa |
-| `core/offline/` | Outbox (`outbox.ts`, lógica pura y probada), base local IndexedDB con Dexie (`db.ts`) y `runOperation`/`useOutbox` (`index.ts`). Doc 09 §4.2.1 |
+| `core/offline/` | Outbox (`outbox.ts`, lógica pura y probada), base local IndexedDB con Dexie (`db.ts`; desde la versión 2 guarda también los borradores de pedido en `drafts`, con `draftStore`) y `runOperation`/`useOutbox` (`index.ts`). Doc 09 §4.2.1 |
 | `modules/mesero/` | `/mesero` (mapa por zonas, abrir mesa, para llevar, acciones rechazadas) y `/mesero/ocupacion/:id` (comensales, cuentas, trasladar, unir, transferir). `api/floor-api.ts` encola con `runOperation` |
 | `app/` | `StartRedirect` (`/` → emparejar, entrar o el área del dispositivo) y `AppShell` con el nombre del restaurante, el usuario y Salir; las áreas piden sesión |
 
@@ -205,7 +205,7 @@ shared/
 - En desarrollo (typecheck, Vitest y Vite) se lee **el TypeScript fuente**, sin compilar: el `package.json` de `shared` declara la condición `@mise/source`, que activan `tsconfig.base.json` (`customConditions`) y el `vitest.config.ts` de cada paquete.
 - En producción el backend lee lo compilado en `shared/dist` (`pnpm --filter @mise/shared build`), así que en el despliegue `shared` se compila antes que el backend (doc 13 §4, paso 7).
 - Dependencias de `shared`: `ulid` (generación y conversión ULID ↔ uuid, ADR-006) y `zod` (contratos).
-- Estado (2026-11-12): hechos `domain/ids`, `domain/orders` y `contracts/errors`, con pruebas. `domain/billing` y `domain/folios` son de Pablito (doc 17 §1).
+- Estado (2026-11-12): hechos `domain/ids`, `domain/orders` y `contracts/errors`, con pruebas. `domain/billing` y `domain/folios` son de Pablito (doc 17 §1). (2026-11-22, H2) hechos `domain/billing` (dinero en centavos enteros: `toCents`, `fromCents`, `sumMoney`, `lineTotal`) y `contracts/billing` (cuentas, mover y separar ítems).
 
 ## 6. Resto
 

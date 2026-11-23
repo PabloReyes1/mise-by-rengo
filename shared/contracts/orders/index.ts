@@ -55,6 +55,8 @@ export const sendOrderRequestSchema = z.object({
   /** Hora del dispositivo; el servidor la corrige con clockOffsetMs (Docs/09 §4.2) */
   clientSentAt: isoDateTimeSchema,
   items: z.array(sendOrderItemSchema).min(1).max(100),
+  /** 🔑 si quien envía no tiene order.create o la mesa es de otro mesero */
+  authorization: authorizationSchema.optional(),
 });
 export type SendOrderRequest = z.infer<typeof sendOrderRequestSchema>;
 
@@ -146,7 +148,19 @@ export const orderPrintedRequestSchema = z.object({
   printerId: idSchema,
 });
 
-// POST /api/orders/:id/deliver y POST /api/orders/:id/reprint no llevan cuerpo.
+/**
+ * POST /api/orders/:id/deliver (order.deliver). El cuerpo puede ir vacío ({}); la 🔑 solo hace
+ * falta para entregar en la mesa de otro mesero (SC-33).
+ */
+export const deliverOrderRequestSchema = z.object({
+  authorization: authorizationSchema.optional(),
+});
+export type DeliverOrderRequest = z.infer<typeof deliverOrderRequestSchema>;
+
+/** GET /api/occupancies/:id/orders — rondas de la mesa, de la primera a la última (SC-47) */
+export const occupancyOrdersResponseSchema = z.array(orderSchema);
+
+// POST /api/orders/:id/reprint no lleva cuerpo.
 
 // ---------------------------------------------------------------------------
 // Eventos de tiempo real que emite orders (Docs/08 §3.1). El sobre es de realtime.

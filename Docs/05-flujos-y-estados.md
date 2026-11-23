@@ -229,9 +229,11 @@ stateDiagram-v2
     LISTO --> ENTREGADO: mesero entrega
     ENVIADO --> CANCELADO: cancelar todos los ítems
     EN_PREPARACION --> CANCELADO: cancelar todos los ítems
+    LISTO --> CANCELADO: cancelar todos los ítems (merma, motivo + 🔑)
     ENTREGADO --> [*]
     CANCELADO --> [*]
 ```
+`ENTREGADO` es final: si después se cancelan ítems entregados (merma), el pedido sigue `ENTREGADO` (PA-055).
 
 ### 5.4 Ítem
 ```mermaid
