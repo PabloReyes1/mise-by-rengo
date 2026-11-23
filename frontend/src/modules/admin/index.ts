@@ -1,6 +1,7 @@
 // Módulo admin del frontend (Docs/19 §4). Dueño: Deniscito.
-// H1: restaurante, menú, mesas y dispositivos (con prueba de impresión). H3: usuarios, roles, métodos de pago y motivos; cajas, pendiente.
+// H1: restaurante, menú, mesas y dispositivos (con prueba de impresión). H3: usuarios, roles, métodos de pago, motivos y cajas.
 export { AdminLayout } from './pages/AdminLayout.js';
+export { CashRegistersPage } from './pages/CashRegistersPage.js';
 export { DevicesPage } from './pages/DevicesPage.js';
 export { MenuPage } from './pages/MenuPage.js';
 export { PaymentMethodsPage } from './pages/PaymentMethodsPage.js';

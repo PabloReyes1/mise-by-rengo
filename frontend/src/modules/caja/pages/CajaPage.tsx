@@ -59,7 +59,9 @@ export function CajaPage() {
   const [chosen, setChosen] = useState<string | null>(null);
   if (registers.isPending) return <p className="text-base text-secondary">Cargando cajas…</p>;
   if (!registers.data?.length)
-    return <p role="alert">Esta sucursal no tiene cajas. Créalas en Configuración.</p>;
+    return (
+      <p role="alert">Esta sucursal no tiene cajas activas. Créalas en Configuración › Cajas.</p>
+    );
   const register = registers.data.find((r) => r.id === chosen) ?? registers.data[0]!;
 
   return (

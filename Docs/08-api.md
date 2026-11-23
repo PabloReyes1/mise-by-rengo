@@ -173,7 +173,9 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.8 Caja
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/cash-registers` | Cajas de la sucursal y turno abierto | Autenticado |
+| GET | `/api/cash-registers` | Cajas activas de la sucursal y turno abierto (con `countByDenomination`). Con `?all=true`, también las inactivas | Autenticado; `?all=true` pide `config.restaurant` |
+| POST | `/api/cash-registers` | Crear caja en la sucursal del dispositivo `{ id, name, openingFloatMode, openingFloatAmount, countByDenomination, isMain }` → 201 (200 si el `id` ya existía). La primera de la sucursal es la principal (SC-64) | `config.restaurant` |
+| PUT | `/api/cash-registers/:id` | Editar `{ name, openingFloatMode, openingFloatAmount, countByDenomination, isMain, active }`. Marcar `isMain` se la quita a la otra; la principal no se desmarca ni se desactiva; no se desactiva con turno abierto (400). Auditoría `cash.register.create/update` | `config.restaurant` |
 | POST | `/api/shifts` | `{ id, cashRegisterId, openingFloat, counts? }` — **solo en línea** (PA-042); no se acepta por `sync/push` | `cash.open_shift` |
 | GET | `/api/shifts/:id` | Resumen (el esperado solo con `cash.view_expected`) | `cash.open_shift` |
 | POST | `/api/shifts/:id/movements` | `{ id, type, amount, reasonId, note, authorization? }` → el turno con sus movimientos; cada uno trae `userName` y `authorizedByName` (quien dio la 🔑) para el comprobante (doc 11 §4.5) | `cash.movement` |

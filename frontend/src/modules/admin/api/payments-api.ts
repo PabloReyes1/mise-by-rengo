@@ -1,4 +1,9 @@
-// Métodos de pago y motivos (Docs/08 §2.3; H3 #21).
+// Métodos de pago, motivos y cajas (Docs/08 §2.3 y §2.8; H3 #21).
+import type {
+  CashRegister,
+  CreateCashRegisterRequest,
+  UpdateCashRegisterRequest,
+} from '@mise/shared/contracts/cash';
 import type {
   CreatePaymentMethodRequest,
   PaymentMethodAdmin,
@@ -64,4 +69,32 @@ export const useCreateReason = () =>
 export const useUpdateReason = () =>
   useReasonMutation(({ id, body }: { id: string; body: UpdateReasonRequest }) =>
     apiFetch<ReasonAdmin>(`/reasons/${id}`, { method: 'PUT', body }),
+  );
+
+// Cajas (H3 #21). Misma raíz de clave que la pantalla de Caja, para que vea los cambios
+const REGISTERS_KEY = ['cash', 'registers'] as const;
+
+export function useAllCashRegisters() {
+  return useQuery({
+    queryKey: [...REGISTERS_KEY, 'all'],
+    queryFn: () => apiFetch<CashRegister[]>('/cash-registers?all=true'),
+  });
+}
+
+function useRegisterMutation<TVars>(fn: (vars: TVars) => Promise<CashRegister>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: REGISTERS_KEY }),
+  });
+}
+
+export const useCreateCashRegister = () =>
+  useRegisterMutation((body: CreateCashRegisterRequest) =>
+    apiFetch<CashRegister>('/cash-registers', { method: 'POST', body }),
+  );
+
+export const useUpdateCashRegister = () =>
+  useRegisterMutation(({ id, body }: { id: string; body: UpdateCashRegisterRequest }) =>
+    apiFetch<CashRegister>(`/cash-registers/${id}`, { method: 'PUT', body }),
   );

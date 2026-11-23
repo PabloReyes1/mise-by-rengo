@@ -1,6 +1,10 @@
 // Rutas de caja (Docs/08 §2.8). Dueño: Pablito; reasignado a Deniscito (doc 17 §3.1, H3 #18).
 import {
+  cashRegisterSchema,
   cashRegistersResponseSchema,
+  createCashRegisterRequestSchema,
+  listCashRegistersQuerySchema,
+  updateCashRegisterRequestSchema,
   closeShiftRequestSchema,
   shiftReportSchema,
   createMovementRequestSchema,
@@ -13,11 +17,13 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
+import { AppError } from '../../core/errors.js';
 import { authorize } from '../auth/index.js';
 import { requestBranchId } from '../floor/index.js';
 import { announce } from '../realtime/index.js';
 import { addMovement, getShift, listCashRegisters, openShift, type Actor } from './cash.service.js';
 import { closeShift, getShiftReport, startClose } from './close.service.js';
+import { createCashRegister, updateCashRegister } from './registers.service.js';
 
 const params = z.object({ id: idSchema });
 
@@ -37,8 +43,54 @@ export const cashRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
 
   app.get(
     '/api/cash-registers',
-    { preHandler: [authenticate], schema: { response: { 200: cashRegistersResponseSchema } } },
-    async (req) => listCashRegisters(prisma, await branch(req), actor(req)),
+    {
+      preHandler: [authenticate],
+      schema: {
+        querystring: listCashRegistersQuerySchema,
+        response: { 200: cashRegistersResponseSchema },
+      },
+    },
+    async (req) => {
+      const all = req.query.all === 'true';
+      // Con ?all=true también las inactivas: solo quien administra las cajas (SC-64)
+      if (all && !req.auth!.permissions.includes('config.restaurant'))
+        throw new AppError('FORBIDDEN', 'No tienes permiso para administrar las cajas');
+      return listCashRegisters(prisma, await branch(req), actor(req), all);
+    },
+  );
+
+  // Administrar cajas (H3 #21): en la sucursal del dispositivo
+  app.post(
+    '/api/cash-registers',
+    {
+      preHandler: [authenticate, authorize('config.restaurant')],
+      schema: {
+        body: createCashRegisterRequestSchema,
+        response: { 200: cashRegisterSchema, 201: cashRegisterSchema },
+      },
+    },
+    async (req, reply) => {
+      const b = await branch(req);
+      const r = await createCashRegister(prisma, b, req.body, actor(req));
+      return reply.status(r.created ? 201 : 200).send(r.register);
+    },
+  );
+
+  app.put(
+    '/api/cash-registers/:id',
+    {
+      preHandler: [authenticate, authorize('config.restaurant')],
+      schema: {
+        params: z.object({ id: idSchema }),
+        body: updateCashRegisterRequestSchema,
+        response: { 200: cashRegisterSchema },
+      },
+    },
+    async (req) => {
+      const b = await branch(req);
+      const register = await updateCashRegister(prisma, b, req.params.id, req.body, actor(req));
+      return register;
+    },
   );
 
   // Abrir turno: solo en línea (PA-042); 201 al crear, 200 si es el mismo id
