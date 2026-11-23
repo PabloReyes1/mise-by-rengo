@@ -29,3 +29,5 @@ export {
   type NumberInputProps,
   type NumberStepperProps,
 } from './NumberInput.js';
+export { compressImage, fitInside, imageFromTransfer, isImage } from './image.js';
+export { ImagePicker, type ImagePickerProps } from './ImagePicker.js';

@@ -1,9 +1,17 @@
 // Editor de un producto (RF-011, RF-013 a RF-016): datos, modificadores, foto y combo.
 import type { ComboGroup, MenuResponse, Product } from '@mise/shared/contracts/catalog';
-import { ImageUp, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { Button, Card, NumberInput, Select, Switch, TextInput } from '../../../core/ui/index.js';
+import {
+  Button,
+  Card,
+  ImagePicker,
+  NumberInput,
+  Select,
+  Switch,
+  TextInput,
+} from '../../../core/ui/index.js';
 import {
   toMoney,
   useSaveComboGroups,
@@ -206,34 +214,27 @@ export function ProductEditor({
       {product && (
         <section className="flex flex-col gap-3 border-t border-accent pt-6">
           <h3 className="text-base font-bold">Foto</h3>
-          <div className="flex items-center gap-4">
-            {product.imageUrl ? (
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                width={96}
-                height={96}
-                className="size-24 rounded-md border border-accent object-cover"
-              />
-            ) : (
-              <span className="flex size-24 items-center justify-center rounded-md border border-dashed border-secondary text-sm text-secondary">
-                Sin foto
-              </span>
-            )}
-            <label className="inline-flex min-h-12 cursor-pointer items-center gap-2 rounded-md border border-secondary px-4 text-base font-semibold text-secondary hover:bg-surface">
-              <ImageUp aria-hidden className="size-5" />
-              {image.isPending ? 'Subiendo…' : product.imageUrl ? 'Cambiar foto' : 'Subir foto'}
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) image.mutate({ id: product.id, file });
-                }}
-              />
-            </label>
-          </div>
+          <ImagePicker
+            label={`Foto de ${product.name}`}
+            name={product.sku}
+            busy={image.isPending}
+            onImage={(file) => image.mutate({ id: product.id, file })}
+            preview={
+              product.imageUrl ? (
+                <img
+                  src={product.imageUrl}
+                  alt={product.name}
+                  width={96}
+                  height={96}
+                  className="size-24 rounded-md border border-accent object-cover"
+                />
+              ) : (
+                <span className="flex size-24 items-center justify-center rounded-md border border-dashed border-secondary text-sm text-secondary">
+                  Sin foto
+                </span>
+              )
+            }
+          />
           {errorText(image.error) && (
             <p role="alert" className="text-sm">
               {errorText(image.error)}

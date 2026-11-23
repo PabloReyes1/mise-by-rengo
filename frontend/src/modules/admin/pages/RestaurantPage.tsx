@@ -1,10 +1,18 @@
 // Configuración › Restaurante (RF-001, RF-004, Docs/18 §6 y §8): datos, regional, apariencia y logo.
 import type { Settings } from '@mise/shared/contracts/config';
 import { THEMES, themeById, validatePrimaryOverride } from '@mise/shared/domain/theme';
-import { Check, CircleAlert, ImageUp } from 'lucide-react';
+import { Check, CircleAlert } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { Button, Card, cx, Select, Switch, TextInput } from '../../../core/ui/index.js';
+import {
+  Button,
+  Card,
+  cx,
+  ImagePicker,
+  Select,
+  Switch,
+  TextInput,
+} from '../../../core/ui/index.js';
 import { useLicense, useSaveSettings, useSettings, useUploadLogo } from '../api/admin-api.js';
 
 const THEME_NAMES: Record<string, string> = {
@@ -262,19 +270,12 @@ export function RestaurantPage() {
         title="Logo"
         description="Se muestra en la app y en los tickets. Se ajusta solo a máximo 800 px."
       >
-        <label className="inline-flex min-h-12 w-fit cursor-pointer items-center gap-2 rounded-md border border-secondary px-4 text-base font-semibold text-secondary hover:bg-surface">
-          <ImageUp aria-hidden className="size-5" />
-          {logo.isPending ? 'Subiendo…' : 'Subir logo'}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="sr-only"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) logo.mutate(file);
-            }}
-          />
-        </label>
+        <ImagePicker
+          label="Logo del restaurante"
+          name="logo"
+          busy={logo.isPending}
+          onImage={(file) => logo.mutate(file)}
+        />
         {logo.isSuccess && <p className="text-sm">Logo actualizado.</p>}
         {logo.error && (
           <p role="alert" className="text-sm">
