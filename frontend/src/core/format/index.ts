@@ -39,3 +39,11 @@ export function formatDateTime(iso: string, regional: Regional): string {
     timeStyle: 'short',
   }).format(new Date(iso));
 }
+
+/** "58" o "58,5" → "58.50"; null si no es un monto válido (lo que escribe la persona). */
+export function toMoney(input: string): string | null {
+  const value = input.trim().replace(',', '.');
+  if (!/^\d{1,10}(\.\d{0,2})?$/.test(value)) return null;
+  const [int, dec = ''] = value.split('.');
+  return `${Number(int)}.${dec.padEnd(2, '0')}`;
+}

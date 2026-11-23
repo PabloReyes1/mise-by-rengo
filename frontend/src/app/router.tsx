@@ -16,6 +16,7 @@ import {
   OccupancyPage,
   OrderPage,
 } from '../modules/mesero/index.js';
+import { CajaPage } from '../modules/caja/index.js';
 import { KdsPage } from '../modules/cocina/index.js';
 import { AppShell } from './AppShell.js';
 import { DEVICE_AREAS } from './device-areas.js';
@@ -24,6 +25,8 @@ import { PendingModule } from './PendingModule.js';
 import { StartRedirect } from './StartRedirect.js';
 
 const areaChildren: Record<string, RouteObject[]> = {
+  // Caja (H3, reasignado a Deniscito)
+  '/caja': [{ index: true, element: <CajaPage /> }],
   // Cocina (Deniscito, H2)
   '/kds': [{ index: true, element: <KdsPage /> }],
   // Mesero (Pablito, H1)

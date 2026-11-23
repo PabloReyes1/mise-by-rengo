@@ -147,10 +147,5 @@ export function useCreatePairingCode() {
   });
 }
 
-/** "58" o "58.5" → "58.50"; null si no es un monto válido. */
-export function toMoney(input: string): string | null {
-  const value = input.trim().replace(',', '.');
-  if (!/^\d{1,10}(\.\d{0,2})?$/.test(value)) return null;
-  const [int, dec = ''] = value.split('.');
-  return `${Number(int)}.${dec.padEnd(2, '0')}`;
-}
+/** Se movió a core/format (también lo usa caja). */
+export { toMoney } from '../../../core/format/index.js';
