@@ -6,6 +6,28 @@ export const LICENSE_STATUSES = ['ACTIVA', 'GRACIA', 'SOLO_LECTURA', 'SUSPENDIDA
 export const MODULE_KEYS = ['recipes', 'ai', 'multiBranch', 'advancedReports'] as const;
 export const modulesSchema = z.record(z.string(), z.boolean());
 
+/**
+ * Tiempos y sonido del KDS (Docs/07 client_settings.kds_thresholds y kds_sound, SC-54).
+ * Arreglo 4 de la demo de H2 (doc 17 §5): el pedido nuevo suena una vez; cada `reminderSec`
+ * suena UNA vez el recordatorio con el sonido del estado más crítico (0 = sin recordatorio).
+ */
+export const kdsSettingsSchema = z
+  .object({
+    /** Minutos desde el envío para "Por vencer" */
+    warnMin: z.number().int().min(1).max(120),
+    /** Minutos desde el envío para "Atrasado" */
+    lateMin: z.number().int().min(2).max(240),
+    /** Cada cuántos segundos se recuerda lo pendiente; 0 = nunca */
+    reminderSec: z.number().int().min(0).max(3600),
+    /** Volumen de 0 a 1 */
+    volume: z.number().min(0).max(1),
+  })
+  .refine((k) => k.lateMin > k.warnMin, {
+    message: '"Atrasado" tiene que ser después de "Por vencer"',
+    path: ['lateMin'],
+  });
+export type KdsSettings = z.infer<typeof kdsSettingsSchema>;
+
 // GET /api/config/public (público): lo que la PWA necesita antes de iniciar sesión
 export const publicConfigSchema = z.object({
   tradeName: z.string(),
@@ -22,6 +44,8 @@ export const publicConfigSchema = z.object({
   licenseStatus: z.enum(LICENSE_STATUSES),
   settingsVersion: z.number().int(),
   minFrontendVersion: z.string(),
+  /** El KDS lo lee sin permisos de configuración */
+  kds: kdsSettingsSchema,
 });
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
 
@@ -39,6 +63,7 @@ export const settingsSchema = z.object({
   businessDayCutoff: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
   themeId: z.string().min(1),
   colorPrimaryOverride: hexColorSchema.nullable(),
+  kds: kdsSettingsSchema,
   settingsVersion: z.number().int(),
 });
 export type Settings = z.infer<typeof settingsSchema>;

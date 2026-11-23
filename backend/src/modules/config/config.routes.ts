@@ -28,6 +28,7 @@ import {
   listBranches,
   listReasons,
   listTicketTemplates,
+  toKdsSettings,
   toSettings,
   updateBranch,
   updateSettings,
@@ -70,6 +71,7 @@ export function configRoutes(license: ReturnType<typeof licenseReader>): Fastify
           modules: (l?.modules ?? {}) as Record<string, boolean>,
           licenseStatus: l?.status ?? 'ACTIVA',
           settingsVersion: s.settingsVersion,
+          kds: toKdsSettings(s),
           minFrontendVersion: app.env.MIN_FRONTEND_VERSION,
         };
       },

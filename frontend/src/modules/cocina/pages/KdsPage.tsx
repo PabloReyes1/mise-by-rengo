@@ -20,6 +20,7 @@ import {
   useRecall,
 } from '../api/kds-api.js';
 import { KdsCard } from '../components/KdsCard.js';
+import { useKdsTiming } from '../hooks/kds-timing.js';
 import { useKdsSound } from '../hooks/useKdsSound.js';
 
 const COLUMNS: { status: KdsOrder['status']; title: string }[] = [
@@ -48,13 +49,15 @@ export function KdsPage() {
   const itemReady = useItemReady();
   const recall = useRecall();
   const list = orders.data ?? [];
-  const sound = useKdsSound(list.filter((o) => o.status === 'ENVIADO').length);
+  const timing = useKdsTiming();
+  const sound = useKdsSound(list, timing);
 
   useRealtimeEvents((e) => {
     if (e.event === REALTIME_EVENTS.resyncRequired || e.event.startsWith('order.')) {
       void qc.invalidateQueries({ queryKey: KDS_KEY });
     }
-    if (e.event === REALTIME_EVENTS.orderSent) sound.play();
+    // Pedido nuevo: suena una vez
+    if (e.event === REALTIME_EVENTS.orderSent) sound.play('new');
   });
 
   const busyId =
@@ -118,6 +121,7 @@ export function KdsPage() {
                   key={o.id}
                   order={o}
                   now={now}
+                  timing={timing}
                   busy={busyId === o.id}
                   onAccept={() => accept.mutate(o.id)}
                   onReady={() => ready.mutate(o.id)}

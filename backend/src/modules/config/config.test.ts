@@ -245,3 +245,40 @@ describe('GET /api/reasons (motivos para el mesero)', () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+describe('KDS: umbrales y recordatorio (SC-54, doc 17 §5 arreglo 4)', () => {
+  it('por defecto: 10 y 20 min, recordatorio cada 2 min; se guardan y salen en la config pública', async () => {
+    const current = (
+      await app.inject({ method: 'GET', url: '/api/config/settings', headers })
+    ).json();
+    expect(current.kds).toEqual({ warnMin: 10, lateMin: 20, reminderSec: 120, volume: 0.8 });
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/settings',
+      headers,
+      payload: {
+        kds: { warnMin: 8, lateMin: 15, reminderSec: 300, volume: 0.6 },
+        settingsVersion: current.settingsVersion,
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const pub = (await app.inject({ method: 'GET', url: '/api/config/public' })).json();
+    expect(pub.kds).toEqual({ warnMin: 8, lateMin: 15, reminderSec: 300, volume: 0.6 });
+  });
+
+  it('"atrasado" antes de "por vencer" no se acepta', async () => {
+    const current = (
+      await app.inject({ method: 'GET', url: '/api/config/settings', headers })
+    ).json();
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/settings',
+      headers,
+      payload: {
+        kds: { warnMin: 20, lateMin: 10, reminderSec: 120, volume: 0.8 },
+        settingsVersion: current.settingsVersion,
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});

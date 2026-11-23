@@ -4,11 +4,12 @@
 import type { KdsOrder } from '@mise/shared/contracts/kitchen';
 import { Check, ChefHat, Undo2 } from 'lucide-react';
 import { Button, cx } from '../../../core/ui/index.js';
-import { minutesSince, urgency, URGENCY } from '../hooks/kds-timing.js';
+import { minutesSince, urgency, URGENCY, type KdsTiming } from '../hooks/kds-timing.js';
 
 export interface KdsCardProps {
   order: KdsOrder;
   now: number;
+  timing: KdsTiming;
   busy: boolean;
   onAccept: () => void;
   onReady: () => void;
@@ -19,6 +20,7 @@ export interface KdsCardProps {
 export function KdsCard({
   order,
   now,
+  timing,
   busy,
   onAccept,
   onReady,
@@ -27,7 +29,7 @@ export function KdsCard({
 }: KdsCardProps) {
   // El tiempo corre desde que se envió (kds_thresholds.from = SENT, Docs/07)
   const minutes = minutesSince(order.sentAt, now);
-  const u = URGENCY[order.status === 'LISTO' ? 'onTime' : urgency(minutes)];
+  const u = URGENCY[order.status === 'LISTO' ? 'onTime' : urgency(minutes, timing)];
   const where = order.table
     ? `Mesa ${order.table}`
     : `PARA LLEVAR${order.customerName ? ` · ${order.customerName}` : ''}`;

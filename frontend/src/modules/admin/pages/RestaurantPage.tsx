@@ -10,6 +10,7 @@ import {
   Card,
   cx,
   ImagePicker,
+  NumberInput,
   Select,
   Switch,
   TextInput,
@@ -152,6 +153,57 @@ export function RestaurantPage() {
           autoComplete="off"
           onChange={(e) => set('nit', e.target.value)}
         />
+      </Section>
+
+      <Section
+        title="Cocina (KDS)"
+        description="Cuándo un pedido pasa a 'Por vencer' y a 'Atrasado', y cada cuánto suena el recordatorio. Un pedido nuevo siempre suena una vez."
+      >
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberInput
+            label="Por vencer a los (minutos)"
+            min={1}
+            max={120}
+            value={draft.kds.warnMin}
+            onChange={(n) => set('kds', { ...draft.kds, warnMin: n })}
+          />
+          <NumberInput
+            label="Atrasado a los (minutos)"
+            min={2}
+            max={240}
+            value={draft.kds.lateMin}
+            error={
+              draft.kds.lateMin <= draft.kds.warnMin
+                ? 'Tiene que ser después de "Por vencer"'
+                : undefined
+            }
+            onChange={(n) => set('kds', { ...draft.kds, lateMin: n })}
+          />
+          <Select
+            label="Recordatorio de pendientes"
+            hint="Suena una vez, con el sonido de lo más urgente"
+            value={String(draft.kds.reminderSec)}
+            options={[
+              { value: '0', label: 'Nunca' },
+              { value: '60', label: 'Cada minuto' },
+              { value: '120', label: 'Cada 2 minutos' },
+              { value: '300', label: 'Cada 5 minutos' },
+              { value: '600', label: 'Cada 10 minutos' },
+            ]}
+            onChange={(e) => set('kds', { ...draft.kds, reminderSec: Number(e.target.value) })}
+          />
+          <Select
+            label="Volumen"
+            value={String(draft.kds.volume)}
+            options={[
+              { value: '0.3', label: 'Bajo' },
+              { value: '0.6', label: 'Medio' },
+              { value: '0.8', label: 'Alto' },
+              { value: '1', label: 'Máximo' },
+            ]}
+            onChange={(e) => set('kds', { ...draft.kds, volume: Number(e.target.value) })}
+          />
+        </div>
       </Section>
 
       <Section

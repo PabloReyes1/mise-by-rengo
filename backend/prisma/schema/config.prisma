@@ -26,7 +26,7 @@ model ClientSettings {
   themeId              String   @default("botanical-graphite") @map("theme_id")
   colorPrimaryOverride String?  @map("color_primary_override")
   kdsThresholds        Json     @default("{\"warnMin\": 10, \"lateMin\": 20, \"from\": \"SENT\"}") @map("kds_thresholds")
-  kdsSound             Json     @default("{\"tone\": \"bell\", \"volume\": 0.8, \"repeatSec\": 30}") @map("kds_sound")
+  kdsSound             Json     @default("{\"tone\": \"bell\", \"volume\": 0.8, \"repeatSec\": 120}") @map("kds_sound")
   cashDiffThreshold    Decimal  @default(0) @map("cash_diff_threshold") @db.Decimal(12, 2)
   autoPrintReceipt     Boolean  @default(false) @map("auto_print_receipt")
   offlinePolicy        Json     @default("{}") @map("offline_policy")

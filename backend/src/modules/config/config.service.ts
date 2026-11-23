@@ -1,6 +1,7 @@
 // Configuración del cliente, sucursales y plantillas de ticket (Docs/07 §4.1, RF-001 a RF-004).
 import type {
   Branch,
+  KdsSettings,
   Reason,
   ReasonType,
   Settings,
@@ -28,6 +29,18 @@ function auditActor(actor: Actor) {
   };
 }
 
+/** Lee kds_thresholds y kds_sound (jsonb) con los valores por defecto del doc 07. */
+export function toKdsSettings(s: Pick<ClientSettings, 'kdsThresholds' | 'kdsSound'>): KdsSettings {
+  const t = (s.kdsThresholds ?? {}) as { warnMin?: number; lateMin?: number };
+  const sound = (s.kdsSound ?? {}) as { volume?: number; repeatSec?: number };
+  return {
+    warnMin: t.warnMin ?? 10,
+    lateMin: t.lateMin ?? 20,
+    reminderSec: sound.repeatSec ?? 120,
+    volume: sound.volume ?? 0.8,
+  };
+}
+
 export function toSettings(s: ClientSettings): Settings {
   return {
     legalName: s.legalName,
@@ -41,6 +54,7 @@ export function toSettings(s: ClientSettings): Settings {
     businessDayCutoff: s.businessDayCutoff,
     themeId: s.themeId,
     colorPrimaryOverride: s.colorPrimaryOverride,
+    kds: toKdsSettings(s),
     settingsVersion: s.settingsVersion,
   };
 }
@@ -62,7 +76,7 @@ export async function updateSettings(
   input: Partial<Omit<Settings, 'settingsVersion'>> & { settingsVersion: number },
   actor: Actor,
 ): Promise<Settings> {
-  const { settingsVersion, ...changes } = input;
+  const { settingsVersion, kds, ...changes } = input;
   return prisma.$transaction(async (tx) => {
     const current = await tx.clientSettings.findFirst();
     if (!current) throw new AppError('NOT_FOUND', 'El cliente no está configurado');
@@ -97,9 +111,24 @@ export async function updateSettings(
       }
     }
 
+    // El KDS se guarda en los dos jsonb del doc 07, conservando las demás claves
+    const kdsData = kds
+      ? {
+          kdsThresholds: {
+            ...((current.kdsThresholds ?? {}) as object),
+            warnMin: kds.warnMin,
+            lateMin: kds.lateMin,
+          },
+          kdsSound: {
+            ...((current.kdsSound ?? {}) as object),
+            repeatSec: kds.reminderSec,
+            volume: kds.volume,
+          },
+        }
+      : {};
     const updated = await tx.clientSettings.update({
       where: { id: current.id },
-      data: { ...changes, settingsVersion: { increment: 1 } },
+      data: { ...changes, ...kdsData, settingsVersion: { increment: 1 } },
     });
     const diff = changedFields(toSettings(current), toSettings(updated));
     if (diff) {
