@@ -1,6 +1,6 @@
 // Rondas de la mesa con su estado (Docs/05 §5.3): el estado siempre en texto, nunca solo color.
 import type { Order, OrderItem } from '@mise/shared/contracts/orders';
-import { HandPlatter, X } from 'lucide-react';
+import { HandPlatter, Printer, X } from 'lucide-react';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { Badge, Button, Card, cx, type BadgeTone } from '../../../core/ui/index.js';
@@ -20,9 +20,17 @@ export interface OrderListProps {
   delivering?: string | null;
   /** Cancelar un ítem ya enviado (con motivo; 🔑 si hace falta). Si no viene, no hay botón */
   onCancelItem?: (item: OrderItem) => void;
+  /** Reimprimir la comanda de la ronda */
+  onPrint?: (order: Order) => void;
 }
 
-export function OrderList({ orders, onDeliver, delivering, onCancelItem }: OrderListProps) {
+export function OrderList({
+  orders,
+  onDeliver,
+  delivering,
+  onCancelItem,
+  onPrint,
+}: OrderListProps) {
   const regional = useRegional();
   if (orders.length === 0) {
     return <p className="text-base text-secondary">Todavía no hay pedidos en esta mesa.</p>;
@@ -91,6 +99,11 @@ export function OrderList({ orders, onDeliver, delivering, onCancelItem }: Order
                   );
                 })}
               </ul>
+              {onPrint && o.status !== 'CANCELADO' && (
+                <Button variant="outline" icon={<Printer />} onClick={() => onPrint(o)}>
+                  Imprimir comanda
+                </Button>
+              )}
               {onDeliver && o.status === 'LISTO' && (
                 <Button
                   icon={<HandPlatter />}

@@ -10,7 +10,8 @@ import { formatMoney } from '../../../core/format/index.js';
 import { Button, cx, Modal, Select } from '../../../core/ui/index.js';
 import { useAuthorizedAction } from '../api/authorized-action.js';
 import { useFloor, useOccupancy } from '../api/floor-api.js';
-import { useMenu, useOccupancyBills, useSendOrder } from '../api/order-api.js';
+import { useMenu, useOccupancyBills, useOccupancyOrders, useSendOrder } from '../api/order-api.js';
+import { comandaTable, printDraftComanda, printOrderComanda } from '../components/comanda.js';
 import { actionError } from '../components/errors.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
 import { ProductDialog } from '../components/ProductDialog.js';
@@ -34,6 +35,7 @@ export function OrderPage() {
   const floor = useFloor();
   const menu = useMenu();
   const bills = useOccupancyBills(id);
+  const orders = useOccupancyOrders(id);
   const { draft, update, clear } = useOrderDraft(id);
   const send = useSendOrder(id);
   const authorized = useAuthorizedAction();
@@ -92,6 +94,16 @@ export function OrderPage() {
     });
     authorized.run(send, { body, label: `Pedido de ${title}` }, `Enviar el pedido de ${title}`, {
       onDone: (outcome) => {
+        // Comanda (#14): se abre el diálogo de imprimir; sin conexión, desde el borrador enviado
+        if (occupancy.data) {
+          const ctx = {
+            occupancy: occupancy.data,
+            table: comandaTable(occupancy.data, floor.data?.zones ?? []),
+            regional,
+          };
+          if (outcome.status === 'applied') printOrderComanda(outcome.data, ctx);
+          else printDraftComanda(draft, (orders.data?.length ?? 0) + 1, ctx);
+        }
         clear();
         setReviewing(false);
         void navigate(`/mesero/ocupacion/${id}`, { state: { sent: outcome.status } });

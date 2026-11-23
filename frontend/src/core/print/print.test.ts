@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ticketHtml } from './browser-print.js';
+import { cancellationDocument, comandaDocument } from './documents/comanda.js';
 import { testPage } from './documents/test-page.js';
 import { encodeEposPrint, eposEnvelope } from './epos-xml.js';
 import { encodeEscPos } from './escpos.js';
@@ -232,5 +233,103 @@ describe('página de prueba (Docs/11 §4.5)', () => {
       expect(text).toContain(piece);
     expect(Math.max(...text.split('\n').map((l) => l.length))).toBeLessThanOrEqual(32 + 16);
     expect(layoutRows(page, 58).every((r) => r.text.length <= 32)).toBe(true);
+  });
+});
+
+describe('comanda (Docs/11 §4.1)', () => {
+  const base = {
+    folio: 'C-000131',
+    tempFolio: 'M3-0005',
+    roundNumber: 2,
+    table: '5 · Salón',
+    waiterName: 'Luis Pérez',
+    guests: 4,
+    sentAt: '11/11/2026 18:04',
+    items: [
+      {
+        quantity: 2,
+        name: 'Lomito',
+        modifiers: ['Término: Medio', 'Extra queso'],
+        components: [],
+        note: 'sin cebolla',
+      },
+      {
+        quantity: 1,
+        name: 'Combo almuerzo',
+        modifiers: [],
+        components: [
+          { name: 'Pollo a la plancha', modifiers: [] },
+          { name: 'Limonada', modifiers: ['Sin azúcar'] },
+        ],
+        note: null,
+      },
+    ],
+  };
+
+  it('ronda 2: ADICIONAL, mesa, mesero, ítems en grande con modificadores, nota y combo; sin precios', () => {
+    const text = renderText(comandaDocument(base), 80);
+    for (const piece of [
+      '** COMANDA **',
+      'ADICIONAL',
+      'ORDEN: C-000131',
+      '(M3-0005)',
+      'MESA: 5 · Salón',
+      'Comensales: 4',
+      'Mesero: Luis Pérez',
+      'Ronda: 2',
+      '     > Término: Medio',
+      '     *** NOTA: sin cebolla ***',
+      '     - Limonada',
+      '       > Sin azúcar',
+      'Ítems: 3',
+    ])
+      expect(text).toContain(piece);
+    expect(text).not.toMatch(/Q\d/);
+    expect(layoutRows(comandaDocument(base), 80).find((r) => r.text.includes('LOMITO'))?.size).toBe(
+      'tall',
+    );
+  });
+
+  it('ronda 1 no dice ADICIONAL; para llevar lo dice en el encabezado', () => {
+    expect(renderText(comandaDocument({ ...base, roundNumber: 1 }), 80)).not.toContain('ADICIONAL');
+    const takeaway = renderText(
+      comandaDocument({
+        ...base,
+        table: null,
+        customerName: 'Sra. López',
+        customerPhone: '5555-1234',
+      }),
+      58,
+    );
+    expect(takeaway).toContain('PARA LLEVAR');
+    expect(takeaway).toContain('Cliente: Sra. López');
+  });
+
+  it('cancelación: motivo, quién y quién autorizó, ítem con signo menos', () => {
+    const text = renderText(
+      cancellationDocument({
+        folio: 'C-000131',
+        table: '5',
+        cancelledAt: '18:12',
+        cancelledBy: 'Luis Pérez',
+        authorizedBy: 'María Ruiz',
+        reason: 'Cliente cambió de opinión',
+        item: {
+          quantity: 1,
+          name: 'Lomito',
+          modifiers: ['Término: Medio'],
+          components: [],
+          note: null,
+        },
+      }),
+      80,
+    );
+    for (const piece of [
+      'CANCELACIÓN',
+      'Autorizó: María Ruiz',
+      'Motivo: Cliente cambió de opinión',
+      '-1 LOMITO',
+    ])
+      expect(text).toContain(piece);
   });
 });

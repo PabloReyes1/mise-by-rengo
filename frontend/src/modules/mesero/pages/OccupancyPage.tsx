@@ -17,6 +17,7 @@ import { ApiError } from '../../../core/api/index.js';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { useOutbox } from '../../../core/offline/index.js';
+import { useSession } from '../../../core/session/index.js';
 import { Badge, Button, Card, Modal, Select } from '../../../core/ui/index.js';
 import {
   useBranchUsers,
@@ -30,12 +31,14 @@ import {
 import { useAuthorizedAction } from '../api/authorized-action.js';
 import {
   useCancelItem,
+  useCancelReasons,
   useDeliverOrder,
   useOccupancyBills,
   useOccupancyOrders,
 } from '../api/order-api.js';
 import { useMeseroRealtime } from '../api/realtime-sync.js';
 import { CancelItemDialog } from '../components/CancelItemDialog.js';
+import { comandaTable, printCancellation, printOrderComanda } from '../components/comanda.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
 import { OrderList } from '../components/OrderList.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
@@ -63,6 +66,8 @@ export function OccupancyPage() {
   const bills = useOccupancyBills(id);
   const deliver = useDeliverOrder(id);
   const cancelItem = useCancelItem(id);
+  const reasons = useCancelReasons();
+  const session = useSession();
   const [cancelling, setCancelling] = useState<OrderItem | null>(null);
   const authorized = useAuthorizedAction();
 
@@ -202,6 +207,13 @@ export function OccupancyPage() {
                 { onDone: done },
               );
             }}
+            onPrint={(o) =>
+              printOrderComanda(o, {
+                occupancy: occ,
+                table: comandaTable(occ, floor.data?.zones ?? []),
+                regional,
+              })
+            }
             onCancelItem={
               isOpen
                 ? (item) => {
@@ -224,6 +236,16 @@ export function OccupancyPage() {
             onDone: (outcome) => {
               setCancelling(null);
               done(outcome);
+              // Comanda de cancelación (Docs/11 §4.1)
+              printCancellation(
+                {
+                  order: orders.data?.find((o) => o.items.some((i) => i.id === item.id)),
+                  item,
+                  reason: reasons.data?.find((r) => r.id === reasonId)?.name ?? '—',
+                  cancelledBy: session?.user.fullName ?? occ.waiterName,
+                },
+                { occupancy: occ, table: comandaTable(occ, floor.data?.zones ?? []), regional },
+              );
             },
             onError: () => setCancelling(null),
           });

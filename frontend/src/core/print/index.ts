@@ -5,6 +5,13 @@
 // En reserva (no se usan hoy, con sus pruebas): ESC/POS, XML ePOS y los transportes directos
 // epos-lan y webusb, por si después hace falta que la comanda salga sola sin tocar "Imprimir".
 export { printWithDialog, ticketHtml } from './browser-print.js';
+export {
+  cancellationDocument,
+  comandaDocument,
+  type CancellationInput,
+  type ComandaInput,
+  type ComandaItem,
+} from './documents/comanda.js';
 export { testPage } from './documents/test-page.js';
 export {
   columnsFor,
