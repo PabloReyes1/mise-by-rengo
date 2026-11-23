@@ -67,7 +67,7 @@ export function OrderPage() {
   const choose = (p: Product) => {
     if (p.status !== 'ACTIVE') return;
     // Sin modificadores se agrega directo; con modificadores se eligen primero
-    if (groupsOf(p).length === 0) {
+    if (groupsOf(p).length === 0 && !p.isCombo) {
       add({
         key: newId(),
         productId: p.id,
@@ -150,8 +150,7 @@ export function OrderPage() {
               .filter((p) => p.categoryId === category.id)
               .map((p) => {
                 const soldOut = p.status === 'SOLD_OUT';
-                // GET /api/menu aún no trae el id de los grupos del combo (catalog, SC-51)
-                const unavailable = soldOut || p.isCombo;
+                const unavailable = soldOut;
                 return (
                   <li key={p.id}>
                     <button
@@ -170,9 +169,9 @@ export function OrderPage() {
                         <span className="text-base font-semibold">{p.name}</span>
                         {soldOut && <span className="text-sm font-semibold">Agotado</span>}
                         {!soldOut && p.isCombo && (
-                          <span className="text-sm">Combo: disponible pronto</span>
+                          <span className="text-sm text-secondary">Combo</span>
                         )}
-                        {!unavailable && groupsOf(p).length > 0 && (
+                        {!unavailable && !p.isCombo && groupsOf(p).length > 0 && (
                           <span className="text-sm text-secondary">Con opciones</span>
                         )}
                       </span>
@@ -210,6 +209,7 @@ export function OrderPage() {
       <ProductDialog
         product={picking}
         groups={picking ? groupsOf(picking) : []}
+        menu={menu.data}
         onClose={() => setPicking(null)}
         onAdd={add}
       />
@@ -232,6 +232,13 @@ export function OrderPage() {
                         {l.modifiers.map((m) => m.name).join(', ')}
                       </span>
                     )}
+                    {(l.components ?? []).map((c) => (
+                      <span key={`${c.comboGroupId}-${c.productId}`} className="text-sm">
+                        – {c.name}
+                        {c.modifiers.length > 0 &&
+                          ` (${c.modifiers.map((m) => m.name).join(', ')})`}
+                      </span>
+                    ))}
                     {l.note && <span className="text-sm">Nota: {l.note}</span>}
                   </div>
                   <span className="shrink-0 text-base font-semibold tabular">

@@ -28,6 +28,65 @@ const churrasco = (key: string, extra: Partial<DraftLine> = {}): DraftLine => ({
   ...extra,
 });
 
+describe('combos en el borrador (SC-51)', () => {
+  const combo = (key: string, bebida: string): DraftLine => ({
+    key,
+    productId: ID(7),
+    name: 'Menú del día',
+    unitPrice: '75.00',
+    quantity: 1,
+    modifiers: [],
+    note: '',
+    components: [
+      {
+        comboGroupId: ID(8),
+        productId: ID(1),
+        name: 'Churrasco',
+        priceDelta: '10.00',
+        modifiers: [],
+      },
+      {
+        comboGroupId: ID(9),
+        productId: bebida,
+        name: 'Horchata',
+        priceDelta: '0.00',
+        modifiers: [{ modifierId: ID(3), name: 'Grande', priceDelta: '5.00' }],
+      },
+    ],
+  });
+
+  it('el total suma los extras del combo y de sus modificadores', () => {
+    // 75 + 10 + 0 + 5 = 90
+    expect(draftLineTotal(combo('a', ID(2)))).toBe('90.00');
+  });
+
+  it('dos combos iguales se juntan; con otra bebida son dos líneas', () => {
+    let d = addLine(EMPTY_DRAFT, combo(ID(4), ID(2)));
+    d = addLine(d, combo(ID(5), ID(2)));
+    expect(d.lines).toHaveLength(1);
+    d = addLine(d, combo(ID(6), ID(5)));
+    expect(d.lines).toHaveLength(2);
+  });
+
+  it('la ronda manda los componentes con sus modificadores', () => {
+    const body = toSendOrder(addLine(EMPTY_DRAFT, combo(ID(4), ID(2))), {
+      id: ID(1),
+      occupancyId: ID(2),
+      billId: ID(3),
+      now: new Date('2026-11-23T12:00:00Z'),
+    });
+    expect(sendOrderRequestSchema.parse(body).items[0]!.components).toEqual([
+      { comboGroupId: ID(8), productId: ID(1), priceDelta: '10.00', modifiers: [] },
+      {
+        comboGroupId: ID(9),
+        productId: ID(2),
+        priceDelta: '0.00',
+        modifiers: [{ modifierId: ID(3), priceDelta: '5.00' }],
+      },
+    ]);
+  });
+});
+
 describe('borrador del pedido', () => {
   it('junta líneas iguales y separa las distintas', () => {
     let d = addLine(EMPTY_DRAFT, churrasco(ID(4)));

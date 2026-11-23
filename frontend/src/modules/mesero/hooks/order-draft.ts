@@ -13,6 +13,15 @@ export interface DraftModifier {
   priceDelta: string;
 }
 
+/** Componente elegido en un combo (Docs/05 paso 3, SC-51). Reasignado a Deniscito (doc 17 §3.1). */
+export interface DraftComponent {
+  comboGroupId: string;
+  productId: string;
+  name: string;
+  priceDelta: string;
+  modifiers: DraftModifier[];
+}
+
 export interface DraftLine {
   /** Id local de la línea; al enviar se vuelve el id del ítem */
   key: string;
@@ -21,6 +30,8 @@ export interface DraftLine {
   unitPrice: string;
   quantity: number;
   modifiers: DraftModifier[];
+  /** Solo en combos. Los borradores guardados antes no lo traen: se toma como [] */
+  components?: DraftComponent[];
   note: string;
 }
 
@@ -30,18 +41,27 @@ export interface OrderDraft {
 
 export const EMPTY_DRAFT: OrderDraft = { lines: [] };
 
+const modifierIds = (modifiers: DraftModifier[]) =>
+  modifiers
+    .map((m) => m.modifierId)
+    .sort()
+    .join(',');
+
+/** Lo que pide la línea en el combo, sin importar el orden en que se eligió. */
+const componentIds = (l: Pick<DraftLine, 'components'>) =>
+  (l.components ?? [])
+    .map((c) => `${c.comboGroupId}:${c.productId}:${modifierIds(c.modifiers)}`)
+    .sort()
+    .join('|');
+
 /** Dos líneas son "la misma" si piden lo mismo: se suman en vez de repetirse. */
 function sameLine(a: Omit<DraftLine, 'key' | 'quantity'>, b: DraftLine): boolean {
-  const ids = (l: { modifiers: DraftModifier[] }) =>
-    l.modifiers
-      .map((m) => m.modifierId)
-      .sort()
-      .join(',');
   return (
     a.productId === b.productId &&
     a.unitPrice === b.unitPrice &&
     a.note.trim() === b.note.trim() &&
-    ids(a) === ids(b)
+    modifierIds(a.modifiers) === modifierIds(b.modifiers) &&
+    componentIds(a) === componentIds(b)
   );
 }
 
@@ -66,9 +86,16 @@ export function removeLine(draft: OrderDraft, key: string): OrderDraft {
 }
 
 export function draftLineTotal(line: DraftLine): string {
+  // Como el servidor (SC-48): modificadores + extras del combo y de sus modificadores, por unidad
   return lineTotal(
     line.unitPrice,
-    line.modifiers.map((m) => m.priceDelta),
+    [
+      ...line.modifiers.map((m) => m.priceDelta),
+      ...(line.components ?? []).flatMap((c) => [
+        c.priceDelta,
+        ...c.modifiers.map((m) => m.priceDelta),
+      ]),
+    ],
     line.quantity,
   );
 }
@@ -97,7 +124,12 @@ export function toSendOrder(
       quantity: l.quantity,
       unitPrice: l.unitPrice,
       modifiers: l.modifiers.map(({ modifierId, priceDelta }) => ({ modifierId, priceDelta })),
-      components: [],
+      components: (l.components ?? []).map((c) => ({
+        comboGroupId: c.comboGroupId,
+        productId: c.productId,
+        priceDelta: c.priceDelta,
+        modifiers: c.modifiers.map(({ modifierId, priceDelta }) => ({ modifierId, priceDelta })),
+      })),
       ...(l.note.trim() ? { note: l.note.trim() } : {}),
     })),
   };

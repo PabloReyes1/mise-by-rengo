@@ -57,6 +57,13 @@ export function OrderList({ orders, onDeliver, delivering }: OrderListProps) {
                             {i.modifiers.map((m) => m.name).join(', ')}
                           </span>
                         )}
+                        {i.components.map((c) => (
+                          <span key={`${c.comboGroupId}-${c.productId}`} className="text-sm">
+                            – {c.name}
+                            {c.modifiers.length > 0 &&
+                              ` (${c.modifiers.map((m) => m.name).join(', ')})`}
+                          </span>
+                        ))}
                         {i.note && <span className="text-sm">Nota: {i.note}</span>}
                         {cancelled && <span className="text-sm font-semibold">Cancelado</span>}
                       </div>
