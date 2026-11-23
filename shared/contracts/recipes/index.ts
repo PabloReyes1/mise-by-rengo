@@ -124,6 +124,10 @@ export const costedProductSchema = z.object({
 });
 export type CostedProduct = z.infer<typeof costedProductSchema>;
 
+/** GET /api/costing/modifiers: solo los modificadores que tienen receta. */
+export const costedModifierSchema = z.object({ modifierId: idSchema, cost: unitCostSchema });
+export type CostedModifier = z.infer<typeof costedModifierSchema>;
+
 export const listCostingQuerySchema = z.object({
   belowTarget: z.enum(['true', 'false']).optional(),
 });

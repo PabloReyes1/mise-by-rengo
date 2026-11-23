@@ -2,6 +2,7 @@
 // licencia activo (RF-252). Dueño: Deniscito; reasignado a Pablito (doc 17 §3.1, H3 #22).
 import { idSchema } from '@mise/shared/contracts/common';
 import {
+  costedModifierSchema,
   costedProductSchema,
   costTargetsSchema,
   createIngredientRequestSchema,
@@ -29,6 +30,7 @@ import {
   getCostTargets,
   getRecipe,
   ingredientCostHistory,
+  listCostedModifiers,
   listCostedProducts,
   listIngredients,
   listUnits,
@@ -175,6 +177,12 @@ export const recipesRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       },
     },
     (req) => listCostedProducts(prisma, { belowTarget: req.query.belowTarget === 'true' }),
+  );
+
+  app.get(
+    '/api/costing/modifiers',
+    { preHandler: guard, schema: { response: { 200: z.array(costedModifierSchema) } } },
+    () => listCostedModifiers(prisma),
   );
 
   done();

@@ -4,7 +4,9 @@ import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 import {
   AdminLayout,
   CashRegistersPage,
+  CostingPage,
   DevicesPage,
+  IngredientsPage,
   MenuPage,
   PaymentMethodsPage,
   ReasonsPage,
@@ -56,6 +58,8 @@ const areaChildren: Record<string, RouteObject[]> = {
         { path: 'restaurante', element: <RestaurantPage /> },
         { path: 'menu', element: <MenuPage /> },
         { path: 'mesas', element: <TablesPage /> },
+        { path: 'insumos', element: <IngredientsPage /> },
+        { path: 'costeo', element: <CostingPage /> },
         { path: 'cajas', element: <CashRegistersPage /> },
         { path: 'tickets', element: <TicketsPage /> },
         { path: 'metodos-pago', element: <PaymentMethodsPage /> },

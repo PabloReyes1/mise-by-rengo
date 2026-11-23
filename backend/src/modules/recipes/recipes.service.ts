@@ -5,6 +5,7 @@
 // unidad base del insumo (SC-67).
 import {
   DEFAULT_COST_TARGET,
+  type CostedModifier,
   type CostedProduct,
   type CostTargets,
   type CostTargetValues,
@@ -530,6 +531,14 @@ export async function listCostedProducts(
     };
   });
   return belowTarget ? rows.filter((r) => r.belowTarget) : rows;
+}
+
+export async function listCostedModifiers(db: Db): Promise<CostedModifier[]> {
+  const rows = await db.recipe.findMany({
+    where: { modifierId: { not: null } },
+    select: { modifierId: true, computedCost: true },
+  });
+  return rows.map((r) => ({ modifierId: toApiId(r.modifierId!), cost: r.computedCost.toFixed(4) }));
 }
 
 // ---------- Costo congelado en la venta (RF-139) ----------

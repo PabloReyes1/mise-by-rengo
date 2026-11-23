@@ -207,6 +207,14 @@ describe('recetas y costeo (RF-132 a RF-138)', () => {
       lines: [{ ingredientId: milk.id, quantity: '250', unitId: unit('ml'), wastePct: 0 }],
     });
     expect(ok.json().cost).toBe('3.0000');
+    const mod = menu.modifierGroups[0]!.modifiers[0]!;
+    const modUrl = '/api/modifiers/' + mod.id + '/recipe';
+    await call('PUT', modUrl, {
+      lines: [{ ingredientId: milk.id, quantity: '0.1', unitId: unit('l'), wastePct: 0 }],
+    });
+    expect((await call('GET', '/api/costing/modifiers')).json()).toEqual([
+      { modifierId: mod.id, cost: '1.2000' },
+    ]);
     expect((await call('PUT', url, { lines: [] })).json()).toBeNull();
     expect((await call('GET', url)).json()).toBeNull();
   });
