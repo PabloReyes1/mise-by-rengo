@@ -63,6 +63,10 @@ describe('GET /api/menu (Docs/08 §2.4)', () => {
       'Plato fuerte',
       'Bebida',
     ]);
+    // Cada grupo trae su id: el pedido lo manda como comboGroupId (SC-51)
+    expect(combo.comboGroups.every((g: { id?: string }) => /^[0-9A-Z]{26}$/.test(g.id ?? ''))).toBe(
+      true,
+    );
   });
 
   it('sin sesión no se puede leer el menú', async () => {

@@ -74,18 +74,21 @@ export const comboOptionSchema = z.object({
   priceDelta: moneySchema,
   isDefault: z.boolean(),
 });
-export const comboGroupSchema = z
-  .object({
-    name: z.string().trim().min(1).max(60),
-    minSelect: z.number().int().min(0),
-    maxSelect: z.number().int().min(1),
-    options: z.array(comboOptionSchema).min(1),
-  })
-  .refine((g) => g.minSelect <= g.maxSelect, {
-    message: 'El mínimo no puede ser mayor que el máximo',
-    path: ['minSelect'],
-  });
+const comboGroupFields = z.object({
+  name: z.string().trim().min(1).max(60),
+  minSelect: z.number().int().min(0),
+  maxSelect: z.number().int().min(1),
+  options: z.array(comboOptionSchema).min(1),
+});
+/** Grupo del combo al guardarlo (sin id: se crean de nuevo en cada guardado) */
+export const comboGroupSchema = comboGroupFields.refine((g) => g.minSelect <= g.maxSelect, {
+  message: 'El mínimo no puede ser mayor que el máximo',
+  path: ['minSelect'],
+});
 export type ComboGroup = z.infer<typeof comboGroupSchema>;
+/** Grupo del combo en GET /api/menu: con su id, que el pedido manda como comboGroupId (SC-51) */
+export const menuComboGroupSchema = comboGroupFields.extend({ id: idSchema });
+export type MenuComboGroup = z.infer<typeof menuComboGroupSchema>;
 // PUT /api/products/:id/combo-groups
 export const saveComboGroupsSchema = z.object({ groups: z.array(comboGroupSchema) });
 
@@ -102,7 +105,7 @@ export const productSchema = z.object({
   /** URL versionada de la imagen (Docs/08 §2.4), o null si no tiene */
   imageUrl: z.string().nullable(),
   modifierGroupIds: z.array(idSchema),
-  comboGroups: z.array(comboGroupSchema),
+  comboGroups: z.array(menuComboGroupSchema),
 });
 export type Product = z.infer<typeof productSchema>;
 

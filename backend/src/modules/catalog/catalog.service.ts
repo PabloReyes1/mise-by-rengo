@@ -61,6 +61,7 @@ function toProduct(p: ProductRow): Product {
       : null,
     modifierGroupIds: p.modifierGroups.map((g) => toApiId(g.groupId)),
     comboGroups: p.comboGroups.map((g) => ({
+      id: toApiId(g.id),
       name: g.name,
       minSelect: g.minSelect,
       maxSelect: g.maxSelect,
