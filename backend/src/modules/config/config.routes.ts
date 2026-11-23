@@ -5,7 +5,9 @@ import {
   createBranchSchema,
   docTypeSchema,
   licenseSchema,
+  listReasonsQuerySchema,
   publicConfigSchema,
+  reasonSchema,
   settingsSchema,
   ticketTemplateSchema,
   updateBranchSchema,
@@ -24,6 +26,7 @@ import {
   createBranch,
   getSettings,
   listBranches,
+  listReasons,
   listTicketTemplates,
   toSettings,
   updateBranch,
@@ -187,6 +190,16 @@ export function configRoutes(license: ReturnType<typeof licenseReader>): Fastify
       },
       (req) =>
         updateTicketTemplate(prisma, req.params.id, req.params.docType, req.body, actor(req)),
+    );
+
+    // Motivos activos: cualquier usuario con sesión (el mesero elige uno al cancelar un ítem)
+    app.get(
+      '/api/reasons',
+      {
+        preHandler: [authenticate],
+        schema: { querystring: listReasonsQuerySchema, response: { 200: z.array(reasonSchema) } },
+      },
+      (req) => listReasons(prisma, req.query.type),
     );
 
     done();

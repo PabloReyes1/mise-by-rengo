@@ -220,3 +220,28 @@ describe('sucursales y plantillas de ticket', () => {
     expect(res.json()).toMatchObject({ docType: 'RECIBO', footer: '¡Vuelva pronto!' });
   });
 });
+
+describe('GET /api/reasons (motivos para el mesero)', () => {
+  it('el mesero lee los motivos de cancelación activos, sin permisos de configuración', async () => {
+    await createUser('ana', 'Mesero');
+    const waiter = await loginAs('ana', 'clave-segura-123');
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/reasons?type=CANCEL_ITEM',
+      headers: waiter,
+    });
+    expect(res.statusCode).toBe(200);
+    const reasons = res.json<{ type: string; name: string }[]>();
+    expect(reasons.length).toBeGreaterThan(0);
+    expect(reasons.every((r) => r.type === 'CANCEL_ITEM')).toBe(true);
+  });
+
+  it('sin sesión no se pueden leer', async () => {
+    expect((await app.inject({ method: 'GET', url: '/api/reasons' })).statusCode).toBe(401);
+  });
+
+  it('un tipo que no existe → 400', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/reasons?type=OTRO', headers });
+    expect(res.statusCode).toBe(400);
+  });
+});

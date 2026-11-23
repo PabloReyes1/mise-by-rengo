@@ -1,5 +1,11 @@
 // Configuración del cliente, sucursales y plantillas de ticket (Docs/07 §4.1, RF-001 a RF-004).
-import type { Branch, Settings, TicketTemplate } from '@mise/shared/contracts/config';
+import type {
+  Branch,
+  Reason,
+  ReasonType,
+  Settings,
+  TicketTemplate,
+} from '@mise/shared/contracts/config';
 import { THEMES, themeById, validatePrimaryOverride } from '@mise/shared/domain/theme';
 import { AppError } from '../../core/errors.js';
 import { newDbId, toApiId, toDbId } from '../../core/ids.js';
@@ -254,4 +260,20 @@ export async function updateTicketTemplate(
     }
     return toTicket(updated);
   });
+}
+
+// ─── Motivos (Docs/08 §2.3) ──────────────────────────────────────────────────
+
+/** Motivos activos, del tipo pedido o todos, en su orden (los lee cualquier usuario con sesión). */
+export async function listReasons(prisma: PrismaClient, type?: ReasonType): Promise<Reason[]> {
+  const rows = await prisma.reason.findMany({
+    where: { active: true, ...(type ? { type } : {}) },
+    orderBy: [{ type: 'asc' }, { sort: 'asc' }, { name: 'asc' }],
+  });
+  return rows.map((r) => ({
+    id: toApiId(r.id),
+    type: r.type as ReasonType,
+    name: r.name,
+    sort: r.sort,
+  }));
 }

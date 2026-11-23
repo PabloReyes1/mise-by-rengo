@@ -75,7 +75,8 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/POST/PUT | `/api/branches`, `/api/branches/:id` | `config.restaurant` |
 | GET/PUT | `/api/branches/:id/ticket-templates/:docType` | `config.restaurant` |
 | GET/POST/PUT | `/api/service-periods` | `config.restaurant` |
-| GET/POST/PUT | `/api/reasons?type=` | `config.payments` |
+| GET | `/api/reasons?type=` | Motivos activos `[{ id, type, name, sort }]` para elegir al cancelar un ítem, reabrir, etc. (2026-11-23) | Sesión |
+| POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (admin H3) | `config.payments` |
 | GET/POST/PUT | `/api/payment-methods` | `config.payments` |
 | GET/POST/PUT | `/api/users`, `/api/users/:id`, `POST /api/users/:id/pin` | `config.users` |
 | GET/POST/PUT | `/api/roles`, `/api/roles/:id` | `config.roles` |

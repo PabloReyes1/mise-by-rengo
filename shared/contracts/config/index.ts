@@ -90,3 +90,24 @@ export const ticketTemplateSchema = z.object({
 });
 export type TicketTemplate = z.infer<typeof ticketTemplateSchema>;
 export const updateTicketTemplateSchema = ticketTemplateSchema.omit({ docType: true }).partial();
+
+// GET /api/reasons?type= (cualquier usuario con sesión): motivos activos para elegir al cancelar
+// un ítem, reabrir una cuenta, etc. Crear y editar motivos (config.payments) llega con admin H3.
+export const REASON_TYPES = [
+  'CANCEL_ITEM',
+  'REOPEN_BILL',
+  'DISCOUNT',
+  'CASH_WITHDRAWAL',
+  'CASH_DEPOSIT',
+  'CONFLICT',
+] as const;
+export const reasonTypeSchema = z.enum(REASON_TYPES);
+export type ReasonType = z.infer<typeof reasonTypeSchema>;
+export const reasonSchema = z.object({
+  id: idSchema,
+  type: reasonTypeSchema,
+  name: z.string(),
+  sort: z.number().int(),
+});
+export type Reason = z.infer<typeof reasonSchema>;
+export const listReasonsQuerySchema = z.object({ type: reasonTypeSchema.optional() });
