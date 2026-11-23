@@ -1,15 +1,16 @@
 // Caja (Docs/05 paso 1, H3 #18): abrir turno (solo con conexión, PA-042), resumen del turno y
 // retiros/depósitos con motivo (🔑 si hace falta). El cobro (#19) y el corte (#20) se agregan aquí.
 // Reasignado a Deniscito (doc 17 §3.1).
-import type { CashRegister } from '@mise/shared/contracts/cash';
+import type { CashMovement, CashRegister, ShiftDetail } from '@mise/shared/contracts/cash';
 import { newId } from '@mise/shared/domain/ids';
 import type { ShiftReport } from '@mise/shared/contracts/cash';
-import { ArrowDownToLine, ArrowUpFromLine, Calculator, LockOpen } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Calculator, LockOpen, Printer } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
-import { useRegional } from '../../../core/config/index.js';
+import { usePublicConfig, useRegional } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney, formatTime, toMoney } from '../../../core/format/index.js';
+import { movimientoDocument, printWithDialog } from '../../../core/print/index.js';
 import { authorizationRequired, useAuthorizationPrompt } from '../../../core/session/index.js';
 import { Badge, Button, Card, Modal, Select, TextInput } from '../../../core/ui/index.js';
 import { CloseShiftDialog } from '../components/CloseShiftDialog.js';
@@ -26,6 +27,29 @@ import {
   useStartClose,
   type MovementInput,
 } from '../api/cash-api.js';
+
+/** Comprobante de retiro o depósito (Docs/11 §4.5): al registrarlo y al reimprimir. */
+function usePrintMovement(registerName: string) {
+  const regional = useRegional();
+  const config = usePublicConfig();
+  return (m: CashMovement, reprint: boolean) => {
+    if (m.type !== 'RETIRO' && m.type !== 'DEPOSITO') return;
+    void printWithDialog(
+      movimientoDocument({
+        restaurant: config.data?.tradeName ?? '',
+        register: registerName,
+        type: m.type,
+        amount: formatMoney(m.amount, regional),
+        at: formatDateTime(m.at, regional),
+        reason: m.reasonName,
+        note: m.note,
+        user: m.userName,
+        authorizedBy: m.authorizedByName,
+        reprint,
+      }),
+    );
+  };
+}
 
 const errorText = (e: unknown) =>
   e instanceof ApiError ? e.message : e ? 'No se pudo completar' : null;
@@ -116,6 +140,7 @@ function ShiftView({ register }: { register: CashRegister }) {
   const [moving, setMoving] = useState<'RETIRO' | 'DEPOSITO' | null>(null);
   const startClose = useStartClose();
   const [closing, setClosing] = useState<ShiftReport | null>(null);
+  const printMovement = usePrintMovement(register.name);
   const data = shift.data ?? { ...summary, movements: [] };
   const row = (label: string, value: string, strong = false) => (
     <div className="flex justify-between gap-3">
@@ -186,16 +211,33 @@ function ShiftView({ register }: { register: CashRegister }) {
                     {m.note ? ` · ${m.note}` : ''}
                   </span>
                 </span>
-                <span className="font-semibold tabular">
-                  {m.type === 'DEPOSITO' ? '' : '-'}
-                  {formatMoney(m.amount, regional)}
+                <span className="flex items-center gap-2">
+                  <span className="font-semibold tabular">
+                    {m.type === 'DEPOSITO' ? '' : '-'}
+                    {formatMoney(m.amount, regional)}
+                  </span>
+                  {m.type !== 'REVERSO_REAPERTURA' && (
+                    <Button
+                      variant="outline"
+                      icon={<Printer />}
+                      aria-label={`Reimprimir comprobante de ${m.type === 'RETIRO' ? 'retiro' : 'depósito'}`}
+                      onClick={() => printMovement(m, true)}
+                    >
+                      Reimprimir
+                    </Button>
+                  )}
                 </span>
               </li>
             ))}
           </ul>
         )}
       </section>
-      <MovementDialog shiftId={summary.id} type={moving} onClose={() => setMoving(null)} />
+      <MovementDialog
+        shiftId={summary.id}
+        type={moving}
+        onClose={() => setMoving(null)}
+        onSaved={(m) => printMovement(m, false)}
+      />
       <CloseShiftDialog register={register} start={closing} onClose={() => setClosing(null)} />
     </>
   );
@@ -205,10 +247,12 @@ function MovementDialog({
   shiftId,
   type,
   onClose,
+  onSaved,
 }: {
   shiftId: string;
   type: 'RETIRO' | 'DEPOSITO' | null;
   onClose: () => void;
+  onSaved: (movement: CashMovement) => void;
 }) {
   return (
     <Modal
@@ -216,7 +260,18 @@ function MovementDialog({
       onClose={onClose}
       title={type === 'RETIRO' ? 'Retiro de efectivo' : 'Depósito de efectivo'}
     >
-      {type && <MovementForm key={type} shiftId={shiftId} type={type} onDone={onClose} />}
+      {type && (
+        <MovementForm
+          key={type}
+          shiftId={shiftId}
+          type={type}
+          onDone={(shift, id) => {
+            const saved = shift.movements.find((m) => m.id === id);
+            if (saved) onSaved(saved);
+            onClose();
+          }}
+        />
+      )}
     </Modal>
   );
 }
@@ -228,7 +283,7 @@ function MovementForm({
 }: {
   shiftId: string;
   type: 'RETIRO' | 'DEPOSITO';
-  onDone: () => void;
+  onDone: (shift: ShiftDetail, movementId: string) => void;
 }) {
   const reasons = useCashReasons(type === 'RETIRO' ? 'CASH_WITHDRAWAL' : 'CASH_DEPOSIT');
   const add = useAddMovement();
@@ -251,7 +306,7 @@ function MovementForm({
       ...(note.trim() ? { note: note.trim() } : {}),
     };
     add.mutate(input, {
-      onSuccess: onDone,
+      onSuccess: (shift) => onDone(shift, input.id),
       onError: (error) => {
         const permission = authorizationRequired(error);
         if (!permission) return;
@@ -262,8 +317,7 @@ function MovementForm({
             actionLabel: type === 'RETIRO' ? 'Retiro de efectivo' : 'Depósito de efectivo',
           },
           async (authorization) => {
-            await add.mutateAsync({ ...input, authorization });
-            onDone();
+            onDone(await add.mutateAsync({ ...input, authorization }), input.id);
           },
         );
       },

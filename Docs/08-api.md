@@ -151,7 +151,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET | `/api/cash-registers` | Cajas de la sucursal y turno abierto | Autenticado |
 | POST | `/api/shifts` | `{ id, cashRegisterId, openingFloat, counts? }` — **solo en línea** (PA-042); no se acepta por `sync/push` | `cash.open_shift` |
 | GET | `/api/shifts/:id` | Resumen (el esperado solo con `cash.view_expected`) | `cash.open_shift` |
-| POST | `/api/shifts/:id/movements` | `{ id, type, amount, reasonId, note, authorization? }` | `cash.movement` |
+| POST | `/api/shifts/:id/movements` | `{ id, type, amount, reasonId, note, authorization? }` → el turno con sus movimientos; cada uno trae `userName` y `authorizedByName` (quien dio la 🔑) para el comprobante (doc 11 §4.5) | `cash.movement` |
 | POST | `/api/shifts/:id/start-close` | Pasa a `EN_CORTE`; rechaza si hay operaciones de esa caja sin sincronizar | `cash.close_shift` |
 | POST | `/api/shifts/:id/close` | `{ countedCash, counts?, comment?, provisional?: { expectedCash, closedAt } }` → reporte de corte. Si llega por `sync/push` con `provisional` (corte hecho sin conexión), el servidor recalcula el esperado con todas las operaciones, cierra el turno y, si difiere, crea el conflicto `CORTE_DIFERENTE` | `cash.close_shift` |
 | POST | `/api/cash-registers/:id/open-drawer` | Registro de apertura sin venta | `cash.open_drawer` |

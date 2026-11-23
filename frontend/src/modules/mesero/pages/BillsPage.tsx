@@ -84,12 +84,14 @@ export function BillsPage() {
   const [renaming, setRenaming] = useState<Bill | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Desde Caja se vuelve a Caja; desde el celular, a la mesa
   const back = (
     <Link
-      to={`/mesero/ocupacion/${id}`}
+      to={cashRegisterId ? '/caja' : `/mesero/ocupacion/${id}`}
       className="flex min-h-12 items-center gap-2 self-start font-semibold"
     >
-      <ArrowLeft aria-hidden className="size-5" /> Volver a la mesa
+      <ArrowLeft aria-hidden className="size-5" />{' '}
+      {cashRegisterId ? 'Volver a Caja' : 'Volver a la mesa'}
     </Link>
   );
   if (occupancy.isPending || bills.isPending || orders.isPending)
@@ -192,7 +194,8 @@ export function BillsPage() {
                 legend: 'Este documento no es una factura.',
               }),
             );
-            if (r.occupancyClosed) void navigate('/mesero', { state: { closed: title } });
+            if (r.occupancyClosed)
+              void navigate(cashRegisterId ? '/caja' : '/mesero', { state: { closed: title } });
           }
           after(o);
         },

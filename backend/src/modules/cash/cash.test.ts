@@ -146,6 +146,19 @@ describe('retiros, depósitos y efectivo esperado', () => {
       reasonId: await reason('CASH_WITHDRAWAL'),
     });
     expect(noKey.json().error.code).toBe('AUTHORIZATION_REQUIRED');
+    // Con la 🔑 de una gerente pasa, y el movimiento dice quién autorizó (comprobante, Docs/11 §4.5)
+    const ginaId = await createUser('gina', 'Gerente', { pin: '4821' });
+    const withKey = await post(`/api/shifts/${shift.id}/movements`, cashier, {
+      id: newId(),
+      type: 'RETIRO',
+      amount: '50.00',
+      reasonId: await reason('CASH_WITHDRAWAL'),
+      authorization: { userId: ginaId, pin: '4821' },
+    });
+    expect(withKey.json().movements[0]).toMatchObject({
+      userName: 'carlos',
+      authorizedByName: 'gina',
+    });
     const wrong = await post(`/api/shifts/${shift.id}/movements`, admin, {
       id: newId(),
       type: 'RETIRO',

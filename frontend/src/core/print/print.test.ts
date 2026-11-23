@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ticketHtml } from './browser-print.js';
 import { cancellationDocument, comandaDocument } from './documents/comanda.js';
+import { movimientoDocument } from './documents/movimiento.js';
 import { precuentaDocument } from './documents/precuenta.js';
 import { testPage } from './documents/test-page.js';
 import { encodeEposPrint, eposEnvelope } from './epos-xml.js';
@@ -372,5 +373,60 @@ describe('pre-cuenta (Docs/11 §4.2)', () => {
         (r) => r.text.length <= (r.size === 'normal' || r.size === 'tall' ? 32 : 16),
       ),
     ).toBe(true);
+  });
+});
+
+describe('comprobante de retiro o depósito (Docs/11 §4.5)', () => {
+  const base = {
+    restaurant: 'Restaurante Ejemplo',
+    register: 'Caja 1',
+    type: 'RETIRO' as const,
+    amount: 'Q150.00',
+    at: '23/11/2026 18:05',
+    reason: 'Pago a proveedor',
+    note: 'Verduras',
+    user: 'Carlos',
+    authorizedBy: 'Gina',
+    reprint: false,
+  };
+
+  it('trae tipo, monto, motivo, nota, quién registró, quién autorizó y firmas; cabe en 58 mm', () => {
+    const doc = movimientoDocument(base);
+    const text = renderText(doc, 80);
+    for (const piece of [
+      'RETIRO DE EFECTIVO',
+      'Caja: Caja 1',
+      'MONTO',
+      'Q150.00',
+      'Motivo: Pago a proveedor',
+      'Nota: Verduras',
+      'Registró: Carlos',
+      'Autorizó: Gina',
+      'Entrega',
+      'Recibe',
+    ])
+      expect(text).toContain(piece);
+    expect(
+      layoutRows(doc, 58).every(
+        (r) => r.text.length <= (r.size === 'normal' || r.size === 'tall' ? 32 : 16),
+      ),
+    ).toBe(true);
+  });
+
+  it('depósito sin 🔑 ni nota no trae esas líneas; la reimpresión se marca', () => {
+    const text = renderText(
+      movimientoDocument({
+        ...base,
+        type: 'DEPOSITO',
+        note: null,
+        authorizedBy: null,
+        reprint: true,
+      }),
+      80,
+    );
+    expect(text).toContain('DEPÓSITO DE EFECTIVO');
+    expect(text).toContain('REIMPRESIÓN');
+    expect(text).not.toContain('Autorizó');
+    expect(text).not.toContain('Nota:');
   });
 });

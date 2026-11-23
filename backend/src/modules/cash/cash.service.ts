@@ -186,7 +186,7 @@ export async function openShift(
 async function toMovements(db: Db, rows: ShiftRow['movements']): Promise<CashMovement[]> {
   const names = await userNames(
     db,
-    rows.map((m) => m.userId),
+    rows.flatMap((m) => (m.authorizedBy ? [m.userId, m.authorizedBy] : [m.userId])),
   );
   const reasons = await db.reason.findMany({
     where: { id: { in: rows.flatMap((m) => (m.reasonId ? [m.reasonId] : [])) } },
@@ -202,6 +202,7 @@ async function toMovements(db: Db, rows: ShiftRow['movements']): Promise<CashMov
     reasonName: m.reasonId ? (reasonName.get(m.reasonId) ?? null) : null,
     note: m.note,
     userName: names.get(m.userId) ?? '',
+    authorizedByName: m.authorizedBy ? (names.get(m.authorizedBy) ?? null) : null,
     at: m.createdAt.toISOString(),
   }));
 }

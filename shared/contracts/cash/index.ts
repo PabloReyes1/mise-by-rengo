@@ -63,6 +63,8 @@ export const cashMovementSchema = z.object({
   reasonName: z.string().nullable(),
   note: z.string().nullable(),
   userName: z.string(),
+  /** Quien autorizó con 🔑, si hizo falta (comprobante, Docs/11 §4.5) */
+  authorizedByName: z.string().nullable(),
   at: isoDateTimeSchema,
 });
 export type CashMovement = z.infer<typeof cashMovementSchema>;
