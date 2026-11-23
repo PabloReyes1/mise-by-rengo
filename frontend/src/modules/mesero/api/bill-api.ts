@@ -1,9 +1,16 @@
 // Cuentas de la mesa desde el mesero (Docs/08 §2.7, RF-102 a RF-104, #17 del plan).
 // Reasignado a Deniscito (doc 17 §3.1). Las acciones pasan por la outbox (también sin conexión).
 import type { Authorization } from '@mise/shared/contracts/auth';
-import type { Bill, PrecheckResponse } from '@mise/shared/contracts/billing';
+import type {
+  Bill,
+  PayBillRequest,
+  PaymentMethod,
+  PrecheckResponse,
+  Receipt,
+} from '@mise/shared/contracts/billing';
 import { newId } from '@mise/shared/domain/ids';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { apiFetch } from '../../../core/api/index.js';
 import { runOperation, type OperationOutcome } from '../../../core/offline/index.js';
 import { billsKey, ordersKey } from './order-api.js';
 
@@ -32,6 +39,7 @@ function useBillAction<V extends { authorization?: Authorization }, T>(
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: billsKey(occupancyId) });
       void qc.invalidateQueries({ queryKey: ordersKey(occupancyId) });
+      void qc.invalidateQueries({ queryKey: ['floor'] });
     },
   });
 }
@@ -122,4 +130,28 @@ export function usePrecheck(occupancyId: string) {
       label: `Pre-cuenta de ${v.bill.name}`,
     }),
   );
+}
+
+/** Métodos de pago activos (Docs/08 §2.7). */
+export function usePaymentMethods() {
+  return useQuery({
+    queryKey: ['payment-methods'],
+    queryFn: () => apiFetch<PaymentMethod[]>('/payment-methods'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Cobrar una cuenta (Docs/05 paso 11, H3 #19): por la outbox, con los ids de pago del dispositivo. */
+export function usePayBill(occupancyId: string) {
+  return useBillAction<
+    { bill: Bill; body: Omit<PayBillRequest, 'authorization'>; authorization?: Authorization },
+    Receipt
+  >(occupancyId, (v) => ({
+    type: 'bill.pay',
+    entityId: v.bill.id,
+    method: 'POST',
+    path: `/bills/${v.bill.id}/pay`,
+    body: v.body,
+    label: `Cobrar ${v.bill.name}`,
+  }));
 }

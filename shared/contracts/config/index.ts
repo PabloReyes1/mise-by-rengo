@@ -46,6 +46,13 @@ export const publicConfigSchema = z.object({
   minFrontendVersion: z.string(),
   /** El KDS lo lee sin permisos de configuración */
   kds: kdsSettingsSchema,
+  /** Propina para el cobro (S-10): sugerida y, si editable, se cambia al cobrar */
+  tips: z.object({
+    enabled: z.boolean(),
+    suggestedPct: z.string().nullable(),
+    editable: z.boolean(),
+    appliesTakeaway: z.boolean(),
+  }),
 });
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
 

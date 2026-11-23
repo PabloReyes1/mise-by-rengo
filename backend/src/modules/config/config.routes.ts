@@ -72,6 +72,12 @@ export function configRoutes(license: ReturnType<typeof licenseReader>): Fastify
           licenseStatus: l?.status ?? 'ACTIVA',
           settingsVersion: s.settingsVersion,
           kds: toKdsSettings(s),
+          tips: {
+            enabled: s.tipsEnabled,
+            suggestedPct: s.tipSuggestedPct ? s.tipSuggestedPct.toString() : null,
+            editable: s.tipEditable,
+            appliesTakeaway: s.tipAppliesTakeaway,
+          },
           minFrontendVersion: app.env.MIN_FRONTEND_VERSION,
         };
       },

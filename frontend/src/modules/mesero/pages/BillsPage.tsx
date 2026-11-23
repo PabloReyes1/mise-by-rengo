@@ -3,12 +3,12 @@
 // pre-cuenta. Reasignado a Deniscito (doc 17 §3.1).
 import type { Bill } from '@mise/shared/contracts/billing';
 import type { OrderItem } from '@mise/shared/contracts/orders';
-import { ArrowLeft, ArrowRightLeft, Plus, Printer, Scissors } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, Plus, Printer, Scissors, Wallet } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { usePublicConfig, useRegional } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney } from '../../../core/format/index.js';
-import { precuentaDocument, printWithDialog } from '../../../core/print/index.js';
+import { precuentaDocument, printWithDialog, reciboDocument } from '../../../core/print/index.js';
 import {
   Badge,
   Button,
@@ -23,6 +23,7 @@ import { useAuthorizedAction } from '../api/authorized-action.js';
 import {
   useCreateBill,
   useMoveItems,
+  usePayBill,
   usePrecheck,
   useRenameBill,
   useSplitItem,
@@ -31,6 +32,7 @@ import { useFloor, useOccupancy } from '../api/floor-api.js';
 import { useOccupancyBills, useOccupancyOrders } from '../api/order-api.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
+import { PaymentDialog, type PaymentResult } from '../components/PaymentDialog.js';
 
 const BILL_STATUS: Record<Bill['status'], { label: string; tone: BadgeTone }> = {
   ABIERTA: { label: 'Abierta', tone: 'neutral' },
@@ -62,6 +64,9 @@ export function BillsPage() {
   const move = useMoveItems(id);
   const split = useSplitItem(id);
   const precheck = usePrecheck(id);
+  const pay = usePayBill(id);
+  const navigate = useNavigate();
+  const [paying, setPaying] = useState<Bill | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [target, setTarget] = useState<string>('');
   const [splitting, setSplitting] = useState<OrderItem | null>(null);
@@ -119,6 +124,65 @@ export function BillsPage() {
       {
         onDone: (o) => {
           setSelected([]);
+          after(o);
+        },
+      },
+    );
+  };
+
+  // Cobro (H3 #19): con la versión fresca de la cuenta; al aplicarse se imprime el recibo
+  const collect = async (bill: Bill, result: PaymentResult) => {
+    const fresh = navigator.onLine ? ((await bills.refetch()).data ?? list) : list;
+    const current = fresh.find((b) => b.id === bill.id) ?? bill;
+    authorized.run(
+      pay,
+      { bill: current, body: { ...result, version: current.version } },
+      `Cobrar ${bill.name}`,
+      {
+        onDone: (o) => {
+          setPaying(null);
+          if (o.status === 'applied') {
+            const r = o.data;
+            const cashPay = r.payments.find((p) => p.tendered);
+            void printWithDialog(
+              reciboDocument({
+                restaurant: config.data?.tradeName ?? '',
+                folio: r.bill.folio ?? '',
+                paidAt: formatDateTime(r.paidAt, regional),
+                where: `${title} · ${r.bill.name}`,
+                cashier: r.receivedByName,
+                waiter: occ.waiterName,
+                customer: r.bill.customerTaxName
+                  ? `${r.bill.customerNit ?? 'CF'} · ${r.bill.customerTaxName}`
+                  : (r.bill.customerNit ?? 'CF'),
+                items: r.items.map((i) => ({
+                  quantity: i.quantity,
+                  name: i.productName,
+                  amount: formatMoney(i.lineTotal, regional),
+                })),
+                subtotal: formatMoney(r.bill.subtotal, regional),
+                discount:
+                  r.bill.discountTotal !== '0.00'
+                    ? formatMoney(r.bill.discountTotal, regional)
+                    : null,
+                tip: r.bill.tipAmount !== '0.00' ? formatMoney(r.bill.tipAmount, regional) : null,
+                total: formatMoney(r.totalPaid, regional),
+                payments: r.payments.map((p) => ({
+                  label: p.reference ? `${p.methodName} (Ref. ${p.reference})` : p.methodName,
+                  amount: formatMoney(p.amount, regional),
+                })),
+                cash: cashPay?.tendered
+                  ? {
+                      tendered: formatMoney(cashPay.tendered, regional),
+                      change: formatMoney(r.change, regional),
+                    }
+                  : null,
+                reprint: false,
+                legend: 'Este documento no es una factura.',
+              }),
+            );
+            if (r.occupancyClosed) void navigate('/mesero', { state: { closed: title } });
+          }
           after(o);
         },
       },
@@ -299,6 +363,11 @@ export function BillsPage() {
                   {b.status === 'PRECUENTA' ? 'Reimprimir pre-cuenta' : 'Pre-cuenta'}
                 </Button>
               )}
+              {editable && mine.length > 0 && (
+                <Button icon={<Wallet />} onClick={() => setPaying(b)}>
+                  Cobrar
+                </Button>
+              )}
             </div>
           </Card>
         );
@@ -354,6 +423,14 @@ export function BillsPage() {
             },
           );
         }}
+      />
+      <PaymentDialog
+        bill={paying}
+        isTakeaway={!occ.tableId}
+        loading={pay.isPending}
+        error={actionError(pay.error)}
+        onClose={() => setPaying(null)}
+        onPay={(result) => void collect(paying!, result)}
       />
       <RenameDialog
         bill={renaming}
