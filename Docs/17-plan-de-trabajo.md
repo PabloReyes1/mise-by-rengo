@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | #22 Recetas y costeo (parte 1, API): insumos con historial de costo, unidades y conversiones, recetas por producto y modificador con merma, objetivos de costo (producto > categoría > restaurante), precio sugerido, margen y alerta, productos afectados al cambiar un costo y costo congelado en la venta (RF-139). Falta la pantalla | H3 | Deniscito (`recipes`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 6, cierra #21): plantillas de ticket. Pantalla Configuración › Tickets con vista previa; todos los impresos (comanda, pre-cuenta, recibo, corte, movimientos) usan encabezado, pie, logo y papel de su plantilla (`core/print`, `core/config`); `TextArea` nuevo en `core/ui` | H3 | Deniscito (`config`, `admin`, `core/print`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 5): lista de dispositivos de la sucursal, renombrar y revocar (no el propio). Impresoras y rutas: no se hacen (ADR-003 actualizado, diálogo del sistema) | H3 | Deniscito (`auth`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 4): cajas (`cash`, de Pablito): crear, editar fondo y conteo, mover la principal y desactivar; pantalla Configuración › Cajas | H3 | Deniscito (`admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |

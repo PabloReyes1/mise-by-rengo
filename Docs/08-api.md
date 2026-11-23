@@ -30,7 +30,7 @@
 | 402 | `LICENSE_SUSPENDED`, `LICENSE_READ_ONLY` |
 | 403 | `FORBIDDEN`, `AUTHORIZATION_REQUIRED` (pide 🔑), `MODULE_DISABLED`, `BRANCH_FORBIDDEN`, `DEVICE_REVOKED` |
 | 404 | `NOT_FOUND` |
-| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE` (no puede quedar sin nadie activo que administre usuarios) |
+| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE`, `INGREDIENT_NAME_TAKEN` (no puede quedar sin nadie activo que administre usuarios) |
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
@@ -195,6 +195,16 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/PUT | `/api/recipes/:id`, `/api/products/:id/recipe`, `/api/modifiers/:id/recipe` | `config.recipes` |
 | GET/PUT | `/api/cost-targets` | `config.recipes` |
 | GET | `/api/costing/products?belowTarget=true` | Costo, precio sugerido, precio asignado, margen real, alerta | `config.recipes` |
+
+**Implementado (H3 #22, 2026-11-23, SC-67).** Todas piden `config.recipes` y que la licencia no tenga `modules.recipes = false` (si no, 403 `MODULE_DISABLED`). Costos como string con hasta 4 decimales (`"0.0450"`); porcentajes como número (30 = 30 %).
+- `GET /api/units` → `[{ id, code, name, dimension }]`. Las unidades y conversiones son datos del producto (`templates/seed/units.json`): no hay POST ni PUT.
+- `GET /api/ingredients[?all=true]` → insumos activos (con `all`, también los inactivos), con `unitCost` (por unidad base) y `recipeCount`. `POST /api/ingredients` `{ id, name, category, baseUnitId, unitCost }` → 201 (200 si el `id` ya existía); nombre repetido sin importar mayúsculas → 409 `INGREDIENT_NAME_TAKEN`. `PUT /api/ingredients/:id` `{ name, category, baseUnitId, active }`: el costo no se cambia aquí; la unidad base no se cambia si el insumo ya está en una receta (400).
+- `POST /api/ingredients/:id/cost` `{ unitCost }` → `{ ingredient, affected }`: guarda el costo en el historial, recalcula las recetas que lo usan y devuelve los productos cuyo costo cambió, con su alerta (RF-138). `GET /api/ingredients/:id/costs` → historial `[{ unitCost, validFrom, setByName }]` (los 50 últimos).
+- `GET/PUT /api/products/:id/recipe` y `/api/modifiers/:id/recipe`: `PUT { lines: [{ ingredientId, quantity, unitId, wastePct }] }` reemplaza las líneas y responde la receta con el costo de cada línea y el total; sin líneas la borra (responde `null`). La unidad de la línea debe convertirse a la unidad base del insumo (misma dimensión) o 400; un insumo no se repite. `GET /api/recipes/:id` no se hizo: se llega por el producto o el modificador.
+- `GET /api/cost-targets` → `{ client, categories: [{ categoryId, ... }], products: [{ productId, ... }] }` con `{ targetFoodCostPct, roundingStep ("0.50" | "1.00" | "5.00"), roundingMode (UP | NEAREST) }`; `client: null` = se usa el de por defecto (30 %, Q 1.00 hacia arriba). `PUT /api/cost-targets` `{ scope: CLIENT | CATEGORY | PRODUCT, categoryId?, productId?, target }`: `target: null` quita el de una categoría o producto.
+- `GET /api/costing/products[?belowTarget=true]` → por producto activo o agotado: precio, `hasRecipe`, `cost`, `target` y de dónde sale (`targetScope`: PRODUCT > CATEGORY > CLIENT > DEFAULT), `suggestedPrice`, `foodCostPct`, `marginPct` y `belowTarget` (el costo pasa el % objetivo). El combo suma su propia receta y la de sus opciones por defecto.
+- Venta (RF-139): al enviar un pedido, cada ítem guarda en `unit_cost_snapshot` el costo de la receta del producto + la de sus modificadores + la de los componentes del combo y sus modificadores (`null` si nada tiene receta).
+- Auditoría: `config.ingredient.create/update/cost`, `config.recipe.update`, `config.cost_target.update`.
 
 ### 2.10 Dashboard y reportes
 | Método | Ruta | Descripción | Permiso |

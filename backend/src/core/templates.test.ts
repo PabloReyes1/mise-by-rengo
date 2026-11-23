@@ -22,6 +22,14 @@ describe('templates/seed (datos del producto, iguales para todo cliente)', () =>
   it('trae las unidades de Docs/07 §4.6', () => {
     expect(load().seed.units.map((u) => u.code)).toEqual(['kg', 'g', 'l', 'ml', 'u', 'oz']);
   });
+
+  it('trae las conversiones kg→g, l→ml y oz→g (RF-131)', () => {
+    expect(load().seed.unitConversions.map((c) => `${c.from}>${c.to}`)).toEqual([
+      'kg>g',
+      'l>ml',
+      'oz>g',
+    ]);
+  });
 });
 
 describe('templates/restaurante-basico (plantilla de onboarding)', () => {

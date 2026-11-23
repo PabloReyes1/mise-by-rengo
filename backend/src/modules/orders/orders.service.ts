@@ -16,6 +16,7 @@ import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import { recordAudit } from '../audit/index.js';
 import { recomputeBills } from '../billing/index.js';
 import { assertCanOperate, usesKitchenDisplay, type Actor } from '../floor/index.js';
+import { itemUnitCost } from '../recipes/index.js';
 
 type Tx = Prisma.TransactionClient;
 const D = Prisma.Decimal;
@@ -298,6 +299,20 @@ export async function sendOrder(
         ).map((p) => [p.id, p]),
       );
       const built = input.items.map((item) => ({ item, ...buildItem(item, products) }));
+      // Costo teórico congelado en la venta (RF-139): cambiar costos después no altera esta venta
+      const unitCosts: (Prisma.Decimal | null)[] = [];
+      for (const b of built) {
+        unitCosts.push(
+          await itemUnitCost(tx, {
+            productId: b.product.id,
+            modifierIds: [
+              ...b.modifiers.map((m) => m.modifierId),
+              ...b.components.flatMap((c) => c.modifiers.map((m) => m.modifierId)),
+            ],
+            componentProductIds: b.components.map((c) => c.productId),
+          }),
+        );
+      }
 
       const rounds = await tx.order.count({ where: { occupancyId } });
       const station = await tx.kitchenStation.findFirst({
@@ -320,7 +335,7 @@ export async function sendOrder(
           syncedLate: input.tempFolio !== undefined,
           createdDeviceId: toDbId(actor.deviceId),
           items: {
-            create: built.map(({ item, product, modifiers, components, ...totals }) => ({
+            create: built.map(({ item, product, modifiers, components, ...totals }, i) => ({
               id: toDbId(item.id),
               billId: toDbId(item.billId),
               productId: product.id,
@@ -329,6 +344,7 @@ export async function sendOrder(
               unitPrice: totals.unitPrice,
               modifiersTotal: totals.modifiersTotal,
               lineTotal: totals.lineTotal,
+              unitCostSnapshot: unitCosts[i],
               note: item.note ? item.note : null,
               createdDeviceId: toDbId(actor.deviceId),
               modifiers: {

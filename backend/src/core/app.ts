@@ -17,6 +17,7 @@ import { floorModule } from '../modules/floor/index.js';
 import { kitchenModule } from '../modules/kitchen/index.js';
 import { ordersModule } from '../modules/orders/index.js';
 import { realtimeModule } from '../modules/realtime/index.js';
+import { recipesModule } from '../modules/recipes/index.js';
 import { syncModule } from '../modules/sync/index.js';
 import { systemModule } from '../modules/system/index.js';
 import type { Env } from './env.js';
@@ -103,6 +104,7 @@ export async function buildApp(options: BuildAppOptions): Promise<App> {
     await app.register(kitchenModule);
     await app.register(billingModule);
     await app.register(cashModule);
+    await app.register(recipesModule);
   }
 
   await options.register?.(app);
