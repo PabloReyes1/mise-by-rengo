@@ -37,6 +37,15 @@ async function loginAs(username: string, password: string): Promise<Headers> {
   return { authorization: `Bearer ${session.accessToken}`, 'x-device-id': device.deviceId };
 }
 
+/** Empareja una pantalla de cocina: con KDS solo se entrega desde LISTO (PA-058, SC-60) */
+async function pairKitchen() {
+  const { code } = await createPairingCode(prisma, { branchId: toDbId(branchId) });
+  await app.inject({
+    method: 'POST',
+    url: '/api/devices/pair',
+    payload: { code, name: 'Cocina', type: 'KDS' },
+  });
+}
 const post = (url: string, headers: Headers, payload: object) =>
   app.inject({ method: 'POST', url, headers, payload });
 
@@ -301,7 +310,8 @@ describe('mesa y cuentas', () => {
 });
 
 describe('entregar (POST /api/orders/:id/deliver, Docs/05 paso 9)', () => {
-  it('solo un pedido listo se entrega; repetirlo no cambia nada', async () => {
+  it('con pantalla de cocina solo un pedido listo se entrega; repetirlo no cambia nada', async () => {
+    await pairKitchen();
     const order = (await send([item('Café de olla')])).json();
     const early = await post(`/api/orders/${order.id}/deliver`, waiter, {});
     expect(early.json().error.code).toBe('VALIDATION_ERROR');
@@ -315,6 +325,22 @@ describe('entregar (POST /api/orders/:id/deliver, Docs/05 paso 9)', () => {
 
     const again = await post(`/api/orders/${order.id}/deliver`, waiter, {});
     expect(again.json().deliveredAt).toBe(res.json().deliveredAt);
+  });
+
+  it('sin pantalla de cocina el mesero entrega desde la cola (PA-058, SC-60)', async () => {
+    const floor = (await app.inject({ method: 'GET', url: '/api/floor', headers: waiter })).json();
+    expect(floor.kitchenDisplay).toBe(false);
+    const order = (await send([item('Café de olla')])).json();
+    const res = await post(`/api/orders/${order.id}/deliver`, waiter, {});
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ status: 'ENTREGADO', deliveredAuto: false });
+    expect(res.json().items[0].status).toBe('ENTREGADO');
+
+    await pairKitchen();
+    const withKds = (
+      await app.inject({ method: 'GET', url: '/api/floor', headers: waiter })
+    ).json();
+    expect(withKds.kitchenDisplay).toBe(true);
   });
 });
 

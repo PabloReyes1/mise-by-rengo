@@ -198,6 +198,7 @@ export function OccupancyPage() {
           <OrderList
             orders={orders.data}
             delivering={deliver.isPending ? (deliver.variables?.orderId ?? null) : null}
+            kitchenDisplay={floor.data?.kitchenDisplay ?? true}
             onDeliver={(o) => {
               reset();
               authorized.run(

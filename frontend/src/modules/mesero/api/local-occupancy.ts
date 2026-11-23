@@ -78,6 +78,7 @@ export function cacheLocalOccupancy(
   qc.setQueryData<FloorResponse>(keys.floor, (floor) =>
     floor
       ? {
+          ...floor,
           zones: floor.zones.map((z) => ({
             ...z,
             tables: z.tables.map((t) =>

@@ -219,6 +219,11 @@ export type FloorTable = z.infer<typeof floorTableSchema>;
 
 export const floorResponseSchema = z.object({
   zones: z.array(zoneSchema.extend({ tables: z.array(floorTableSchema) })),
+  /**
+   * La sucursal tiene una pantalla de cocina (KDS) emparejada y activa. Sin KDS, el mesero entrega
+   * los pedidos desde la cola (PA-058, SC-60)
+   */
+  kitchenDisplay: z.boolean(),
 });
 export type FloorResponse = z.infer<typeof floorResponseSchema>;
 

@@ -139,6 +139,18 @@ async function loadOccupancy(db: PrismaClient | Tx, dbId: string): Promise<Occup
 
 // ─── Mapa de mesas ───────────────────────────────────────────────────────────
 
+/**
+ * ¿La sucursal usa pantalla de cocina? Sí si tiene un dispositivo de Cocina emparejado y sin
+ * revocar. El KDS es opcional (doc 06 §7); sin él, el mesero entrega desde la cola (PA-058, SC-60).
+ */
+export async function usesKitchenDisplay(
+  db: PrismaClient | Tx,
+  branchId: string,
+): Promise<boolean> {
+  const kds = await db.device.count({ where: { branchId, type: 'KDS', revokedAt: null } });
+  return kds > 0;
+}
+
 /** Zonas activas con sus mesas activas y el resumen de la ocupación abierta (Docs/08 §2.5). */
 export async function getFloor(prisma: PrismaClient, branchId: string): Promise<FloorResponse> {
   const zones = await prisma.zone.findMany({
@@ -188,6 +200,7 @@ export async function getFloor(prisma: PrismaClient, branchId: string): Promise<
     return null;
   };
   return {
+    kitchenDisplay: await usesKitchenDisplay(prisma, branchId),
     zones: zones.map((z) => ({
       ...toZone(z),
       tables: z.tables

@@ -107,9 +107,9 @@ flowchart TD
 | Aspecto | Detalle |
 |---|---|
 | Actor | Mesero (`order.deliver`) |
-| Estados | Pedido `LISTO` → `ENTREGADO`; `delivered_at = now()` |
+| Estados | Pedido `LISTO` → `ENTREGADO`; `delivered_at = now()`. **Sin pantalla de cocina** (ningún dispositivo de Cocina activo en la sucursal) nadie lo marca listo: se entrega desde `ENVIADO` o `EN_PREPARACION` [SUPUESTO] (PA-058, SC-60) |
 | Métricas | Espera = `accepted_at − sent_at`; Preparación = `ready_at − accepted_at`; Entrega = `delivered_at − ready_at` |
-| Reglas | Si el mesero olvida marcar entregado, el pedido se marca automáticamente al imprimir la pre-cuenta y se excluye del promedio de tiempo de entrega (`delivered_auto = true`). |
+| Reglas | Si el mesero olvida marcar entregado, el pedido se marca automáticamente al imprimir la pre-cuenta y se excluye del promedio de tiempo de entrega (`delivered_auto = true`). Sin pantalla de cocina, la pre-cuenta entrega también los que siguen en cola o en preparación (SC-60). |
 
 ### Paso 10 — Pre-cuenta
 | Aspecto | Detalle |

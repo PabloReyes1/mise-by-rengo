@@ -102,7 +102,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.5 Mesas y ocupaciones
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Cada mesa ocupada trae `service`: `LISTA` (pedido listo para entregar), `EN_COCINA` (pedidos en cocina) o `PRECUENTA` (pre-cuenta impresa), en ese orden de prioridad (hecho 2026-11-23) | Autenticado |
+| GET | `/api/floor` | Zonas activas con sus mesas activas y el resumen de la ocupación abierta (sin ítems). Una mesa `UNIDA` trae `joinedTo` ("Unida a 5") y la ocupación de la mesa principal. Cada mesa ocupada trae `service`: `LISTA` (pedido listo para entregar), `EN_COCINA` (pedidos en cocina) o `PRECUENTA` (pre-cuenta impresa), en ese orden de prioridad (hecho 2026-11-23). `kitchenDisplay`: la sucursal tiene un dispositivo de Cocina activo; sin él, el mesero entrega desde la cola (SC-60) | Autenticado |
 | GET | `/api/zones` | Todas las zonas de la sucursal, también las inactivas | `config.tables` |
 | POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
 | POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |
@@ -125,7 +125,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/orders/:id/ready` | Pedido completo listo | `kds.operate` |
 | POST | `/api/order-items/:id/ready` | Ítem listo | `kds.operate` |
 | POST | `/api/orders/:id/recall` | Listo → En preparación | `kds.recall` |
-| POST | `/api/orders/:id/deliver` | Marca entregado | `order.deliver` |
+| POST | `/api/orders/:id/deliver` | Marca entregado. Desde `LISTO`; si la sucursal no tiene pantalla de cocina, también desde `ENVIADO` o `EN_PREPARACION` (SC-60) | `order.deliver` |
 | POST | `/api/order-items/:id/cancel` | `{ reasonId, note?, authorization? }` | `order.cancel_sent` |
 | POST | `/api/orders/:id/printed` | Confirma impresión de comanda `{ deviceId, printerId }` | Dispositivo |
 | POST | `/api/orders/:id/reprint` | Delegar reimpresión al hub | `bill.reprint` |

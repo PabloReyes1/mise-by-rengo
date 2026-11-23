@@ -4,6 +4,11 @@
 import { floorRoutes } from './floor.routes.js';
 
 export { businessDate } from './business-date.js';
-export { assertCanOperate, requestBranchId, type Actor } from './floor.service.js';
+export {
+  assertCanOperate,
+  requestBranchId,
+  usesKitchenDisplay,
+  type Actor,
+} from './floor.service.js';
 export { tableAuthorization } from './table-authorization.js';
 export const floorModule = floorRoutes;

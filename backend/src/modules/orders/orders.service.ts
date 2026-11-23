@@ -8,14 +8,14 @@ import type {
   OrderItem,
   SendOrderRequest,
 } from '@mise/shared/contracts/orders';
-import { canOrderTransition, type OrderStatus } from '@mise/shared/domain/orders';
+import { canDeliver, canOrderTransition, type OrderStatus } from '@mise/shared/domain/orders';
 import { AppError } from '../../core/errors.js';
 import { nextFolio } from '../../core/folio.js';
 import { newDbId, toApiId, toDbId } from '../../core/ids.js';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import { recordAudit } from '../audit/index.js';
 import { recomputeBills } from '../billing/index.js';
-import { assertCanOperate, type Actor } from '../floor/index.js';
+import { assertCanOperate, usesKitchenDisplay, type Actor } from '../floor/index.js';
 
 type Tx = Prisma.TransactionClient;
 const D = Prisma.Decimal;
@@ -427,7 +427,8 @@ export async function deliverOrder(
     const occupancy = await occupancyInBranch(tx, branchId, order.occupancyId);
     assertCanOperate({ waiterId: toApiId(occupancy.waiterId) }, actor);
     if (order.status === 'ENTREGADO') return toOrder(order);
-    if (!canOrderTransition(order.status as OrderStatus, 'ENTREGADO')) {
+    const kitchenDisplay = await usesKitchenDisplay(tx, branchId);
+    if (!canDeliver(order.status as OrderStatus, kitchenDisplay)) {
       throw new AppError(
         'VALIDATION_ERROR',
         order.status === 'CANCELADO'

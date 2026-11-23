@@ -6,6 +6,7 @@ import {
   canItemTransition,
   canOrderTransition,
   isFinalOrderStatus,
+  canDeliver,
 } from './index.js';
 
 describe('estados del pedido (doc 05 §5.3, doc 07)', () => {
@@ -82,5 +83,21 @@ describe('estados del ítem (doc 05 §5.4, doc 07)', () => {
     ['ENTREGADO', 'LISTO'],
   ] as const)('no permite %s → %s', (from, to) => {
     expect(canItemTransition(from, to)).toBe(false);
+  });
+});
+
+describe('entregar con y sin pantalla de cocina (PA-058, SC-60)', () => {
+  it('con KDS solo se entrega lo listo', () => {
+    expect(canDeliver('LISTO', true)).toBe(true);
+    expect(canDeliver('ENVIADO', true)).toBe(false);
+    expect(canDeliver('EN_PREPARACION', true)).toBe(false);
+  });
+
+  it('sin KDS se entrega desde la cola o la preparación, nunca lo cancelado ni lo entregado', () => {
+    expect(canDeliver('ENVIADO', false)).toBe(true);
+    expect(canDeliver('EN_PREPARACION', false)).toBe(true);
+    expect(canDeliver('LISTO', false)).toBe(true);
+    expect(canDeliver('CANCELADO', false)).toBe(false);
+    expect(canDeliver('ENTREGADO', false)).toBe(false);
   });
 });

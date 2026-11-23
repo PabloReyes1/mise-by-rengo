@@ -15,7 +15,7 @@ import { AppError } from '../../core/errors.js';
 import { newDbId, toApiId, toDbId } from '../../core/ids.js';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import { recordAudit } from '../audit/index.js';
-import { assertCanOperate, type Actor } from '../floor/index.js';
+import { assertCanOperate, usesKitchenDisplay, type Actor } from '../floor/index.js';
 import { recomputeBills } from './totals.js';
 
 type Tx = Prisma.TransactionClient;
@@ -387,14 +387,22 @@ export async function precheckBill(
     const reprint = bill.status === 'PRECUENTA';
     const now = new Date();
 
-    // Pedidos listos de esta cuenta: se dan por entregados (S-09)
+    // Pedidos listos de esta cuenta: se dan por entregados (S-09). Sin pantalla de cocina nadie los
+    // marca listos, así que también los que siguen en cola o en preparación (PA-058, SC-60)
+    const pending = (await usesKitchenDisplay(tx, branchId))
+      ? ['LISTO']
+      : ['ENVIADO', 'EN_PREPARACION', 'LISTO'];
     const ready = await tx.order.findMany({
-      where: { occupancyId: occupancy.id, status: 'LISTO', items: { some: { billId: id } } },
+      where: {
+        occupancyId: occupancy.id,
+        status: { in: pending },
+        items: { some: { billId: id } },
+      },
       select: { id: true },
     });
     for (const o of ready) {
       await tx.orderItem.updateMany({
-        where: { orderId: o.id, status: 'LISTO' },
+        where: { orderId: o.id, status: { in: pending } },
         data: { status: 'ENTREGADO', version: { increment: 1 } },
       });
       await tx.order.update({

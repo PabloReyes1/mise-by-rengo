@@ -1,5 +1,6 @@
 // Rondas de la mesa con su estado (Docs/05 §5.3): el estado siempre en texto, nunca solo color.
 import type { Order, OrderItem } from '@mise/shared/contracts/orders';
+import { canDeliver } from '@mise/shared/domain/orders';
 import { HandPlatter, Printer, X } from 'lucide-react';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
@@ -18,6 +19,11 @@ export interface OrderListProps {
   orders: Order[];
   /** Entregar un pedido listo; si no viene, no se muestra el botón */
   onDeliver?: (order: Order) => void;
+  /**
+   * La sucursal tiene pantalla de cocina. Sin ella, se entrega también desde la cola o la
+   * preparación (PA-058, SC-60). Por defecto sí: solo se entrega lo listo
+   */
+  kitchenDisplay?: boolean;
   delivering?: string | null;
   /** Cancelar un ítem ya enviado (con motivo; 🔑 si hace falta). Si no viene, no hay botón */
   onCancelItem?: (item: OrderItem) => void;
@@ -28,6 +34,7 @@ export interface OrderListProps {
 export function OrderList({
   orders,
   onDeliver,
+  kitchenDisplay = true,
   delivering,
   onCancelItem,
   onPrint,
@@ -108,7 +115,7 @@ export function OrderList({
                   Imprimir comanda
                 </Button>
               )}
-              {onDeliver && o.status === 'LISTO' && (
+              {onDeliver && !isLocalOrder(o) && canDeliver(o.status, kitchenDisplay) && (
                 <Button
                   icon={<HandPlatter />}
                   loading={delivering === o.id}

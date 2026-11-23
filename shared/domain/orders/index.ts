@@ -43,6 +43,15 @@ export function canItemTransition(from: ItemStatus, to: ItemStatus): boolean {
   return ITEM_TRANSITIONS[from].includes(to);
 }
 
+/**
+ * Sin pantalla de cocina (KDS) nadie pasa el pedido a LISTO: el mesero lo entrega directo desde la
+ * cola o la preparación (PA-058, SC-60). Con KDS solo se entrega desde LISTO.
+ */
+export function canDeliver(status: OrderStatus, kitchenDisplay: boolean): boolean {
+  if (canOrderTransition(status, 'ENTREGADO')) return true;
+  return !kitchenDisplay && (status === 'ENVIADO' || status === 'EN_PREPARACION');
+}
+
 export function isFinalOrderStatus(status: OrderStatus): boolean {
   return ORDER_TRANSITIONS[status].length === 0;
 }

@@ -280,6 +280,17 @@ describe('pre-cuenta (Docs/05 paso 10)', () => {
     expect(after).toMatchObject({ status: 'ENTREGADO', deliveredAuto: true });
   });
 
+  it('sin pantalla de cocina, la pre-cuenta también entrega lo que sigue en cola (PA-058, SC-60)', async () => {
+    const item = (await sendCoffee(bill1)) as unknown as { orderId: string };
+    await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    const after = await prisma.order.findUniqueOrThrow({
+      where: { id: toDbId(item.orderId) },
+      include: { items: true },
+    });
+    expect(after).toMatchObject({ status: 'ENTREGADO', deliveredAuto: true });
+    expect(after.items.every((i) => i.status === 'ENTREGADO')).toBe(true);
+  });
+
   it('reimprimir pide bill.reprint: el mesero necesita 🔑', async () => {
     await sendCoffee(bill1);
     await post(`/api/bills/${bill1}/precheck`, waiter, {});
