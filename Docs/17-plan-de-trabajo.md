@@ -163,6 +163,16 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 **Integración H2:** servicio completo con conexión, de abrir la mesa a entregar. PR-002 a PR-009, PR-013, PR-015, PR-101, PR-103, PR-104, PR-108. **Al cerrar H2:** revisar los supuestos SC con "Revisar en H2" (doc 16 §2b).
 
+> **Demo de H2 (2026-11-23, Deniscito):** aprobada salvo los arreglos de abajo, que se hacen **antes** de seguir con H3. Deniscito autorizó empezar H3 sin esperar más y avanzar también las tareas de Pablito de H3 (regla 8 y §3.1).
+>
+> **Arreglos pendientes de la demo de H2 (en este orden):**
+> 1. **Pedido sin conexión invisible en la mesa:** al enviar un pedido sin conexión, la pantalla de la mesa no lo muestra. Debe aparecer en "Pedidos" con su estado "Sin enviar" (copia local en el caché de , como la mesa local de ), y reemplazarse por el del servidor al sincronizar.
+> 2. **No se ve el contador de "pendientes":** revisar  (cuenta de la outbox junto al indicador de conexión): en la prueba de Deniscito no aparecía. Que se vea siempre que haya acciones sin enviar, también en celular.
+> 3. **No se pueden subir imágenes** (ni pegando ni eligiendo archivo) en productos ni en el logo. Revisar cómo lo hace el proyecto **DENGO-POS** (carpeta , una arriba de este repo) en productos y corregir , , la subida ( con FormData) y  y . Probarlo en el navegador.
+> 4. **Sonido del KDS:** hoy suena cada 30 s mientras haya pedidos sin aceptar y molesta. Cambiar a: (a) **pedido nuevo → suena una vez**; (b) **recordatorio configurable** (cada cuánto, desde administración; por defecto más espaciado, ej. 2 min) que suena **una sola vez** por recordatorio y con el sonido del **estado más crítico** que haya; (c) **un sonido distinto por estado** (nuevo, por vencer, atrasado). Va con la configuración de umbrales y sonido del KDS en admin (SC-54,  y ).
+>
+> Confirmado en la demo: el aviso "Listo para entregar" se queda hasta marcar entregado (Docs/05 paso 8), aunque se toque para ir a la mesa.
+
 ### H3 — Cobro y caja (3 semanas)
 
 | Persona 1 (Pablito) | Persona 2 (Deniscito) |
