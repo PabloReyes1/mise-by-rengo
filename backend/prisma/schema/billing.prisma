@@ -27,7 +27,8 @@ model Bill {
   createdDeviceId String    @map("created_device_id") @db.Uuid
   version         Int       @default(0)
 
-  occupancy Occupancy @relation(fields: [occupancyId], references: [id])
+  occupancy Occupancy   @relation(fields: [occupancyId], references: [id])
+  items     OrderItem[]
 
   @@unique([folio])
   @@index([occupancyId])

@@ -1,12 +1,20 @@
-// Detalle de una mesa abierta (o para llevar): comensales, cuentas y acciones de sala
-// (trasladar, unir, transferir). Tomar el pedido llega en H2 con orders.
+// Detalle de una mesa abierta (o para llevar): comensales, pedidos, cuentas con su total y
+// acciones de sala (tomar pedido, entregar, trasladar, unir, transferir).
 import type { FloorTable } from '@mise/shared/contracts/floor';
-import { ArrowLeft, ArrowRightLeft, CircleAlert, Info, Link2, UserRound } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRightLeft,
+  CircleAlert,
+  Info,
+  Link2,
+  NotebookPen,
+  UserRound,
+} from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
 import { useRegional } from '../../../core/config/index.js';
-import { formatTime } from '../../../core/format/index.js';
+import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { useOutbox } from '../../../core/offline/index.js';
 import { Badge, Button, Card, Modal, Select } from '../../../core/ui/index.js';
 import {
@@ -19,6 +27,9 @@ import {
   useUpdateGuests,
 } from '../api/floor-api.js';
 import { useAuthorizedAction } from '../api/authorized-action.js';
+import { useDeliverOrder, useOccupancyBills, useOccupancyOrders } from '../api/order-api.js';
+import { occupancyTitle } from '../components/occupancy-title.js';
+import { OrderList } from '../components/OrderList.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
 import { GuestsStepper } from '../components/GuestsStepper.js';
 import { TablePickerDialog } from '../components/TablePickerDialog.js';
@@ -31,15 +42,26 @@ export function OccupancyPage() {
   const floor = useFloor();
   const regional = useRegional();
   const [dialog, setDialog] = useState<Dialog>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Al volver de tomar el pedido: enviado o guardado sin conexión
+  const sent = (location.state as { sent?: 'applied' | 'queued' } | null)?.sent;
+  const [notice, setNotice] = useState<string | null>(
+    sent === 'queued' ? QUEUED_MESSAGE : sent === 'applied' ? 'Pedido enviado a cocina.' : null,
+  );
   const queue = useOutbox();
+  const orders = useOccupancyOrders(id);
+  const bills = useOccupancyBills(id);
+  const deliver = useDeliverOrder(id);
   const authorized = useAuthorizedAction();
 
   const move = useMoveOccupancy();
   const merge = useMergeOccupancy();
   const transfer = useTransferOccupancy();
   const guests = useUpdateGuests();
-  const error = actionError(move.error ?? merge.error ?? transfer.error ?? guests.error);
+  const error = actionError(
+    move.error ?? merge.error ?? transfer.error ?? guests.error ?? deliver.error,
+  );
 
   const back = (
     <Link to="/mesero" className="flex min-h-12 items-center gap-2 self-start font-semibold">
@@ -63,17 +85,14 @@ export function OccupancyPage() {
 
   const occ = occupancy.data;
   const tables = floor.data?.zones.flatMap((z) => z.tables) ?? [];
-  const table = tables.find((t) => t.id === occ.tableId);
-  const title = table
-    ? ['Mesa', [table.name, ...occ.mergedTables.map((t) => t.name)].join(' + ')].join(' ')
-    : `Para llevar${occ.customerName ? `: ${occ.customerName}` : ''}`;
+  const title = occupancyTitle(occ, tables);
   const isOpen = occ.status === 'ABIERTA';
   const done = (outcome: { status: 'applied' | 'queued' }) => {
     setDialog(null);
     setNotice(outcome.status === 'queued' ? QUEUED_MESSAGE : null);
   };
   const reset = () => {
-    for (const m of [move, merge, transfer, guests]) m.reset();
+    for (const m of [move, merge, transfer, guests, deliver]) m.reset();
     setNotice(null);
   };
   const openDialog = (d: Dialog) => {
@@ -101,7 +120,7 @@ export function OccupancyPage() {
         </p>
       </header>
 
-      {notice && queue.pending.length > 0 && (
+      {notice && (notice !== QUEUED_MESSAGE || queue.pending.length > 0) && (
         <p role="status" className="flex items-start gap-2 rounded-md bg-surface p-3 text-base">
           <Info aria-hidden className="mt-0.5 size-5 shrink-0 text-secondary" />
           <span>{notice}</span>
@@ -127,15 +146,42 @@ export function OccupancyPage() {
       </Card>
 
       <section className="flex flex-col gap-3">
+        <h3 className="text-lg font-bold">Pedidos</h3>
+        {orders.isPending && <p className="text-base text-secondary">Cargando pedidos…</p>}
+        {orders.data && (
+          <OrderList
+            orders={orders.data}
+            delivering={deliver.isPending ? (deliver.variables?.orderId ?? null) : null}
+            onDeliver={(o) => {
+              reset();
+              authorized.run(
+                deliver,
+                { orderId: o.id, label: `Entregar ronda ${o.roundNumber} de ${title}` },
+                `Entregar la ronda ${o.roundNumber} de ${title}`,
+                { onDone: done },
+              );
+            }}
+          />
+        )}
+      </section>
+
+      <section className="flex flex-col gap-3">
         <h3 className="text-lg font-bold">Cuentas</h3>
         <ul className="flex flex-col gap-2">
-          {occ.bills.map((b) => (
+          {(bills.data ?? occ.bills).map((b) => (
             <li
               key={b.id}
               className="flex min-h-12 items-center justify-between gap-3 rounded-md border border-accent px-4"
             >
               <span className="font-semibold">{b.name}</span>
-              <Badge>{b.status === 'ABIERTA' ? 'Abierta' : b.status}</Badge>
+              <span className="flex items-center gap-3">
+                {'total' in b && typeof b.total === 'string' && (
+                  <span className="text-base font-semibold tabular">
+                    {formatMoney(b.total, regional)}
+                  </span>
+                )}
+                <Badge>{b.status === 'ABIERTA' ? 'Abierta' : b.status}</Badge>
+              </span>
             </li>
           ))}
         </ul>
@@ -143,8 +189,13 @@ export function OccupancyPage() {
 
       {isOpen && (
         <section className="flex flex-col gap-3">
-          <Button size="lg" disabled fullWidth>
-            Tomar pedido (llega en H2)
+          <Button
+            size="lg"
+            fullWidth
+            icon={<NotebookPen />}
+            onClick={() => void navigate(`/mesero/ocupacion/${occ.id}/pedido`)}
+          >
+            Tomar pedido
           </Button>
           <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
             {occ.tableId && (

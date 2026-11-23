@@ -41,7 +41,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ```json
 { "authorization": { "userId": "01J...", "pin": "4821" } }
 ```
-(El PIN viaja solo por HTTPS, nunca se guarda en logs.)
+(El PIN viaja solo por HTTPS, nunca se guarda en logs.) Las rutas de mesas, pedidos y cuentas aceptan `authorization` también cuando el usuario tiene el permiso de la ruta pero la mesa es de otro mesero: la 🔑 se valida contra `table.view_all` (SC-33).
 
 ## 2. Endpoints
 
@@ -118,6 +118,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
 | POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, unitPrice, modifiers:[{ modifierId, priceDelta }], components:[{ comboGroupId, productId, priceDelta, modifiers }], note }] }` → `{ id, folio, roundNumber, items }`. `unitPrice` y `priceDelta` son el precio que vio el mesero al vender; el servidor los respeta (doc 09 §6.3). Contrato v1: `shared/contracts/orders` | `order.create` |
+| GET | `/api/occupancies/:id/orders` | Rondas de la ocupación con sus ítems, en orden de ronda (pantalla de la mesa; SC-47) | Mesero de la mesa o `table.view_all` |
 | GET | `/api/kds/orders?status=ENVIADO,EN_PREPARACION,LISTO` | Cola FIFO de la estación | `kds.operate` |
 | POST | `/api/orders/:id/accept` | Marca `accepted_at` (idempotente: conserva la primera) | `kds.operate` |
 | POST | `/api/orders/:id/ready` | Pedido completo listo | `kds.operate` |
@@ -131,9 +132,10 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.7 Cuentas, descuentos y pagos
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
+| GET | `/api/occupancies/:id/bills` | Cuentas de la ocupación (sin las `ELIMINADA`) con sus totales (SC-50) | Mesero de la mesa o `table.view_all` |
 | POST | `/api/occupancies/:id/bills` | `{ id, name }` crea cuenta | `bill.split` |
 | PATCH | `/api/bills/:id` | `{ name, customerNit, customerTaxName, version }` | `bill.split` |
-| POST | `/api/bills/move-items` | `{ itemIds:[], targetBillId, versions }` | `bill.split` |
+| POST | `/api/bills/move-items` | `{ itemIds:[], targetBillId, versions }` — `versions` es `{ billId: version }` de cada cuenta que cambia (origen y destino); `409 STALE_VERSION` si alguna cambió (SC-50) → `{ bills }` | `bill.split` |
 | POST | `/api/order-items/:id/split` | `{ newItemId, quantity, targetBillId?, version }` — separa `quantity` unidades en un ítem nuevo (RF-104) y, si se indica, lo pasa a otra cuenta. `409` si el ítem tiene descuento de ítem o está en una cuenta pagada | `bill.split` |
 | POST | `/api/bills/:id/precheck` | Registra impresión de pre-cuenta, devuelve datos del impreso | `bill.print_precheck` |
 | POST | `/api/bills/:id/discounts` | `{ id, target: "BILL"|"ITEM", itemId?, kind, value, reasonId, authorization? }` | `discount.apply` |

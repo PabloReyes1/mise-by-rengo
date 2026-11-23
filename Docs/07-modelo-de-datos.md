@@ -264,6 +264,8 @@ Implementado en H1: `backend/prisma/schema/floor.prisma` y `billing.prisma` (mig
 **`order_item_modifiers`**: id, order_item_id, modifier_id, name_snapshot, price_delta, cost_snapshot.
 **`order_item_components`**: id, order_item_id, combo_group_id, product_id, name_snapshot, price_delta, cost_snapshot, modifiers jsonb.
 
+Implementado en H2: `backend/prisma/schema/orders.prisma` (migración `h2_orders`): `orders`, `order_items`, `order_item_modifiers`, `order_item_components` y `folio_sequences`. `CHECK` de estados, `round_number ≥ 1`, `quantity > 0`, ítem `CANCELADO` si y solo si tiene `cancelled_at`, `doc_type IN ('ORDER','BILL')` e índice único parcial `(branch_id, folio) WHERE folio IS NOT NULL`. Las columnas que apuntan a catálogo, usuarios, sucursal o estación no tienen relación de Prisma: las valida el servicio (SC-46). `modifiers_total` incluye los extras de los componentes del combo y sus modificadores (SC-48).
+
 **`bills`** (cuentas)
 | Columna | Tipo | Nota |
 |---|---|---|

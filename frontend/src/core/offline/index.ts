@@ -5,6 +5,8 @@ import { useSyncExternalStore } from 'react';
 import { ApiError, apiFetch } from '../api/index.js';
 import { sessionStore } from '../session/index.js';
 import { dexieStore, requestPersistentStorage } from './db.js';
+
+export { draftStore } from './db.js';
 import {
   createOutbox,
   OutboxRejectedError,

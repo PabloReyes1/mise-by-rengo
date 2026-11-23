@@ -490,8 +490,8 @@ export async function listOccupancies(
   return rows.map((r) => toOccupancy(r, names));
 }
 
-/** Mesero dueño o con table.view_all (Docs/08 §2.5). */
-function assertCanOperate(occupancy: Occupancy, actor: Actor) {
+/** Mesero dueño o con table.view_all (Docs/08 §2.5). También lo usa orders. */
+export function assertCanOperate(occupancy: { waiterId: string }, actor: Actor) {
   if (occupancy.waiterId === actor.userId || actor.permissions.includes('table.view_all')) return;
   // Un gerente autorizó esta acción con su PIN (🔑): vale también para la mesa ajena (SC-33)
   if (actor.authorizedBy) return;
@@ -613,6 +613,11 @@ export async function mergeOccupancies(
         },
       });
     }
+    // Sus pedidos también: la siguiente ronda de A cuenta los de B ("ADICIONAL", SC-49)
+    await tx.order.updateMany({
+      where: { occupancyId: sourceDb },
+      data: { occupancyId: targetDb },
+    });
     // Si a B ya le habían unido otras mesas, ahora cuelgan de A (un solo nivel)
     await tx.occupancy.updateMany({
       where: { mergedIntoId: sourceDb },

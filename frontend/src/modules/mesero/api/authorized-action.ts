@@ -1,23 +1,21 @@
-// Acciones de mesas con 🔑 (Docs/03 §5 regla 3, SC-42). Dueño: Pablito.
+// Acciones de mesas y pedidos con 🔑 (Docs/03 §5 regla 3, SC-42). Dueño: Pablito.
 // Se lanza la acción; si el servidor responde AUTHORIZATION_REQUIRED, se abre la ventana 🔑 de
 // core/session (Deniscito) y la misma acción se repite por la outbox con { authorization }.
 import type { Authorization } from '@mise/shared/contracts/auth';
-import type { Occupancy } from '@mise/shared/contracts/floor';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { OperationOutcome } from '../../../core/offline/index.js';
 import { authorizationRequired, useAuthorizationPrompt } from '../../../core/session/index.js';
 
-type FloorMutation<V> = UseMutationResult<OperationOutcome<Occupancy>, Error, V>;
-type Outcome = OperationOutcome<Occupancy>;
+type ActionMutation<T, V> = UseMutationResult<OperationOutcome<T>, Error, V>;
 
 export function useAuthorizedAction() {
   const { prompt, dialog } = useAuthorizationPrompt();
 
-  function run<V extends { authorization?: Authorization }>(
-    mutation: FloorMutation<V>,
+  function run<T, V extends { authorization?: Authorization }>(
+    mutation: ActionMutation<T, V>,
     vars: V,
     actionLabel: string,
-    handlers: { onDone: (outcome: Outcome) => void; onError?: () => void },
+    handlers: { onDone: (outcome: OperationOutcome<T>) => void; onError?: () => void },
   ) {
     mutation.mutate(vars, {
       onSuccess: handlers.onDone,

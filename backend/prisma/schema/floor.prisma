@@ -66,6 +66,7 @@ model Occupancy {
   mergedInto    Occupancy?   @relation("MergedOccupancies", fields: [mergedIntoId], references: [id])
   mergedSources Occupancy[]  @relation("MergedOccupancies")
   bills         Bill[]
+  orders        Order[]
 
   // El índice único parcial (una ocupación ABIERTA por mesa) va a mano en la migración
   @@index([branchId, status])

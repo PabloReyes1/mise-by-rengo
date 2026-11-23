@@ -400,6 +400,22 @@ describe('unir, trasladar y transferir (RF-105 a RF-107)', () => {
     expect(log.before).toMatchObject({ table: '5' });
   });
 
+  it('un mesero con table.move traslada la mesa de otro con la 🔑 de un gerente (SC-33)', async () => {
+    const a = (await open(waiter)).json();
+    await createUser('beto', 'Mesero', { password: 'clave-mesero-2' });
+    const other = await loginAs('beto', 'clave-mesero-2');
+    const denied = await post(`/api/occupancies/${a.id}/move`, other, { targetTableId: table6 });
+    expect(denied.json().error.code).toBe('AUTHORIZATION_REQUIRED');
+    const ginaId = await createUser('gina', 'Gerente', { pin: '4821' });
+    const ok = await post(`/api/occupancies/${a.id}/move`, other, {
+      targetTableId: table6,
+      authorization: { userId: ginaId, pin: '4821' },
+    });
+    expect(ok.statusCode).toBe(200);
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: 'table.move' } });
+    expect(log.authorizedBy).toBe(toDbId(ginaId));
+  });
+
   it('no se traslada a una mesa ocupada', async () => {
     const a = (await open(waiter)).json();
     await open(waiter, { tableId: table6 });
