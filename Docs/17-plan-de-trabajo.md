@@ -60,14 +60,21 @@ Cada persona es dueña de **módulos completos**: su pantalla, su API, sus tabla
 
 ## 3. Reglas para trabajar por separado e integrar después
 
-1. **Cada uno edita solo sus carpetas** (§1). Para tocar algo del otro, se le pide o se le avisa antes.
+1. **Cada uno edita sus carpetas** (§1). Para tocar algo del otro, se le avisa. **Si una tarea del otro es del mismo hito, se puede avanzar** para no quedar bloqueado: se anota en §3.1 y en el Control de cambios (2026-11-23).
 2. **El contrato va primero.** Un endpoint, campo o evento nuevo se agrega primero a [08](08-api.md) o [07](07-modelo-de-datos.md), después a `shared/contracts/<modulo>`, y el dueño del otro lado lo revisa.
 3. **Esquema Prisma por módulo** (`backend/prisma/schema/<modulo>.prisma`): cada uno edita solo los archivos de sus módulos.
 4. **Migraciones:** cada uno genera las suyas, solo aditivas. Al integrar, quien integra en segundo lugar vuelve a generar su migración encima de la del otro.
 5. **No se crean carpetas fuera de [19](19-estructura-del-proyecto.md)** sin agregarlas primero al documento.
 6. **Control de cambios del README:** cada quien agrega sus filas al final; si hay conflicto al integrar, se conservan las dos.
-7. **Ramas** (los commits los hace cada persona): una por persona y por hito, ej. `p1/h2-servicio`, `p2/h2-servicio`.
+7. **Se trabaja en `main`** (desde 2026-11-23; antes, una rama por persona). `git pull` antes de empezar; un commit corto por cada cambio, a nombre de quien trabaja aunque lo prepare Claude.
 8. **Cada hito termina con una integración y una demo conjunta** con las pruebas indicadas de [14](14-plan-de-pruebas.md). No se empieza el siguiente hito hasta que la demo pase.
+
+### 3.1 Tareas reasignadas
+
+Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño del módulo no cambia.
+
+| Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
+|---|---|---|---|---|---|
 
 ## 4. Orden en que se construyen los módulos
 
