@@ -52,6 +52,18 @@ export function AppShell({ area }: { area: DeviceArea }) {
           <span>Salir</span>
         </button>
       </header>
+      {outbox.pending.length > 0 && (
+        // Bien visible, también en celular (arreglo 2 de la demo de H2, doc 17 §5)
+        <p
+          role="status"
+          className="sticky top-14 z-10 flex min-h-11 items-center justify-center gap-2 bg-warning px-4 text-center text-base font-semibold text-primary"
+        >
+          {outbox.pending.length === 1
+            ? '1 acción sin enviar'
+            : `${outbox.pending.length} acciones sin enviar`}
+          {status === 'offline' ? ': se enviarán solas al volver la conexión' : ': enviando…'}
+        </p>
+      )}
       <main
         id="contenido"
         className="flex flex-1 flex-col px-4 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
