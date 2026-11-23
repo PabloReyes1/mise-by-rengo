@@ -75,6 +75,8 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | Abrir mesa y enviar pedidos sin conexión: mesa local en el caché (`mesero/api/local-occupancy.ts`), `runOperation` responde "guardado" si espera detrás de otra acción, el menú se descarga desde el mapa | H1 | Pablito (`mesero`, `core/offline`) | Deniscito | Error encontrado en la prueba: sin conexión la mesa no se abría y "Enviar a cocina" se quedaba girando |
+| 2026-11-23 | Comensales con − y + en el detalle de la mesa (sin ventana "Cambiar"), número editable, se guarda solo | H1 | Pablito (`mesero`) | Deniscito | Pedido de RENGO en la prueba |
 
 ## 4. Orden en que se construyen los módulos
 

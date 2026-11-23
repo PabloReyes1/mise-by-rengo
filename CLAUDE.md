@@ -44,7 +44,7 @@ Detalle, tabla de contraste y reglas por módulo en [Docs/18-sistema-de-diseno.m
 - El trabajo se reparte **por módulos** entre Persona 1 = Pablito (Sala y caja) y Persona 2 = Deniscito (Cocina y gestión): ver [Docs/17-plan-de-trabajo.md](Docs/17-plan-de-trabajo.md).
 - **Reasignación (desde 2026-11-23):** si una tarea del otro es del **mismo hito**, se puede avanzar para no quedar bloqueado, dejando constancia en "Tareas reasignadas" ([Docs/17 §3.1](Docs/17-plan-de-trabajo.md#31-tareas-reasignadas)) y en el Control de cambios.
 - **Se trabaja directo en `main`** (sin ramas por persona), con `git pull` antes de empezar.
-- **Commits:** Claude hace un commit **por cada cambio** (funcionalidad, corrección o documento) con el usuario de git configurado (quien trabaja) y **sin** la línea `Co-Authored-By` de Claude. Mensajes cortos, en inglés, con prefijo (`feat:`, `fix:`, `docs:`). Nada de lotes grandes. El push lo hace la persona, salvo que pida lo contrario.
+- **Commits:** Claude hace un commit **por cada cambio** (funcionalidad, corrección o documento) con el usuario de git configurado (quien trabaja) y **sin** la línea `Co-Authored-By` de Claude. Mensajes cortos, en inglés, con prefijo (`feat:`, `fix:`, `docs:`). Nada de lotes grandes. Después de cada commit importante, **push** a `origin main` (pedido de Deniscito, 2026-11-23).
 
 ## Dónde empezar
 - Índice de la documentación: [Docs/README.md](Docs/README.md)
