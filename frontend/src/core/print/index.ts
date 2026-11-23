@@ -17,6 +17,7 @@ export {
   type PrecuentaInput,
   type PrecuentaItem,
 } from './documents/precuenta.js';
+export { corteDocument, type CorteInput } from './documents/corte.js';
 export { reciboDocument, type ReciboInput } from './documents/recibo.js';
 export { testPage } from './documents/test-page.js';
 export {

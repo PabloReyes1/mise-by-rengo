@@ -3,7 +3,8 @@
 // Reasignado a Deniscito (doc 17 §3.1).
 import type { CashRegister } from '@mise/shared/contracts/cash';
 import { newId } from '@mise/shared/domain/ids';
-import { ArrowDownToLine, ArrowUpFromLine, LockOpen } from 'lucide-react';
+import type { ShiftReport } from '@mise/shared/contracts/cash';
+import { ArrowDownToLine, ArrowUpFromLine, Calculator, LockOpen } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
@@ -11,6 +12,8 @@ import { useRegional } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney, formatTime, toMoney } from '../../../core/format/index.js';
 import { authorizationRequired, useAuthorizationPrompt } from '../../../core/session/index.js';
 import { Badge, Button, Card, Modal, Select, TextInput } from '../../../core/ui/index.js';
+import { CloseShiftDialog } from '../components/CloseShiftDialog.js';
+import { TodayBills } from '../components/TodayBills.js';
 import { useBrowserOnline } from '../hooks/use-online.js';
 import {
   useAddMovement,
@@ -20,6 +23,7 @@ import {
   useOpenOccupancies,
   useOpenShift,
   useShift,
+  useStartClose,
   type MovementInput,
 } from '../api/cash-api.js';
 
@@ -52,6 +56,7 @@ export function CajaPage() {
       </header>
       {register.openShift ? <ShiftView register={register} /> : <OpenShift register={register} />}
       <OpenTables />
+      <TodayBills cashRegisterId={register.id} />
     </div>
   );
 }
@@ -109,6 +114,8 @@ function ShiftView({ register }: { register: CashRegister }) {
   const summary = register.openShift!;
   const shift = useShift(summary.id);
   const [moving, setMoving] = useState<'RETIRO' | 'DEPOSITO' | null>(null);
+  const startClose = useStartClose();
+  const [closing, setClosing] = useState<ShiftReport | null>(null);
   const data = shift.data ?? { ...summary, movements: [] };
   const row = (label: string, value: string, strong = false) => (
     <div className="flex justify-between gap-3">
@@ -146,6 +153,14 @@ function ShiftView({ register }: { register: CashRegister }) {
           >
             Depósito
           </Button>
+          <Button
+            variant="secondary"
+            icon={<Calculator />}
+            loading={startClose.isPending}
+            onClick={() => startClose.mutate(summary.id, { onSuccess: setClosing })}
+          >
+            Hacer corte
+          </Button>
         </div>
       </Card>
 
@@ -181,6 +196,7 @@ function ShiftView({ register }: { register: CashRegister }) {
         )}
       </section>
       <MovementDialog shiftId={summary.id} type={moving} onClose={() => setMoving(null)} />
+      <CloseShiftDialog register={register} start={closing} onClose={() => setClosing(null)} />
     </>
   );
 }

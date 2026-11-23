@@ -1,7 +1,13 @@
 // Caja: cajas, turno y movimientos (Docs/08 §2.8). Reasignado a Deniscito (doc 17 §3.1, H3 #18).
 // Abrir turno es solo en línea (PA-042): va directo a la API, sin outbox.
 import type { Authorization } from '@mise/shared/contracts/auth';
-import type { CashRegister, ShiftDetail, ShiftSummary } from '@mise/shared/contracts/cash';
+import type { PaidBillSummary } from '@mise/shared/contracts/billing';
+import type {
+  CashRegister,
+  ShiftDetail,
+  ShiftReport,
+  ShiftSummary,
+} from '@mise/shared/contracts/cash';
 import type { Reason } from '@mise/shared/contracts/config';
 import type { FloorResponse, Occupancy } from '@mise/shared/contracts/floor';
 import { newId } from '@mise/shared/domain/ids';
@@ -78,5 +84,70 @@ export function useOpenOccupancies() {
     queryKey: ['occupancies', 'ABIERTA'],
     queryFn: () => apiFetch<Occupancy[]>('/occupancies?status=ABIERTA'),
     refetchInterval: 15_000,
+  });
+}
+
+/** Empezar el corte: el turno deja de recibir efectivo (Docs/05 paso 13). */
+export function useStartClose() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (shiftId: string) =>
+      apiFetch<ShiftReport>(`/shifts/${shiftId}/start-close`, { method: 'POST', body: {} }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: REGISTERS_KEY }),
+  });
+}
+
+export function useCloseShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      shiftId: string;
+      countedCash: string;
+      counts?: { denomination: string; quantity: number }[];
+      comment?: string;
+    }) => {
+      const { shiftId, ...body } = v;
+      return apiFetch<ShiftReport>(`/shifts/${shiftId}/close`, { method: 'POST', body });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: REGISTERS_KEY }),
+  });
+}
+
+/** Cuentas pagadas hoy (para reabrir) y reabiertas pendientes (Docs/05 paso 14). */
+export function useTodayBills() {
+  return useQuery({
+    queryKey: ['bills', 'today'],
+    queryFn: () =>
+      apiFetch<{ paid: PaidBillSummary[]; reopened: PaidBillSummary[] }>('/bills/today'),
+    refetchInterval: 30_000,
+  });
+}
+
+export function useReopenBill() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: {
+      billId: string;
+      reasonId: string;
+      note?: string;
+      cashRegisterId: string;
+      version: number;
+      authorization?: Authorization;
+    }) => {
+      const { billId, ...body } = v;
+      return apiFetch<{ ok: boolean }>(`/bills/${billId}/reopen`, { method: 'POST', body });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['bills', 'today'] });
+      void qc.invalidateQueries({ queryKey: REGISTERS_KEY });
+    },
+  });
+}
+
+export function useReopenReasons() {
+  return useQuery({
+    queryKey: ['reasons', 'REOPEN_BILL'],
+    queryFn: () => apiFetch<Reason[]>('/reasons?type=REOPEN_BILL'),
+    staleTime: 10 * 60_000,
   });
 }
