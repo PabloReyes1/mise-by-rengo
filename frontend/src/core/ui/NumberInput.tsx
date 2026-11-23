@@ -29,13 +29,13 @@ function useNumberText(value: number, min: number, max: number, onChange: (n: nu
   return {
     text,
     invalid: parseIntInRange(text, min, max) === null,
-    change(next: string) {
+    change: (next: string) => {
       const clean = next.replace(/\D/g, '');
       setText(clean);
       const n = parseIntInRange(clean, min, max);
       if (n !== null && n !== value) onChange(n);
     },
-    blur() {
+    blur: () => {
       if (parseIntInRange(text, min, max) === null) setText(String(value));
     },
   };
