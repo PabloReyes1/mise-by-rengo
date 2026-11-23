@@ -2,6 +2,8 @@
 
 > ⚠️ **IMPORTANTE — REGLA DEL PROYECTO:** No se escribe ninguna línea de código hasta que esta documentación esté terminada y aprobada. La documentación vive en `Docs/` en formato `.md` y **se actualiza cada vez que se hace un cambio**. Registra cada cambio en el [Control de cambios](README.md#control-de-cambios).
 
+> **Avance (2026-11-22):** `core/print` hecho para H1 (transportes `epos-lan` y `webusb`, página de prueba en Configuración › Impresoras). Falta validarlo con la impresora real (R-01); los detalles a confirmar están en SC-44 del doc 16. Los impresos se describen con `PrintDocument` (`core/print/layout.ts`) y se imprimen con `printDocument`.
+
 ## 1. Principios
 1. **Imprime el dispositivo que origina el documento**, por su ruta directa configurada (ADR-003). Si no tiene ruta directa, delega al hub de impresión vía servidor (solo con internet).
 2. El documento se genera **en el navegador**: ESC/POS con `@point-of-sale/receipt-printer-encoder`, o XML ePOS para impresoras Epson por red.

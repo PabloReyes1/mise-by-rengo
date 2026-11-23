@@ -1,0 +1,38 @@
+{
+  "$comment": "Zonas y mesas de ejemplo (S-45). Solo se cargan con la opción --with-tables (desarrollo y demos); un cliente real configura las suyas en Configuración › Mesas. El nombre de la mesa no se repite en la sucursal (SC-30). shape: SQUARE, ROUND o RECTANGLE.",
+  "zones": [
+    {
+      "key": "salon",
+      "name": "Salón",
+      "tables": [
+        { "name": "1", "capacity": 2, "shape": "SQUARE" },
+        { "name": "2", "capacity": 2, "shape": "SQUARE" },
+        { "name": "3", "capacity": 4, "shape": "SQUARE" },
+        { "name": "4", "capacity": 4, "shape": "SQUARE" },
+        { "name": "5", "capacity": 4, "shape": "ROUND" },
+        { "name": "6", "capacity": 4, "shape": "ROUND" },
+        { "name": "7", "capacity": 6, "shape": "RECTANGLE" },
+        { "name": "8", "capacity": 8, "shape": "RECTANGLE" }
+      ]
+    },
+    {
+      "key": "terraza",
+      "name": "Terraza",
+      "tables": [
+        { "name": "T1", "capacity": 2, "shape": "ROUND" },
+        { "name": "T2", "capacity": 2, "shape": "ROUND" },
+        { "name": "T3", "capacity": 4, "shape": "SQUARE" },
+        { "name": "T4", "capacity": 4, "shape": "SQUARE" }
+      ]
+    },
+    {
+      "key": "barra",
+      "name": "Barra",
+      "tables": [
+        { "name": "Barra 1", "capacity": 1, "shape": "SQUARE" },
+        { "name": "Barra 2", "capacity": 1, "shape": "SQUARE" },
+        { "name": "Barra 3", "capacity": 1, "shape": "SQUARE" }
+      ]
+    }
+  ]
+}

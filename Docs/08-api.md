@@ -59,7 +59,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST | `/api/devices/pair` | `{ code, name, type }` → `{ deviceId, deviceToken, offlinePrefix }` | Código válido |
 | POST | `/api/auth/login` | `{ username, password }` → `{ accessToken, refreshToken, user, permissions, branches }` | Dispositivo |
 | POST | `/api/auth/pin` | `{ userId, pin }` en dispositivo registrado | Dispositivo |
-| GET | `/api/auth/device-users` | Usuarios activos con PIN de la sucursal del dispositivo `[{ id, fullName }]`, para elegir antes del PIN (SC-07) | Dispositivo |
+| GET | `/api/auth/device-users` | Usuarios activos con PIN de la sucursal del dispositivo `[{ id, fullName }]`, para elegir antes del PIN (SC-07). Con `?permission=<código>` solo quienes tienen ese permiso: la ventana 🔑 lista así a quienes pueden autorizar (SC-40) | Dispositivo |
 | POST | `/api/auth/refresh` | Rota el refresh token | — |
 | POST | `/api/auth/logout` | Revoca la sesión | Autenticado |
 | GET | `/api/auth/pin-cache` | Hashes de PIN de usuarios de la sucursal con permisos de autorización (para validar 🔑 offline; ver doc 09) | Dispositivo de caja/gerente |

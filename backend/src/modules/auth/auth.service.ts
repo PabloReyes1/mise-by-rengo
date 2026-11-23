@@ -327,13 +327,19 @@ export async function loginWithPin(
   return openSession(prisma, env, user.id, device, meta);
 }
 
-/** Usuarios activos con PIN de la sucursal del dispositivo (para elegir antes del PIN, SC-07). */
-export async function deviceUsers(prisma: PrismaClient, device: DeviceRow) {
+/**
+ * Usuarios activos con PIN de la sucursal del dispositivo (para elegir antes del PIN, SC-07).
+ * Con `permission`, solo quienes lo tienen por alguno de sus roles (autorizadores 🔑, SC-40).
+ */
+export async function deviceUsers(prisma: PrismaClient, device: DeviceRow, permission?: string) {
   const users = await prisma.user.findMany({
     where: {
       active: true,
       pinHash: { not: null },
       branches: { some: { branchId: device.branchId } },
+      ...(permission
+        ? { roles: { some: { role: { permissions: { some: { permissionCode: permission } } } } } }
+        : {}),
     },
     orderBy: { fullName: 'asc' },
     select: { id: true, fullName: true },

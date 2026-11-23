@@ -185,6 +185,21 @@ describe('PIN en dispositivos compartidos (RF-032)', () => {
     ]);
   });
 
+  it('con ?permission= lista solo a quienes pueden autorizar esa acción 🔑 (SC-40)', async () => {
+    await createUser('ana', 'Mesero', { pin: '1234' });
+    const d = await pair('WAITER', 'Celular de Ana');
+    const names = async (url: string) =>
+      (await app.inject({ method: 'GET', url, headers: deviceHeaders(d) }))
+        .json()
+        .map((u: { fullName: string }) => u.fullName);
+    expect(await names('/api/auth/device-users')).toEqual(['ana', 'Usuario de desarrollo']);
+    // El mesero no tiene table.transfer_waiter (doc 03 §4): solo el usuario de desarrollo
+    expect(await names('/api/auth/device-users?permission=table.transfer_waiter')).toEqual([
+      'Usuario de desarrollo',
+    ]);
+    expect(await names('/api/auth/device-users?permission=no.existe')).toEqual([]);
+  });
+
   it('entra con el PIN correcto y rechaza uno incorrecto con PIN_INVALID', async () => {
     const d = await pair('CASH', 'Caja 1');
     const [user] = (

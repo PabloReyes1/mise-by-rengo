@@ -138,6 +138,12 @@ describe('validateTemplate detecta errores de referencia y formato', () => {
       role.permissions = role.permissions.filter((p) => p !== 'config.roles');
     expect(validateTemplate(t)).toContainEqual(expect.stringContaining('config.roles'));
   });
+
+  it('dos mesas con el mismo nombre, aunque estén en zonas distintas (SC-30)', () => {
+    const t = load();
+    t.tables.zones[1]!.tables[0]!.name = t.tables.zones[0]!.tables[0]!.name.toUpperCase();
+    expect(validateTemplate(t)).toContainEqual(expect.stringContaining('Mesa repetida'));
+  });
 });
 
 describe('loadTemplate rechaza datos con formato inválido', () => {
