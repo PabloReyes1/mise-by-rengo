@@ -1,5 +1,6 @@
 // Comando del seed (Docs/13 §2 pasos 6 y 7). Lo usa nuevo-cliente.sh; en desarrollo, a mano:
-//   pnpm --filter @mise/backend seed -- --trade-name "La Fonda" --admin admin --with-menu --with-tables --dev-user --demo-users
+//   pnpm --filter @mise/backend seed --trade-name "La Fonda" --admin admin --with-menu --with-tables --dev-user --demo-users
+//   (sin "--" antes de las opciones: pnpm 12 lo pasa tal cual y el comando falla)
 // Lee DATABASE_URL del .env de la carpeta actual, igual que el backend.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
