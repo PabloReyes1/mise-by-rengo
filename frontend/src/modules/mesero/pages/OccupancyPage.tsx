@@ -9,6 +9,7 @@ import {
   Info,
   Link2,
   NotebookPen,
+  Receipt,
   UserRound,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -272,11 +273,26 @@ export function OccupancyPage() {
                     {formatMoney(b.total, regional)}
                   </span>
                 )}
-                <Badge>{b.status === 'ABIERTA' ? 'Abierta' : b.status}</Badge>
+                <Badge>
+                  {b.status === 'ABIERTA'
+                    ? 'Abierta'
+                    : b.status === 'PRECUENTA'
+                      ? 'Pre-cuenta'
+                      : b.status === 'PAGADA'
+                        ? 'Pagada'
+                        : b.status}
+                </Badge>
               </span>
             </li>
           ))}
         </ul>
+        <Button
+          variant="outline"
+          icon={<Receipt />}
+          onClick={() => void navigate(`/mesero/ocupacion/${occ.id}/cuentas`)}
+        >
+          Cuentas y pre-cuenta
+        </Button>
       </section>
 
       {isOpen && (

@@ -136,9 +136,9 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET | `/api/occupancies/:id/bills` | Cuentas de la ocupación (sin las `ELIMINADA`) con sus totales (SC-50) | Mesero de la mesa o `table.view_all` |
 | POST | `/api/occupancies/:id/bills` | `{ id, name }` crea cuenta | `bill.split` |
 | PATCH | `/api/bills/:id` | `{ name, customerNit, customerTaxName, version }` | `bill.split` |
-| POST | `/api/bills/move-items` | `{ itemIds:[], targetBillId, versions }` — `versions` es `{ billId: version }` de cada cuenta que cambia (origen y destino); `409 STALE_VERSION` si alguna cambió (SC-50) → `{ bills }` | `bill.split` |
+| POST | `/api/bills/move-items` | `{ itemIds:[], targetBillId, versions }` — `versions` es `{ itemId: version }` de cada ítem que se mueve (así lo implementa el servidor; corregido el 2026-11-23); `409 STALE_VERSION` si alguno cambió (SC-50) → `{ bills }` | `bill.split` |
 | POST | `/api/order-items/:id/split` | `{ newItemId, quantity, targetBillId?, version }` — separa `quantity` unidades en un ítem nuevo (RF-104) y, si se indica, lo pasa a otra cuenta. `409` si el ítem tiene descuento de ítem o está en una cuenta pagada | `bill.split` |
-| POST | `/api/bills/:id/precheck` | Registra impresión de pre-cuenta, devuelve datos del impreso | `bill.print_precheck` |
+| POST | `/api/bills/:id/precheck` | Pasa la cuenta a PRECUENTA, entrega los pedidos listos de esa cuenta (S-09) y devuelve `{ bill, items, tipPct, tipAmount, totalWithTip, reprint }` para imprimir. Reimprimir pide `bill.reprint` o 🔑 (hecho 2026-11-23, SC-55) | `bill.print_precheck` |
 | POST | `/api/bills/:id/discounts` | `{ id, target: "BILL"|"ITEM", itemId?, kind, value, reasonId, authorization? }` | `discount.apply` |
 | DELETE | `/api/discounts/:id` | Quita descuento (registrado en bitácora) | `discount.apply` |
 | POST | `/api/bills/:id/pay` | `{ tipAmount, payments:[{ id, methodId, amount, tendered?, reference? }], cashRegisterId, version }` → cuenta pagada, cambio, datos del recibo | `payment.register` |

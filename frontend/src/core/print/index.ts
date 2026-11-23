@@ -12,6 +12,11 @@ export {
   type ComandaInput,
   type ComandaItem,
 } from './documents/comanda.js';
+export {
+  precuentaDocument,
+  type PrecuentaInput,
+  type PrecuentaItem,
+} from './documents/precuenta.js';
 export { testPage } from './documents/test-page.js';
 export {
   columnsFor,

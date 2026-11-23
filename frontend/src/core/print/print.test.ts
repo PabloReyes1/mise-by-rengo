@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ticketHtml } from './browser-print.js';
 import { cancellationDocument, comandaDocument } from './documents/comanda.js';
+import { precuentaDocument } from './documents/precuenta.js';
 import { testPage } from './documents/test-page.js';
 import { encodeEposPrint, eposEnvelope } from './epos-xml.js';
 import { encodeEscPos } from './escpos.js';
@@ -331,5 +332,45 @@ describe('comanda (Docs/11 §4.1)', () => {
       '-1 LOMITO',
     ])
       expect(text).toContain(piece);
+  });
+});
+
+describe('pre-cuenta (Docs/11 §4.2)', () => {
+  it('dice que no es comprobante y trae detalle, total, propina sugerida y total con propina', () => {
+    const doc = precuentaDocument({
+      restaurant: 'Restaurante Ejemplo',
+      where: 'Mesa 5',
+      billName: 'Cuenta 1',
+      billPosition: '1 de 2',
+      waiterName: 'Luis Pérez',
+      guests: 2,
+      printedAt: '11/11/2026 19:20',
+      items: [
+        { quantity: 2, name: 'Lomito', detail: 'Término medio, Extra queso', amount: 'Q190.00' },
+      ],
+      subtotal: 'Q190.00',
+      discount: null,
+      total: 'Q190.00',
+      tip: { pct: '10', amount: 'Q19.00', totalWithTip: 'Q209.00' },
+      reprint: false,
+    });
+    const text = renderText(doc, 80);
+    for (const piece of [
+      'PRE-CUENTA',
+      '*** NO ES COMPROBANTE DE PAGO ***',
+      'Cuenta 1 (1 de 2)',
+      '2 Lomito',
+      '  Término medio, Extra queso',
+      'Propina sugerida (10%)',
+      'TOTAL CON PROPINA',
+      'La propina es voluntaria.',
+    ])
+      expect(text).toContain(piece);
+    expect(text).not.toContain('Descuento');
+    expect(
+      layoutRows(doc, 58).every(
+        (r) => r.text.length <= (r.size === 'normal' || r.size === 'tall' ? 32 : 16),
+      ),
+    ).toBe(true);
   });
 });
