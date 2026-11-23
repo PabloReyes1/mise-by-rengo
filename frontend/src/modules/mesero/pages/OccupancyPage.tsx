@@ -10,7 +10,7 @@ import {
   NotebookPen,
   UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
 import { useRegional } from '../../../core/config/index.js';
@@ -34,7 +34,7 @@ import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
 import { GuestsStepper } from '../components/GuestsStepper.js';
 import { TablePickerDialog } from '../components/TablePickerDialog.js';
 
-type Dialog = 'move' | 'merge' | 'transfer' | 'guests' | null;
+type Dialog = 'move' | 'merge' | 'transfer' | null;
 
 export function OccupancyPage() {
   const { id = '' } = useParams();
@@ -69,7 +69,20 @@ export function OccupancyPage() {
     </Link>
   );
 
-  if (occupancy.isPending) return <p className="text-base text-secondary">Cargando…</p>;
+  if (occupancy.isPending) {
+    // Sin conexión y sin copia en este celular: no hay nada que mostrar todavía
+    if (occupancy.fetchStatus === 'paused')
+      return (
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
+          {back}
+          <p role="status" className="text-base">
+            Sin conexión: esta mesa no se había abierto en este celular. Se verá al volver la
+            conexión.
+          </p>
+        </div>
+      );
+    return <p className="text-base text-secondary">Cargando…</p>;
+  }
   if (occupancy.isError) {
     const forbidden =
       occupancy.error instanceof ApiError && occupancy.error.code === 'AUTHORIZATION_REQUIRED';
@@ -133,16 +146,28 @@ export function OccupancyPage() {
         </p>
       )}
 
-      <Card className="flex items-center justify-between gap-4">
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold">Comensales</span>
-          <span className="text-2xl font-bold tabular">{occ.guests}</span>
-        </div>
-        {isOpen && (
-          <Button variant="outline" onClick={() => openDialog('guests')}>
-            Cambiar
-          </Button>
+      <Card className="flex flex-wrap items-center justify-between gap-4">
+        {isOpen ? (
+          // − y + en el mismo lugar, y el número se puede escribir (Docs/18 §6b)
+          <InlineGuests
+            key={occ.version}
+            value={occ.guests}
+            onSave={(n) =>
+              authorized.run(
+                guests,
+                { id: occ.id, guests: n, version: occ.version },
+                `Cambiar a ${n} comensales`,
+                { onDone: done },
+              )
+            }
+          />
+        ) : (
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold">Comensales</span>
+            <span className="text-2xl font-bold tabular">{occ.guests}</span>
+          </div>
         )}
+        {guests.isPending && <span className="text-sm text-secondary">Guardando…</span>}
       </Card>
 
       <section className="flex flex-col gap-3">
@@ -252,21 +277,6 @@ export function OccupancyPage() {
           )
         }
       />
-      <GuestsDialog
-        key={`${occ.version}-${dialog === 'guests'}`}
-        open={dialog === 'guests'}
-        initial={occ.guests}
-        loading={guests.isPending}
-        onClose={() => setDialog(null)}
-        onSave={(n) =>
-          authorized.run(
-            guests,
-            { id: occ.id, guests: n, version: occ.version },
-            `Cambiar a ${n} comensales`,
-            { onDone: done, onError: () => setDialog(null) },
-          )
-        }
-      />
       <TransferDialog
         open={dialog === 'transfer'}
         currentWaiterId={occ.waiterId}
@@ -286,39 +296,37 @@ export function OccupancyPage() {
   );
 }
 
-function GuestsDialog({
-  open,
-  initial,
-  loading,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  initial: number;
-  loading: boolean;
-  onClose: () => void;
-  onSave: (guests: number) => void;
-}) {
-  const [value, setValue] = useState(initial);
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Cambiar comensales"
-      actions={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button loading={loading} onClick={() => onSave(value)}>
-            Guardar
-          </Button>
-        </>
-      }
-    >
-      {open && <GuestsStepper value={value} onChange={setValue} />}
-    </Modal>
+/** Espera a que el mesero deje de tocar + o − para mandar un solo cambio. */
+const GUESTS_SAVE_MS = 800;
+
+function InlineGuests({ value, onSave }: { value: number; onSave: (guests: number) => void }) {
+  const [draft, setDraft] = useState(value);
+  // onSave cambia en cada render: se lee el último desde una referencia
+  const save = useRef(onSave);
+  const pending = useRef<number | null>(null);
+  useEffect(() => {
+    save.current = onSave;
+  });
+  useEffect(() => {
+    if (draft === value) {
+      pending.current = null;
+      return;
+    }
+    pending.current = draft;
+    const timer = setTimeout(() => {
+      pending.current = null;
+      save.current(draft);
+    }, GUESTS_SAVE_MS);
+    return () => clearTimeout(timer);
+  }, [draft, value]);
+  // Si sale de la pantalla antes de que pase la espera, el cambio se guarda igual
+  useEffect(
+    () => () => {
+      if (pending.current !== null) save.current(pending.current);
+    },
+    [],
   );
+  return <GuestsStepper value={draft} onChange={setDraft} />;
 }
 
 function TransferDialog({
