@@ -105,6 +105,17 @@ const templateSchema = z.object({
   }),
   branch: z.object({ name: z.string().min(1) }),
   kitchenStation: z.object({ name: z.string().min(1), isDefault: z.boolean() }),
+  /** Cajas iniciales (SC-56): una principal; el cliente las cambia en administración */
+  cashRegisters: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        isMain: z.boolean(),
+        openingFloatMode: z.enum(['FIJO', 'VARIABLE']),
+        openingFloatAmount: money,
+      }),
+    )
+    .default([]),
   paymentMethods: z.array(
     z.object({
       name: z.string().min(1),

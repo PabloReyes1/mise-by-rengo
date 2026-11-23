@@ -10,6 +10,7 @@ import {
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { authModule } from '../modules/auth/index.js';
 import { billingModule } from '../modules/billing/index.js';
+import { cashModule } from '../modules/cash/index.js';
 import { catalogModule } from '../modules/catalog/index.js';
 import { configModule } from '../modules/config/index.js';
 import { floorModule } from '../modules/floor/index.js';
@@ -101,6 +102,7 @@ export async function buildApp(options: BuildAppOptions): Promise<App> {
     await app.register(ordersModule);
     await app.register(kitchenModule);
     await app.register(billingModule);
+    await app.register(cashModule);
   }
 
   await options.register?.(app);

@@ -7,6 +7,19 @@
     "timeZone": "America/Guatemala",
     "discountsEnabled": false
   },
-  "branch": { "name": "Principal" },
-  "kitchenStation": { "name": "Cocina", "isDefault": true }
+  "branch": {
+    "name": "Principal"
+  },
+  "kitchenStation": {
+    "name": "Cocina",
+    "isDefault": true
+  },
+  "cashRegisters": [
+    {
+      "name": "Caja 1",
+      "isMain": true,
+      "openingFloatMode": "VARIABLE",
+      "openingFloatAmount": "0.00"
+    }
+  ]
 }

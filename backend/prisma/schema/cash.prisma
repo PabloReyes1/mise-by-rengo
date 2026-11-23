@@ -1,0 +1,80 @@
+// Módulo cash: cajas, turnos y movimientos (Docs/07 §4.5). Dueño: Pablito; reasignado a Deniscito
+// (doc 17 §3.1, H3 #18). branch_id, device_id, user_id y reason_id sin relación de Prisma: el
+// servicio valida que existan (como en floor).
+
+model CashRegister {
+  id                  String  @id @db.Uuid
+  branchId            String  @map("branch_id") @db.Uuid
+  name                String
+  deviceId            String? @map("device_id") @db.Uuid
+  active              Boolean @default(true)
+  /// FIJO / VARIABLE (PA-024)
+  openingFloatMode    String  @default("VARIABLE") @map("opening_float_mode")
+  openingFloatAmount  Decimal @default(0) @map("opening_float_amount") @db.Decimal(12, 2)
+  /// OPCIONAL / OBLIGATORIO (PA-025)
+  countByDenomination String  @default("OPCIONAL") @map("count_by_denomination")
+  /// Caja principal de la sucursal: recibe el efectivo de los meseros (PA-052)
+  isMain              Boolean @default(false) @map("is_main")
+
+  shifts Shift[]
+
+  @@index([branchId])
+  @@map("cash_registers")
+}
+
+model Shift {
+  id                      String    @id @db.Uuid
+  cashRegisterId          String    @map("cash_register_id") @db.Uuid
+  openedBy                String    @map("opened_by") @db.Uuid
+  openedAt                DateTime  @map("opened_at") @db.Timestamptz(6)
+  openingFloat            Decimal   @map("opening_float") @db.Decimal(12, 2)
+  /// ABIERTO, EN_CORTE, CERRADO_PROVISIONAL, CERRADO
+  status                  String    @default("ABIERTO")
+  closedBy                String?   @map("closed_by") @db.Uuid
+  closedAt                DateTime? @map("closed_at") @db.Timestamptz(6)
+  closedOffline           Boolean   @default(false) @map("closed_offline")
+  provisionalExpectedCash Decimal?  @map("provisional_expected_cash") @db.Decimal(12, 2)
+  expectedCash            Decimal?  @map("expected_cash") @db.Decimal(12, 2)
+  countedCash             Decimal?  @map("counted_cash") @db.Decimal(12, 2)
+  difference              Decimal?  @db.Decimal(12, 2)
+  comment                 String?
+  reportSnapshot          Json?     @map("report_snapshot")
+
+  cashRegister CashRegister   @relation(fields: [cashRegisterId], references: [id])
+  movements    CashMovement[]
+  counts       ShiftCount[]
+
+  @@index([cashRegisterId])
+  @@map("shifts")
+}
+
+model CashMovement {
+  id           String   @id @db.Uuid
+  shiftId      String   @map("shift_id") @db.Uuid
+  /// DEPOSITO, RETIRO, REVERSO_REAPERTURA
+  type         String
+  billId       String?  @map("bill_id") @db.Uuid
+  paymentId    String?  @map("payment_id") @db.Uuid
+  amount       Decimal  @db.Decimal(12, 2)
+  reasonId     String?  @map("reason_id") @db.Uuid
+  note         String?
+  userId       String   @map("user_id") @db.Uuid
+  authorizedBy String?  @map("authorized_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  shift Shift @relation(fields: [shiftId], references: [id])
+
+  @@index([shiftId])
+  @@map("cash_movements")
+}
+
+model ShiftCount {
+  shiftId      String  @map("shift_id") @db.Uuid
+  denomination Decimal @db.Decimal(12, 2)
+  quantity     Int
+
+  shift Shift @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+
+  @@id([shiftId, denomination])
+  @@map("shift_counts")
+}

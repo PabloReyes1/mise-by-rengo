@@ -71,6 +71,10 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
       },
     });
 
+    for (const r of t.cashRegisters) {
+      await tx.cashRegister.create({ data: { id: newDbId(), branchId, ...r } });
+    }
+
     await tx.orderType.createMany({
       data: t.seed.orderTypes.map((o) => ({ id: newDbId(), ...o })),
     });
