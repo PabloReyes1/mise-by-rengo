@@ -8,7 +8,10 @@ import {
   billDiscountsResponseSchema,
   occupancyBillsResponseSchema,
   payBillRequestSchema,
-  paymentMethodSchema,
+  createPaymentMethodRequestSchema,
+  listPaymentMethodsQuerySchema,
+  paymentMethodAdminSchema,
+  updatePaymentMethodRequestSchema,
   receiptSchema,
   reopenBillRequestSchema,
   todayBillsResponseSchema,
@@ -37,6 +40,11 @@ import {
   updateBill,
 } from './billing.service.js';
 import { applyDiscount, getDiscounts, removeDiscount } from './discount.service.js';
+import {
+  createPaymentMethod,
+  listAllPaymentMethods,
+  updatePaymentMethod,
+} from './payment-methods.service.js';
 import { getReceipt, listPaymentMethods, payBill } from './payment.service.js';
 import { reopenBill, todayBills } from './reopen.service.js';
 
@@ -216,8 +224,48 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
   // Cobro (Docs/05 pasos 11 y 12, H3 #19)
   app.get(
     '/api/payment-methods',
-    { preHandler: [authenticate], schema: { response: { 200: z.array(paymentMethodSchema) } } },
-    async () => listPaymentMethods(prisma),
+    {
+      preHandler: [authenticate],
+      schema: {
+        querystring: listPaymentMethodsQuerySchema,
+        response: {
+          200: z.array(paymentMethodAdminSchema.partial({ active: true, sort: true })),
+        },
+      },
+    },
+    async (req) => {
+      if (req.query.all !== 'true') return listPaymentMethods(prisma);
+      // Con ?all=true trae también los inactivos: solo quien los administra
+      if (!req.auth!.permissions.includes('config.payments'))
+        throw new AppError('FORBIDDEN', 'No tienes permiso para administrar métodos de pago');
+      return listAllPaymentMethods(prisma);
+    },
+  );
+  app.post(
+    '/api/payment-methods',
+    {
+      preHandler: [authenticate, authorize('config.payments')],
+      schema: {
+        body: createPaymentMethodRequestSchema,
+        response: { 200: paymentMethodAdminSchema, 201: paymentMethodAdminSchema },
+      },
+    },
+    async (req, reply) => {
+      const { method, created } = await createPaymentMethod(prisma, req.body, actor(req));
+      return reply.status(created ? 201 : 200).send(method);
+    },
+  );
+  app.put(
+    '/api/payment-methods/:id',
+    {
+      preHandler: [authenticate, authorize('config.payments')],
+      schema: {
+        params,
+        body: updatePaymentMethodRequestSchema,
+        response: { 200: paymentMethodAdminSchema },
+      },
+    },
+    (req) => updatePaymentMethod(prisma, req.params.id, req.body, actor(req)),
   );
   app.post(
     '/api/bills/:id/pay',

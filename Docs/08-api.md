@@ -76,8 +76,10 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/PUT | `/api/branches/:id/ticket-templates/:docType` | `config.restaurant` |
 | GET/POST/PUT | `/api/service-periods` | `config.restaurant` |
 | GET | `/api/reasons?type=` | Motivos activos `[{ id, type, name, sort }]` para elegir al cancelar un ítem, reabrir, etc. (2026-11-23) | Sesión |
-| POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (admin H3) | `config.payments` |
-| GET/POST/PUT | `/api/payment-methods` | `config.payments` |
+| GET | `/api/reasons?all=true[&type=]` | Todos los motivos, también los inactivos (`active`), para administrarlos (H3 #21) | `config.payments`; con solo `config.discounts`, solo los de `DISCOUNT` |
+| POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (SC-63) | `config.payments`; los de `DISCOUNT` también `config.discounts` |
+| GET | `/api/payment-methods` | Métodos activos para cobrar (cualquier sesión); con `?all=true`, todos con `active` y `sort` | Sesión; `?all=true` pide `config.payments` |
+| POST/PUT | `/api/payment-methods[/:id]` | Crear y editar métodos de pago (SC-63) | `config.payments` |
 | GET/POST/PUT | `/api/users`, `/api/users/:id`, `POST /api/users/:id/pin` | `config.users` |
 | GET/POST/PUT/DELETE | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users` o `config.discounts`) |
 | PUT | `/api/roles/:id/discount-limits` | `config.discounts` (S-05) |
@@ -95,6 +97,11 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 - `GET /api/roles` → `[{ id, name, description, isSystem, permissions, maxDiscountPct, maxDiscountAmount, userCount }]`.
 - Todo cambio queda en auditoría (`user.create`, `user.update`, `user.pin_set`, `user.pin_removed`) sin secretos.
 - Nadie da ni toca permisos que no tiene: asignar un rol con permisos que tú no tienes, o editar o poner PIN a un usuario con permisos que tú no tienes → 403 `FORBIDDEN` con `details.missing` (SC-61). Con 🔑 cuentan también los permisos de quien autoriza.
+
+**Métodos de pago y motivos (H3 #21, 2026-11-23, SC-63):**
+- `POST /api/payment-methods` `{ id, name, kind, givesChange?, requiresReference?, sort? }` → 201 (200 si el `id` ya existía). `PUT /api/payment-methods/:id` `{ name, givesChange, requiresReference, active, sort }`: el `kind` no cambia. Solo `CASH` puede dar cambio (en otro tipo `givesChange` queda en `false`). Nombre repetido → 400. No se desactiva el último método activo (400).
+- `POST /api/reasons` `{ id, type, name, sort? }` → 201 (al final de su tipo si no trae `sort`). `PUT /api/reasons/:id` `{ name, active, sort }`: el `type` no cambia; nombre repetido dentro del tipo → 400; no se desactiva el último motivo activo de un tipo (400).
+- Auditoría: `config.payment_method.create/update`, `config.reason.create/update` (solo los campos que cambiaron).
 
 **Roles y permisos (H3 #21, 2026-11-23, SC-62):**
 - `GET /api/permissions` → `[{ code, description }]`: el catálogo del producto (Docs/03 §3), el mismo de `templates/seed/permissions.json` (en código: `PERMISSIONS` de `shared/contracts/auth`).

@@ -5,9 +5,11 @@ import {
   createBranchSchema,
   docTypeSchema,
   licenseSchema,
+  createReasonRequestSchema,
   listReasonsQuerySchema,
+  reasonAdminSchema,
+  updateReasonRequestSchema,
   publicConfigSchema,
-  reasonSchema,
   settingsSchema,
   ticketTemplateSchema,
   updateBranchSchema,
@@ -26,7 +28,10 @@ import {
   createBranch,
   getSettings,
   listBranches,
+  createReason,
+  listAllReasons,
   listReasons,
+  updateReason,
   listTicketTemplates,
   toKdsSettings,
   toSettings,
@@ -43,6 +48,7 @@ function actor(req: FastifyRequest): Actor {
     deviceId: req.auth!.deviceId,
     authorizedBy: req.authorizedBy,
     ip: req.ip,
+    permissions: req.auth!.permissions,
   };
 }
 
@@ -205,9 +211,48 @@ export function configRoutes(license: ReturnType<typeof licenseReader>): Fastify
       '/api/reasons',
       {
         preHandler: [authenticate],
-        schema: { querystring: listReasonsQuerySchema, response: { 200: z.array(reasonSchema) } },
+        schema: {
+          querystring: listReasonsQuerySchema,
+          response: { 200: z.array(reasonAdminSchema.partial({ active: true })) },
+        },
       },
-      (req) => listReasons(prisma, req.query.type),
+      async (req) => {
+        if (req.query.all !== 'true') return listReasons(prisma, req.query.type);
+        const perms = req.auth!.permissions;
+        if (!perms.includes('config.payments') && !perms.includes('config.discounts'))
+          throw new AppError('FORBIDDEN', 'No tienes permiso para administrar motivos');
+        return listAllReasons(prisma, perms, req.query.type);
+      },
+    );
+
+    // Crear y editar motivos (H3 #21): el permiso depende del tipo (config.payments; DISCOUNT
+    // también con config.discounts), lo revisa el servicio
+    app.post(
+      '/api/reasons',
+      {
+        preHandler: [authenticate],
+        schema: {
+          body: createReasonRequestSchema,
+          response: { 200: reasonAdminSchema, 201: reasonAdminSchema },
+        },
+      },
+      async (req, reply) => {
+        const { reason, created } = await createReason(prisma, req.body, actor(req));
+        return reply.status(created ? 201 : 200).send(reason);
+      },
+    );
+
+    app.put(
+      '/api/reasons/:id',
+      {
+        preHandler: [authenticate],
+        schema: {
+          params: z.object({ id: idSchema }),
+          body: updateReasonRequestSchema,
+          response: { 200: reasonAdminSchema },
+        },
+      },
+      (req) => updateReason(prisma, req.params.id, req.body, actor(req)),
     );
 
     done();

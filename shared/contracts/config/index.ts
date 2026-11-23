@@ -124,7 +124,8 @@ export type TicketTemplate = z.infer<typeof ticketTemplateSchema>;
 export const updateTicketTemplateSchema = ticketTemplateSchema.omit({ docType: true }).partial();
 
 // GET /api/reasons?type= (cualquier usuario con sesión): motivos activos para elegir al cancelar
-// un ítem, reabrir una cuenta, etc. Crear y editar motivos (config.payments) llega con admin H3.
+// un ítem, reabrir una cuenta, etc. Con ?all=true (config.payments o config.discounts) trae también
+// los inactivos para administrarlos (H3 #21).
 export const REASON_TYPES = [
   'CANCEL_ITEM',
   'REOPEN_BILL',
@@ -142,4 +143,28 @@ export const reasonSchema = z.object({
   sort: z.number().int(),
 });
 export type Reason = z.infer<typeof reasonSchema>;
-export const listReasonsQuerySchema = z.object({ type: reasonTypeSchema.optional() });
+export const listReasonsQuerySchema = z.object({
+  type: reasonTypeSchema.optional(),
+  all: z.enum(['true', 'false']).optional(),
+});
+export const reasonAdminSchema = reasonSchema.extend({ active: z.boolean() });
+export type ReasonAdmin = z.infer<typeof reasonAdminSchema>;
+
+const reasonNameSchema = z.string().trim().min(1, 'Escribe el motivo').max(80);
+
+// POST /api/reasons (config.payments; los de DISCOUNT también con config.discounts) — idempotente por id
+export const createReasonRequestSchema = z.object({
+  id: idSchema,
+  type: reasonTypeSchema,
+  name: reasonNameSchema,
+  sort: z.number().int().min(0).max(999).optional(),
+});
+export type CreateReasonRequest = z.infer<typeof createReasonRequestSchema>;
+
+// PUT /api/reasons/:id. El tipo no cambia; nunca se queda un tipo sin motivos activos
+export const updateReasonRequestSchema = z.object({
+  name: reasonNameSchema,
+  active: z.boolean(),
+  sort: z.number().int().min(0).max(999),
+});
+export type UpdateReasonRequest = z.infer<typeof updateReasonRequestSchema>;

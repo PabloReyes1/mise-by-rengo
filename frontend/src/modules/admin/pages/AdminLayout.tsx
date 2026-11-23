@@ -7,6 +7,9 @@ const SECTIONS = [
   { to: '/admin/restaurante', label: 'Restaurante', permission: 'config.restaurant' },
   { to: '/admin/menu', label: 'Menú', permission: 'config.menu' },
   { to: '/admin/mesas', label: 'Mesas', permission: 'config.tables' },
+  { to: '/admin/metodos-pago', label: 'Métodos de pago', permission: 'config.payments' },
+  // Los motivos de descuento también los administra quien tiene config.discounts
+  { to: '/admin/motivos', label: 'Motivos', permission: ['config.payments', 'config.discounts'] },
   { to: '/admin/dispositivos', label: 'Dispositivos', permission: 'config.devices' },
   { to: '/admin/usuarios', label: 'Usuarios', permission: 'config.users' },
   // Quien solo fija topes de descuento (config.discounts, S-05) también entra a Roles
