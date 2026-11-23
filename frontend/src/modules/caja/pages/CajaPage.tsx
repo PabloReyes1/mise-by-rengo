@@ -5,6 +5,7 @@ import type { CashRegister } from '@mise/shared/contracts/cash';
 import { newId } from '@mise/shared/domain/ids';
 import { ArrowDownToLine, ArrowUpFromLine, LockOpen } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
 import { useRegional } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney, formatTime, toMoney } from '../../../core/format/index.js';
@@ -15,6 +16,8 @@ import {
   useAddMovement,
   useCashReasons,
   useCashRegisters,
+  useFloorNames,
+  useOpenOccupancies,
   useOpenShift,
   useShift,
   type MovementInput,
@@ -48,6 +51,7 @@ export function CajaPage() {
         )}
       </header>
       {register.openShift ? <ShiftView register={register} /> : <OpenShift register={register} />}
+      <OpenTables />
     </div>
   );
 }
@@ -293,5 +297,47 @@ function MovementForm({
       {/* Fuera del <form>: dentro, su botón mandaría el formulario de afuera */}
       {dialog}
     </>
+  );
+}
+
+/**
+ * Cuentas por cobrar (H3 #19): la caja cobra cualquier mesa abierta (table.view_all) en la misma
+ * pantalla de cuentas del mesero (cobro, descuentos, pre-cuenta).
+ */
+export function OpenTables() {
+  const regional = useRegional();
+  const open = useOpenOccupancies();
+  const floor = useFloorNames();
+  const list = open.data ?? [];
+  return (
+    <section className="flex flex-col gap-2">
+      <h3 className="text-lg font-bold">Por cobrar</h3>
+      {open.isPending && <p className="text-base text-secondary">Cargando…</p>}
+      {!open.isPending && list.length === 0 && (
+        <p className="text-base text-secondary">No hay mesas abiertas.</p>
+      )}
+      <ul className="flex flex-col divide-y divide-accent border-y border-accent">
+        {list.map((o) => (
+          <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+            <span className="flex flex-col">
+              <span className="font-semibold">
+                {o.tableId
+                  ? `Mesa ${[floor.get(o.tableId) ?? '', ...o.mergedTables.map((t) => t.name)].filter(Boolean).join(' + ')}`
+                  : `Para llevar${o.customerName ? `: ${o.customerName}` : ''}`}
+              </span>
+              <span className="text-sm text-secondary">
+                {o.waiterName} · desde {formatTime(o.openedAt, regional)}
+              </span>
+            </span>
+            <Link
+              to={`/mesero/ocupacion/${o.id}/cuentas`}
+              className="inline-flex min-h-12 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-white no-underline"
+            >
+              Cobrar
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

@@ -3,6 +3,7 @@
 import type { Authorization } from '@mise/shared/contracts/auth';
 import type { CashRegister, ShiftDetail, ShiftSummary } from '@mise/shared/contracts/cash';
 import type { Reason } from '@mise/shared/contracts/config';
+import type { FloorResponse, Occupancy } from '@mise/shared/contracts/floor';
 import { newId } from '@mise/shared/domain/ids';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
@@ -60,5 +61,22 @@ export function useAddMovement() {
       qc.setQueryData(shiftKey(shift.id), shift);
       void qc.invalidateQueries({ queryKey: REGISTERS_KEY });
     },
+  });
+}
+
+/** Nombre de cada mesa (id → nombre) para listar lo que hay por cobrar. */
+export function useFloorNames(): Map<string, string> {
+  const floor = useQuery({ queryKey: ['floor'], queryFn: () => apiFetch<FloorResponse>('/floor') });
+  return new Map(
+    (floor.data?.zones ?? []).flatMap((z) => z.tables.map((t) => [t.id, t.name] as const)),
+  );
+}
+
+/** Mesas y órdenes para llevar abiertas, para cobrarlas desde la caja (Docs/05 paso 11). */
+export function useOpenOccupancies() {
+  return useQuery({
+    queryKey: ['occupancies', 'ABIERTA'],
+    queryFn: () => apiFetch<Occupancy[]>('/occupancies?status=ABIERTA'),
+    refetchInterval: 15_000,
   });
 }

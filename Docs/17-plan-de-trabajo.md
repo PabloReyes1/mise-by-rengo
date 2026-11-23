@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | #19 Cobro (parte 3): la Caja lista lo que hay por cobrar y abre la pantalla de cuentas de cada mesa para cobrar, descontar o imprimir pre-cuenta. Queda para #20/reportes: el reparto de la propina según `client_settings.tip_distribution` (la propina ya queda guardada por cuenta, con quién cobró y el mesero) | H3 | Pablito (`caja`) | Deniscito | Deniscito autorizó avanzar H3 |
 | 2026-11-23 | #19 Cobro (parte 2): descuentos sobre la cuenta o un ítem (porcentaje o monto, motivo, tope por rol, 🔑 sin tope), totales recalculados por el servidor, ventana de descuento en Cuentas | H3 | Pablito (`billing`, `mesero`) | Deniscito | Deniscito autorizó avanzar H3 |
 | 2026-11-23 | #19 Cobro (parte 1): `POST /api/bills/:id/pay` (pagos mixtos, cambio solo en efectivo, propina, efectivo al turno de la caja que cobra o de la principal, folio de recibo, NIT/CF, cierra y libera la mesa), métodos de pago, recibo impreso y ventana de cobro del mesero. Pendiente: descuentos con límites y 🔑, cobro desde la pantalla de Caja | H3 | Pablito (`billing`, `caja`, `mesero`, impresos) | Deniscito | Deniscito autorizó avanzar H3 |
 | 2026-11-23 | #18 Turno de caja: cajas, abrir turno (solo en línea, fondo fijo o variable con sugerido), retiros y depósitos con motivo y 🔑, esperado solo con `cash.view_expected`; pantalla Caja | H3 | Pablito (`cash`, `caja`) | Deniscito | Deniscito autorizó avanzar H3 |
