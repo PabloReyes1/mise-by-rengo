@@ -98,7 +98,11 @@ export async function submitOperation<T>(
   return result;
 }
 
-export type OperationOutcome<T> = { status: 'applied'; data: T } | { status: 'queued' };
+/**
+ * `queued` puede traer `data`: la versión local que armó el módulo para seguir trabajando sin
+ * conexión (ej. la mesa abierta), hasta que el servidor confirme (Docs/09 §4).
+ */
+export type OperationOutcome<T> = { status: 'applied'; data: T } | { status: 'queued'; data?: T };
 
 /**
  * Como submitOperation, pero no se queda esperando sin conexión: devuelve `queued` en cuanto el
@@ -118,8 +122,14 @@ export async function runOperation<T>(
   let unsubscribe = () => {};
   const queued = new Promise<OperationOutcome<T>>((resolve) => {
     const check = () => {
-      const op = outbox.getSnapshot().pending.find((o) => o.seq === seq);
-      if (op && op.attempts > 0) resolve({ status: 'queued' });
+      const pending = outbox.getSnapshot().pending;
+      const op = pending.find((o) => o.seq === seq);
+      if (!op) return;
+      // Ya falló por la red, o espera detrás de otra que falló (la cola va en orden), o no hay red:
+      // queda guardada y la pantalla sigue (antes se quedaba esperando su propio intento)
+      const blockedBehind = pending.some((o) => o.seq < seq && o.attempts > 0);
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      if (op.attempts > 0 || blockedBehind || offline) resolve({ status: 'queued' });
     };
     unsubscribe = outbox.subscribe(check);
     check();

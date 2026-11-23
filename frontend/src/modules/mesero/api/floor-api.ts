@@ -13,9 +13,14 @@ import { newId } from '@mise/shared/domain/ids';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
 import { runOperation, type OperationOutcome } from '../../../core/offline/index.js';
+import { sessionStore } from '../../../core/session/index.js';
+import { buildLocalOccupancy, cacheLocalOccupancy } from './local-occupancy.js';
 
 export const FLOOR_KEY = ['floor'] as const;
 const occupancyKey = (id: string) => ['occupancy', id] as const;
+// Mismas claves que order-api (no se importa para no crear un ciclo entre los dos archivos)
+const ordersKey = (id: string) => ['occupancy', id, 'orders'] as const;
+const billsKey = (id: string) => ['occupancy', id, 'bills'] as const;
 const OPEN_KEY = ['occupancies', 'ABIERTA'] as const;
 
 /** Hasta que exista realtime (H2, Deniscito) el mapa se vuelve a leer cada 10 s. */
@@ -66,22 +71,40 @@ function useFloorAction<TVars extends { authorization?: Authorization }>(
     body: unknown;
     label: string;
   },
+  /** Sin conexión: arma la versión local para seguir trabajando (solo abrir mesa) */
+  local?: (body: unknown) => Occupancy | null,
 ) {
   const qc = useQueryClient();
   return useMutation({
     // Sin conexión TanStack pausaría la mutación y la acción no llegaría a la outbox (SC-39)
     networkMode: 'always',
-    mutationFn: (vars: TVars) => {
+    mutationFn: async (vars: TVars): Promise<OperationOutcome<Occupancy>> => {
       const op = build(vars);
       // La 🔑 viaja en el cuerpo (Docs/08 §1); el servidor la valida al aplicar la acción
       const body = vars.authorization
         ? { ...(op.body as object), authorization: vars.authorization }
         : op.body;
-      return runOperation<Occupancy>({ ...op, body });
+      const outcome = await runOperation<Occupancy>({ ...op, body });
+      if (outcome.status === 'queued' && local) {
+        const occ = local(op.body);
+        if (occ) {
+          cacheLocalOccupancy(qc, occ, {
+            floor: FLOOR_KEY,
+            open: OPEN_KEY,
+            occupancy: occupancyKey(occ.id),
+            orders: ordersKey(occ.id),
+            bills: billsKey(occ.id),
+          });
+          return { status: 'queued', data: occ } satisfies OperationOutcome<Occupancy>;
+        }
+      }
+      return outcome;
     },
     onSuccess: (outcome: OperationOutcome<Occupancy>) => {
       if (outcome.status === 'applied')
         qc.setQueryData(occupancyKey(outcome.data.id), outcome.data);
+      // Sin conexión no se vuelve a leer: se perdería la copia local hasta que se envíe
+      if (outcome.status === 'queued' && outcome.data) return;
       void qc.invalidateQueries({ queryKey: FLOOR_KEY });
       void qc.invalidateQueries({ queryKey: OPEN_KEY });
     },
@@ -103,6 +126,17 @@ export function useOpenTable() {
         body,
         label: tableName ? `Abrir mesa ${tableName}` : 'Abrir orden para llevar',
       };
+    },
+    (body) => {
+      const session = sessionStore.getSession();
+      const device = sessionStore.getDevice();
+      if (!session || !device) return null;
+      return buildLocalOccupancy(body as OpenOccupancyRequest, {
+        branchId: device.branchId,
+        waiterId: session.user.id,
+        waiterName: session.user.fullName,
+        now: new Date(),
+      });
     },
   );
 }

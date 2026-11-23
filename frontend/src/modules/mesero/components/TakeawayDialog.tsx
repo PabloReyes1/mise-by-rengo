@@ -45,7 +45,7 @@ function TakeawayForm({ onClose, onOpened, onQueued }: Omit<TakeawayDialogProps,
         ...(phone.trim() ? { customerPhone: phone.trim() } : {}),
       },
       'Abrir orden para llevar',
-      { onDone: (outcome) => (outcome.status === 'applied' ? onOpened(outcome.data) : onQueued()) },
+      { onDone: (outcome) => (outcome.data ? onOpened(outcome.data) : onQueued()) },
     );
   };
 

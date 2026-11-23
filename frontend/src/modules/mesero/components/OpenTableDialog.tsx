@@ -55,7 +55,7 @@ function OpenTableForm({
       open,
       { tableId: table.id, tableName: table.name, orderTypeCode: 'MESA', guests },
       `Abrir la mesa ${table.name}`,
-      { onDone: (outcome) => (outcome.status === 'applied' ? onOpened(outcome.data) : onQueued()) },
+      { onDone: (outcome) => (outcome.data ? onOpened(outcome.data) : onQueued()) },
     );
   };
 

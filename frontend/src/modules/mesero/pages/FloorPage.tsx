@@ -10,6 +10,7 @@ import { outbox, useOutbox } from '../../../core/offline/index.js';
 import { useSession } from '../../../core/session/index.js';
 import { Button, Card, cx } from '../../../core/ui/index.js';
 import { useFloor, useOpenOccupancies } from '../api/floor-api.js';
+import { useMenu } from '../api/order-api.js';
 import { QUEUED_MESSAGE } from '../components/errors.js';
 import { OpenTableDialog } from '../components/OpenTableDialog.js';
 import { TableCard } from '../components/TableCard.js';
@@ -17,6 +18,8 @@ import { TakeawayDialog } from '../components/TakeawayDialog.js';
 
 export function FloorPage() {
   const floor = useFloor();
+  // El menú se descarga con conexión para poder tomar pedidos después sin internet (Docs/09 §8)
+  useMenu();
   const open = useOpenOccupancies();
   const session = useSession();
   const regional = useRegional();
