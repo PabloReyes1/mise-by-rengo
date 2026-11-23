@@ -120,7 +120,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 |---|---|---|---|
 | POST | `/api/orders` | Envía ronda: `{ id, occupancyId, tempFolio?, clientSentAt, items:[{ id, billId, productId, quantity, unitPrice, modifiers:[{ modifierId, priceDelta }], components:[{ comboGroupId, productId, priceDelta, modifiers }], note }] }` → `{ id, folio, roundNumber, items }`. `unitPrice` y `priceDelta` son el precio que vio el mesero al vender; el servidor los respeta (doc 09 §6.3). Contrato v1: `shared/contracts/orders` | `order.create` |
 | GET | `/api/occupancies/:id/orders` | Rondas de la ocupación con sus ítems, en orden de ronda (pantalla de la mesa; SC-47) | Mesero de la mesa o `table.view_all` |
-| GET | `/api/kds/orders?status=ENVIADO,EN_PREPARACION,LISTO` | Cola FIFO de la estación | `kds.operate` |
+| GET | `/api/kds/orders?status=ENVIADO,EN_PREPARACION,LISTO` | Cola FIFO de la sucursal: cada pedido con `table` ("5 · Salón" o null), `orderTypeCode`, `customerName`, `waiterId`, `waiterName`, `guests` (contrato `shared/contracts/kitchen`). Hecho 2026-11-23 | `kds.operate` |
 | POST | `/api/orders/:id/accept` | Marca `accepted_at` (idempotente: conserva la primera) | `kds.operate` |
 | POST | `/api/orders/:id/ready` | Pedido completo listo | `kds.operate` |
 | POST | `/api/order-items/:id/ready` | Ítem listo | `kds.operate` |
