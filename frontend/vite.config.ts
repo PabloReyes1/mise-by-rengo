@@ -54,6 +54,10 @@ export default defineConfig({
   server: {
     port: 5173,
     // En desarrollo, /api va al backend local (en producción lo hace Caddy)
-    proxy: { '/api': 'http://127.0.0.1:3000' },
+    proxy: {
+      '/api': 'http://127.0.0.1:3000',
+      // Tiempo real (Socket.IO, ADR-004): WebSocket hacia el backend
+      '/socket.io': { target: 'http://127.0.0.1:3000', ws: true },
+    },
   },
 });

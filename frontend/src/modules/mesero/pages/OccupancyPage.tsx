@@ -34,6 +34,7 @@ import {
   useOccupancyBills,
   useOccupancyOrders,
 } from '../api/order-api.js';
+import { useMeseroRealtime } from '../api/realtime-sync.js';
 import { CancelItemDialog } from '../components/CancelItemDialog.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
 import { OrderList } from '../components/OrderList.js';
@@ -46,6 +47,7 @@ type Dialog = 'move' | 'merge' | 'transfer' | null;
 export function OccupancyPage() {
   const { id = '' } = useParams();
   const occupancy = useOccupancy(id);
+  useMeseroRealtime();
   const floor = useFloor();
   const regional = useRegional();
   const [dialog, setDialog] = useState<Dialog>(null);

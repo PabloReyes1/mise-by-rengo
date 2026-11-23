@@ -4,6 +4,7 @@ import { LogOut } from 'lucide-react';
 import { Navigate, Outlet, useNavigate } from 'react-router';
 import { usePublicConfig } from '../core/config/index.js';
 import { useOutbox } from '../core/offline/index.js';
+import { useRealtimeConnection } from '../core/realtime/index.js';
 import { sessionStore, useDevice, useSession } from '../core/session/index.js';
 import { ConnectionIndicator } from '../core/ui/index.js';
 import type { DeviceArea } from './device-areas.js';
@@ -17,6 +18,8 @@ export function AppShell({ area }: { area: DeviceArea }) {
   const navigate = useNavigate();
   // Acciones guardadas en el dispositivo que faltan por enviar (core/offline, Pablito)
   const outbox = useOutbox();
+  // Tiempo real (Socket.IO): una conexión mientras haya sesión
+  useRealtimeConnection();
 
   if (!device) return <Navigate to="/emparejar" replace />;
   if (!session) return <Navigate to="/entrar" replace />;

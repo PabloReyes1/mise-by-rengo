@@ -13,8 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
 import { runOperation } from '../../../core/offline/index.js';
 import { FLOOR_KEY } from './floor-api.js';
-
-const POLL_MS = 10_000;
+import { pollInterval } from './realtime-sync.js';
 
 export const ordersKey = (occupancyId: string) => ['occupancy', occupancyId, 'orders'] as const;
 export const billsKey = (occupancyId: string) => ['occupancy', occupancyId, 'bills'] as const;
@@ -32,7 +31,7 @@ export function useOccupancyOrders(occupancyId: string) {
   return useQuery({
     queryKey: ordersKey(occupancyId),
     queryFn: () => apiFetch<Order[]>(`/occupancies/${occupancyId}/orders`),
-    refetchInterval: POLL_MS,
+    refetchInterval: pollInterval,
   });
 }
 
@@ -40,7 +39,7 @@ export function useOccupancyBills(occupancyId: string) {
   return useQuery({
     queryKey: billsKey(occupancyId),
     queryFn: () => apiFetch<Bill[]>(`/occupancies/${occupancyId}/bills`),
-    refetchInterval: POLL_MS,
+    refetchInterval: pollInterval,
   });
 }
 

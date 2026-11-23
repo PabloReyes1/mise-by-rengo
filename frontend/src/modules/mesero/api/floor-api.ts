@@ -15,6 +15,7 @@ import { apiFetch } from '../../../core/api/index.js';
 import { runOperation, type OperationOutcome } from '../../../core/offline/index.js';
 import { sessionStore } from '../../../core/session/index.js';
 import { buildLocalOccupancy, cacheLocalOccupancy } from './local-occupancy.js';
+import { pollInterval } from './realtime-sync.js';
 
 export const FLOOR_KEY = ['floor'] as const;
 const occupancyKey = (id: string) => ['occupancy', id] as const;
@@ -23,14 +24,11 @@ const ordersKey = (id: string) => ['occupancy', id, 'orders'] as const;
 const billsKey = (id: string) => ['occupancy', id, 'bills'] as const;
 const OPEN_KEY = ['occupancies', 'ABIERTA'] as const;
 
-/** Hasta que exista realtime (H2, Deniscito) el mapa se vuelve a leer cada 10 s. */
-const POLL_MS = 10_000;
-
 export function useFloor() {
   return useQuery({
     queryKey: FLOOR_KEY,
     queryFn: () => apiFetch<FloorResponse>('/floor'),
-    refetchInterval: POLL_MS,
+    refetchInterval: pollInterval,
   });
 }
 
@@ -38,7 +36,7 @@ export function useOpenOccupancies() {
   return useQuery({
     queryKey: OPEN_KEY,
     queryFn: () => apiFetch<Occupancy[]>('/occupancies?status=ABIERTA'),
-    refetchInterval: POLL_MS,
+    refetchInterval: pollInterval,
   });
 }
 
@@ -46,7 +44,7 @@ export function useOccupancy(id: string) {
   return useQuery({
     queryKey: occupancyKey(id),
     queryFn: () => apiFetch<Occupancy>(`/occupancies/${id}`),
-    refetchInterval: POLL_MS,
+    refetchInterval: pollInterval,
   });
 }
 

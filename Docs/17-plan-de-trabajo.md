@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | Publicar eventos de tiempo real desde `floor`, `orders` y `billing`; el mesero vuelve a leer al recibirlos (`mesero/api/realtime-sync.ts`) | H2 | Pablito | Deniscito | Conectar el tiempo real (#13) con la sala |
 | 2026-11-23 | Cancelar ítem enviado desde el mesero: motivo obligatorio (`GET /api/reasons`), nota opcional, 🔑 si falta `order.cancel_sent`; los motivos se descargan con el mapa | H2 | Pablito (`mesero`) | Deniscito | Seguir el orden del plan |
 | 2026-11-23 | Vender combos en el mesero: elegir cada grupo del combo y los modificadores de cada componente; se ven en el pedido (SC-51) | H2 | Pablito (`mesero`) | Deniscito | Seguir el orden del plan sin esperar |
 | 2026-11-23 | Abrir mesa y enviar pedidos sin conexión: mesa local en el caché (`mesero/api/local-occupancy.ts`), `runOperation` responde "guardado" si espera detrás de otra acción, el menú se descarga desde el mapa | H1 | Pablito (`mesero`, `core/offline`) | Deniscito | Error encontrado en la prueba: sin conexión la mesa no se abría y "Enviar a cocina" se quedaba girando |

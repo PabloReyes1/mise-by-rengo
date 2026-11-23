@@ -196,6 +196,8 @@ No hay endpoints de FEL en el MVP (PA-002, PA-003). Se reserva el prefijo `/api/
 
 ## 3. Tiempo real (Socket.IO)
 
+> **Hecho (2026-11-23):** servidor (`backend/src/modules/realtime`, `app.realtime.publish` y `announce`) y cliente (`frontend/src/core/realtime`). Todos los eventos llegan por el canal `event` con el sobre de abajo. Ya se emiten `occupancy.*`, `order.sent`, `order.delivered`, `order.item_cancelled` y `bill.updated`; los de cocina llegan con `kitchen`. Contrato en `shared/contracts/realtime`.
+
 **Conexión:** `io("/", { path: "/socket.io", auth: { token, deviceId, lastSeq } })`. El servidor une el socket a las salas según usuario, rol, sucursal y dispositivo.
 
 | Sala | Miembros |
