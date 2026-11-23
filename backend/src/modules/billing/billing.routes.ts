@@ -5,6 +5,8 @@ import {
   moveBillItemsRequestSchema,
   moveBillItemsResponseSchema,
   occupancyBillsResponseSchema,
+  precheckRequestSchema,
+  precheckResponseSchema,
   splitOrderItemRequestSchema,
   splitOrderItemResponseSchema,
   updateBillRequestSchema,
@@ -14,6 +16,7 @@ import type { FastifyRequest } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
+import { toDbId } from '../../core/ids.js';
 import { announce, REALTIME_EVENTS as EV } from '../realtime/index.js';
 import { authorize } from '../auth/index.js';
 import { requestBranchId, tableAuthorization, type Actor } from '../floor/index.js';
@@ -21,6 +24,7 @@ import {
   createBill,
   listOccupancyBills,
   moveBillItems,
+  precheckBill,
   splitOrderItem,
   updateBill,
 } from './billing.service.js';
@@ -41,6 +45,7 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
   const { prisma } = app;
   const branch = (req: FastifyRequest) => requestBranchId(prisma, req.auth!);
   const split = [authenticate, authorize('bill.split'), tableAuthorization];
+  const reprintGuard = authorize('bill.reprint');
 
   app.get(
     '/api/occupancies/:id/bills',
@@ -116,6 +121,24 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
         billIds: [result.original.billId, result.created.billId],
       });
       return result;
+    },
+  );
+
+  // Pre-cuenta (Docs/05 paso 10). Reimprimir pide bill.reprint o 🔑
+  app.post(
+    '/api/bills/:id/precheck',
+    {
+      preHandler: [authenticate, authorize('bill.print_precheck'), tableAuthorization],
+      schema: { params, body: precheckRequestSchema, response: { 200: precheckResponseSchema } },
+    },
+    async (req, reply) => {
+      const b = await branch(req);
+      const current = await prisma.bill.findUnique({ where: { id: toDbId(req.params.id) } });
+      if (current?.status === 'PRECUENTA') await reprintGuard.call(app, req, reply);
+      const r = await precheckBill(prisma, b, req.params.id, actor(req));
+      announce(app, b, EV.billUpdated, ['branch'], { occupancyId: r.occupancyId });
+      for (const id of r.autoDelivered) announce(app, b, EV.orderDelivered, ['branch'], { id });
+      return r.result;
     },
   );
 

@@ -5,6 +5,7 @@ import type {
   Bill,
   CreateBillRequest,
   MoveBillItemsRequest,
+  PrecheckResponse,
   SplitOrderItemRequest,
   UpdateBillRequest,
 } from '@mise/shared/contracts/billing';
@@ -13,6 +14,7 @@ import type { OrderItem } from '@mise/shared/contracts/orders';
 import { AppError } from '../../core/errors.js';
 import { newDbId, toApiId, toDbId } from '../../core/ids.js';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
+import { recordAudit } from '../audit/index.js';
 import { assertCanOperate, type Actor } from '../floor/index.js';
 import { recomputeBills } from './totals.js';
 
@@ -354,5 +356,96 @@ export async function splitOrderItem(
       tx.orderItem.findUniqueOrThrow({ where: { id: newId }, include: itemInclude }),
     ]);
     return { original: toItem(original), created: toItem(created) };
+  });
+}
+
+// ─── Pre-cuenta (Docs/05 paso 10) ────────────────────────────────────────────
+
+/**
+ * POST /api/bills/:id/precheck: la cuenta pasa a PRECUENTA (se puede seguir pidiendo; al agregar
+ * vuelve a ABIERTA) y los pedidos LISTO con ítems en esta cuenta quedan entregados
+ * automáticamente (S-09). Reasignado a Deniscito (doc 17 §3.1).
+ */
+export async function precheckBill(
+  prisma: PrismaClient,
+  branchId: string,
+  billId: string,
+  actor: Actor,
+): Promise<{
+  result: PrecheckResponse;
+  occupancyId: string;
+  autoDelivered: string[];
+}> {
+  return prisma.$transaction(async (tx) => {
+    const id = toDbId(billId);
+    const { bill, occupancy } = await editableBill(tx, branchId, id, actor);
+    const reprint = bill.status === 'PRECUENTA';
+    const now = new Date();
+
+    // Pedidos listos de esta cuenta: se dan por entregados (S-09)
+    const ready = await tx.order.findMany({
+      where: { occupancyId: occupancy.id, status: 'LISTO', items: { some: { billId: id } } },
+      select: { id: true },
+    });
+    for (const o of ready) {
+      await tx.orderItem.updateMany({
+        where: { orderId: o.id, status: 'LISTO' },
+        data: { status: 'ENTREGADO', version: { increment: 1 } },
+      });
+      await tx.order.update({
+        where: { id: o.id },
+        data: {
+          status: 'ENTREGADO',
+          deliveredAt: now,
+          deliveredAuto: true,
+          version: { increment: 1 },
+        },
+      });
+    }
+
+    const updated = reprint
+      ? bill
+      : await tx.bill.update({
+          where: { id },
+          data: { status: 'PRECUENTA', version: { increment: 1 } },
+        });
+    await recordAudit(tx, {
+      action: reprint ? 'bill.precheck_reprint' : 'bill.precheck',
+      entity: 'bill',
+      entityId: billId,
+      userId: toDbId(actor.userId),
+      authorizedBy: actor.authorizedBy ? toDbId(actor.authorizedBy) : null,
+      deviceId: toDbId(actor.deviceId),
+      branchId,
+      ip: actor.ip,
+    });
+
+    const items = await tx.orderItem.findMany({
+      where: { billId: id, status: { not: 'CANCELADO' } },
+      orderBy: { id: 'asc' },
+      include: itemInclude,
+    });
+    // Propina sugerida (Docs/03 §5): solo si está activa y, en para llevar, si aplica
+    const settings = await tx.clientSettings.findFirst();
+    const applies =
+      settings?.tipsEnabled &&
+      settings.tipSuggestedPct !== null &&
+      (occupancy.tableId !== null || settings.tipAppliesTakeaway);
+    const pct = applies ? settings.tipSuggestedPct! : null;
+    const tip = pct
+      ? updated.total.times(pct).dividedBy(100).toDecimalPlaces(2)
+      : new Prisma.Decimal(0);
+    return {
+      result: {
+        bill: toBill(updated),
+        items: items.map(toItem),
+        tipPct: pct ? pct.toString() : null,
+        tipAmount: money(tip),
+        totalWithTip: money(updated.total.plus(tip)),
+        reprint,
+      },
+      occupancyId: toApiId(occupancy.id),
+      autoDelivered: ready.map((o) => toApiId(o.id)),
+    };
   });
 }

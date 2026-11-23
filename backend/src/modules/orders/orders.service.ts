@@ -373,6 +373,11 @@ export async function sendOrder(
         },
       });
       await recomputeBills(tx, billIds);
+      // Si se pidió más sobre una pre-cuenta, la cuenta vuelve a ABIERTA (Docs/05 paso 10)
+      await tx.bill.updateMany({
+        where: { id: { in: billIds }, status: 'PRECUENTA' },
+        data: { status: 'ABIERTA', version: { increment: 1 } },
+      });
       return (await loadOrder(tx, id))!;
     });
     return { order: toOrder(order), created: true };

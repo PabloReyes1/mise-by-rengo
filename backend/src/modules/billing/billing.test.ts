@@ -13,6 +13,7 @@ interface BillDto {
   name: string;
   subtotal: string;
   total: string;
+  status: string;
   version: number;
 }
 
@@ -233,5 +234,65 @@ describe('separar unidades (RF-104)', () => {
       version: cafe.version,
     });
     expect(res.json().error.code).toBe('VALIDATION_ERROR');
+  });
+});
+
+describe('pre-cuenta (Docs/05 paso 10)', () => {
+  async function settingsTip(pct: string | null) {
+    await prisma.clientSettings.updateMany({
+      data: { tipsEnabled: pct !== null, tipSuggestedPct: pct },
+    });
+  }
+
+  it('pasa la cuenta a PRECUENTA y trae ítems, propina sugerida y total con propina', async () => {
+    await settingsTip('10');
+    await sendCoffee(bill1, 2);
+    const res = await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.bill).toMatchObject({ status: 'PRECUENTA', total: '24.00' });
+    expect(body).toMatchObject({
+      tipPct: '10',
+      tipAmount: '2.40',
+      totalWithTip: '26.40',
+      reprint: false,
+    });
+    expect(body.items[0]).toMatchObject({ productName: 'Café de olla', quantity: 2 });
+  });
+
+  it('sin propinas activas no sugiere propina', async () => {
+    await settingsTip(null);
+    await sendCoffee(bill1);
+    const body = (await post(`/api/bills/${bill1}/precheck`, waiter, {})).json();
+    expect(body).toMatchObject({ tipPct: null, tipAmount: '0.00', totalWithTip: '12.00' });
+  });
+
+  it('los pedidos listos de la cuenta quedan entregados automáticamente (S-09)', async () => {
+    const item = (await sendCoffee(bill1)) as unknown as { orderId: string };
+    const order = { id: item.orderId };
+    await prisma.order.update({ where: { id: toDbId(order.id) }, data: { status: 'LISTO' } });
+    await prisma.orderItem.updateMany({
+      where: { orderId: toDbId(order.id) },
+      data: { status: 'LISTO' },
+    });
+    await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    const after = await prisma.order.findUniqueOrThrow({ where: { id: toDbId(order.id) } });
+    expect(after).toMatchObject({ status: 'ENTREGADO', deliveredAuto: true });
+  });
+
+  it('reimprimir pide bill.reprint: el mesero necesita 🔑', async () => {
+    await sendCoffee(bill1);
+    await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    const again = await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    expect(again.json().error.code).toBe('AUTHORIZATION_REQUIRED');
+    const byAdmin = await post(`/api/bills/${bill1}/precheck`, admin, {});
+    expect(byAdmin.json()).toMatchObject({ reprint: true });
+  });
+
+  it('pedir más sobre una pre-cuenta la devuelve a ABIERTA', async () => {
+    await sendCoffee(bill1);
+    await post(`/api/bills/${bill1}/precheck`, waiter, {});
+    await sendCoffee(bill1);
+    expect((await bills())[0]!.status).toBe('ABIERTA');
   });
 });

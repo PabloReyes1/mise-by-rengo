@@ -79,3 +79,23 @@ export const splitOrderItemResponseSchema = z.object({
   original: orderItemSchema,
   created: orderItemSchema,
 });
+
+// POST /api/bills/:id/precheck (bill.print_precheck; reimprimir pide bill.reprint o 🔑)
+// La cuenta pasa a PRECUENTA y los pedidos listos de esa cuenta se marcan entregados (S-09).
+// Devuelve lo necesario para imprimir la pre-cuenta (Docs/11 §4.2). Reasignado a Deniscito.
+export const precheckRequestSchema = z.object({
+  authorization: authorizationSchema.optional(),
+});
+export const precheckResponseSchema = z.object({
+  bill: billSchema,
+  /** Ítems no cancelados de la cuenta */
+  items: z.array(orderItemSchema),
+  /** Porcentaje de propina sugerida, o null si no aplica (propinas apagadas o para llevar) */
+  tipPct: z.string().nullable(),
+  /** Propina sugerida sobre el total (después de descuentos) */
+  tipAmount: moneySchema,
+  totalWithTip: moneySchema,
+  /** true si ya se había impreso (reimpresión) */
+  reprint: z.boolean(),
+});
+export type PrecheckResponse = z.infer<typeof precheckResponseSchema>;
