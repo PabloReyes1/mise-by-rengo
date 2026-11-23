@@ -20,7 +20,8 @@ export type ItemStatus = (typeof ITEM_STATUSES)[number];
 const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   ENVIADO: ['EN_PREPARACION', 'CANCELADO'], // cocina acepta / cancelar todos los ítems
   EN_PREPARACION: ['LISTO', 'CANCELADO'], // todos los ítems listos / cancelar todos los ítems
-  LISTO: ['EN_PREPARACION', 'ENTREGADO'], // recall (permiso) / mesero entrega
+  // recall (permiso) / mesero entrega / cancelar todos los ítems: merma (PA-055)
+  LISTO: ['EN_PREPARACION', 'ENTREGADO', 'CANCELADO'],
   ENTREGADO: [],
   CANCELADO: [],
 };

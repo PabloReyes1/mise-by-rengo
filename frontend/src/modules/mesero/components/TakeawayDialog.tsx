@@ -3,6 +3,7 @@ import type { Occupancy } from '@mise/shared/contracts/floor';
 import { CircleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Button, Modal, TextInput } from '../../../core/ui/index.js';
+import { useAuthorizedAction } from '../api/authorized-action.js';
 import { useOpenTable } from '../api/floor-api.js';
 import { actionError } from './errors.js';
 
@@ -30,56 +31,59 @@ function TakeawayForm({ onClose, onOpened, onQueued }: Omit<TakeawayDialogProps,
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const create = useOpenTable();
+  const authorized = useAuthorizedAction();
   const error = actionError(create.error);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    create.mutate(
+    authorized.run(
+      create,
       {
         orderTypeCode: 'PARA_LLEVAR',
         guests: 1,
         ...(name.trim() ? { customerName: name.trim() } : {}),
         ...(phone.trim() ? { customerPhone: phone.trim() } : {}),
       },
-      {
-        onSuccess: (outcome) =>
-          outcome.status === 'applied' ? onOpened(outcome.data) : onQueued(),
-      },
+      'Abrir orden para llevar',
+      { onDone: (outcome) => (outcome.status === 'applied' ? onOpened(outcome.data) : onQueued()) },
     );
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
-      <TextInput
-        label="Nombre del cliente"
-        value={name}
-        maxLength={80}
-        autoComplete="off"
-        onChange={(e) => setName(e.target.value)}
-      />
-      <TextInput
-        label="Teléfono"
-        type="tel"
-        inputMode="tel"
-        value={phone}
-        maxLength={30}
-        autoComplete="off"
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      {error && (
-        <p role="alert" className="flex items-start gap-2 text-base">
-          <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0 text-error" />
-          <span>{error}</span>
-        </p>
-      )}
-      <div className="flex flex-wrap justify-end gap-3 pt-2">
-        <Button variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button type="submit" size="lg" loading={create.isPending}>
-          Crear orden
-        </Button>
-      </div>
-    </form>
+    <>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        <TextInput
+          label="Nombre del cliente"
+          value={name}
+          maxLength={80}
+          autoComplete="off"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <TextInput
+          label="Teléfono"
+          type="tel"
+          inputMode="tel"
+          value={phone}
+          maxLength={30}
+          autoComplete="off"
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        {error && (
+          <p role="alert" className="flex items-start gap-2 text-base">
+            <CircleAlert aria-hidden className="mt-0.5 size-5 shrink-0 text-error" />
+            <span>{error}</span>
+          </p>
+        )}
+        <div className="flex flex-wrap justify-end gap-3 pt-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="submit" size="lg" loading={create.isPending}>
+            Crear orden
+          </Button>
+        </div>
+      </form>
+      {authorized.dialog}
+    </>
   );
 }

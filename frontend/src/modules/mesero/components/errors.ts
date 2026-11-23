@@ -5,7 +5,8 @@ import { OutboxRejectedError } from '../../../core/offline/index.js';
 export function actionError(error: unknown): string | null {
   if (!error) return null;
   if (error instanceof OutboxRejectedError || error instanceof ApiError) {
-    // La 🔑 (PIN de un gerente en este mismo celular) la construye Deniscito en auth (SC-38)
+    // Normalmente se abre la ventana 🔑 (useAuthorizedAction); esto queda para las acciones
+    // que se rechazaron después de guardarse sin conexión
     if (error.code === 'AUTHORIZATION_REQUIRED') {
       return 'Esta acción necesita la autorización de un gerente.';
     }

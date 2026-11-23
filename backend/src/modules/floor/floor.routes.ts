@@ -16,7 +16,7 @@ import {
   updateTableSchema,
   zoneSchema,
 } from '@mise/shared/contracts/floor';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyRequest, preHandlerAsyncHookHandler } from 'fastify';
 import type { FastifyPluginCallbackZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../../core/auth.js';
@@ -54,6 +54,14 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   const { prisma } = app;
   const branch = (req: FastifyRequest) => requestBranchId(prisma, req.auth!);
   const tablesAdmin = [authenticate, authorize('config.tables')];
+  // PATCH no pide permiso propio (basta ser el dueño), pero acepta la 🔑 de quien tenga
+  // table.view_all para cambiar la mesa de otro mesero (SC-33). Sin 🔑 no revisa nada aquí.
+  const viewAll = authorize('table.view_all');
+  const optionalViewAll: preHandlerAsyncHookHandler = async function (req, reply) {
+    if ((req.body as { authorization?: unknown } | undefined)?.authorization) {
+      await viewAll.call(this, req, reply);
+    }
+  };
 
   // Mapa de mesas de la sucursal
   app.get(
@@ -139,7 +147,7 @@ export const floorRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
   app.patch(
     '/api/occupancies/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, optionalViewAll],
       schema: { params, body: updateOccupancyRequestSchema, response: { 200: occupancySchema } },
     },
     async (req) => updateGuests(prisma, await branch(req), req.params.id, req.body, actor(req)),

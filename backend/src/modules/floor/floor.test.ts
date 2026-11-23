@@ -214,6 +214,14 @@ describe('abrir mesa (POST /api/occupancies, Docs/05 paso 2)', () => {
     expect(occ.waiterId).toBe(waiterId);
   });
 
+  it('con la 🔑 de un gerente, quien no tiene table.open sí abre la mesa', async () => {
+    await createUser('chef', 'Cocina', { password: 'clave-cocina-1' });
+    const kitchen = await loginAs('chef', 'clave-cocina-1');
+    const ginaId = await createUser('gina', 'Gerente', { pin: '4821' });
+    const res = await open(kitchen, { waiterId, authorization: { userId: ginaId, pin: '4821' } });
+    expect(res.statusCode).toBe(201);
+  });
+
   it('el rol Cocina no puede abrir mesas', async () => {
     await createUser('chef', 'Cocina', { password: 'clave-cocina-1' });
     const kitchen = await loginAs('chef', 'clave-cocina-1');
@@ -263,6 +271,49 @@ describe('consultar y editar la ocupación', () => {
       headers: admin,
     });
     expect(ok.statusCode).toBe(200);
+  });
+
+  it('con la 🔑 de un gerente, otro mesero sí cambia los comensales de la mesa ajena', async () => {
+    const occ = (await open(waiter)).json();
+    await createUser('beto', 'Mesero', { password: 'clave-mesero-2' });
+    const other = await loginAs('beto', 'clave-mesero-2');
+    const ginaId = await createUser('gina', 'Gerente', { pin: '4821' });
+    const patch = (body: object) =>
+      app.inject({
+        method: 'PATCH',
+        url: `/api/occupancies/${occ.id}`,
+        headers: other,
+        payload: body,
+      });
+
+    const denied = await patch({ guests: 5, version: 0 });
+    expect(denied.json().error).toMatchObject({
+      code: 'AUTHORIZATION_REQUIRED',
+      details: { permission: 'table.view_all' },
+    });
+    const wrongPin = await patch({
+      guests: 5,
+      version: 0,
+      authorization: { userId: ginaId, pin: '0000' },
+    });
+    expect(wrongPin.json().error.code).toBe('PIN_INVALID');
+    const ok = await patch({
+      guests: 5,
+      version: 0,
+      authorization: { userId: ginaId, pin: '4821' },
+    });
+    expect(ok.json()).toMatchObject({ guests: 5, version: 1 });
+  });
+
+  it('el dueño cambia sus comensales aunque no tenga table.view_all (la 🔑 es opcional)', async () => {
+    const occ = (await open(waiter)).json();
+    const res = await app.inject({
+      method: 'PATCH',
+      url: `/api/occupancies/${occ.id}`,
+      headers: waiter,
+      payload: { guests: 3, version: 0 },
+    });
+    expect(res.statusCode).toBe(200);
   });
 
   it('no se bloquea ni se da de baja una mesa ocupada', async () => {

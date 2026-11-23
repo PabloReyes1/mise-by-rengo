@@ -8,7 +8,6 @@ import { ApiError } from '../../../core/api/index.js';
 import { useRegional } from '../../../core/config/index.js';
 import { formatTime } from '../../../core/format/index.js';
 import { useOutbox } from '../../../core/offline/index.js';
-import { hasPermission, useSession } from '../../../core/session/index.js';
 import { Badge, Button, Card, Modal, Select } from '../../../core/ui/index.js';
 import {
   useBranchUsers,
@@ -19,6 +18,7 @@ import {
   useTransferOccupancy,
   useUpdateGuests,
 } from '../api/floor-api.js';
+import { useAuthorizedAction } from '../api/authorized-action.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
 import { GuestsStepper } from '../components/GuestsStepper.js';
 import { TablePickerDialog } from '../components/TablePickerDialog.js';
@@ -29,11 +29,11 @@ export function OccupancyPage() {
   const { id = '' } = useParams();
   const occupancy = useOccupancy(id);
   const floor = useFloor();
-  const session = useSession();
   const regional = useRegional();
   const [dialog, setDialog] = useState<Dialog>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const queue = useOutbox();
+  const authorized = useAuthorizedAction();
 
   const move = useMoveOccupancy();
   const merge = useMergeOccupancy();
@@ -161,11 +161,10 @@ export function OccupancyPage() {
                 Unir otra mesa
               </Button>
             )}
-            {hasPermission(session, 'table.transfer_waiter') && (
-              <Button variant="outline" icon={<UserRound />} onClick={() => openDialog('transfer')}>
-                Transferir
-              </Button>
-            )}
+            {/* Sin table.transfer_waiter, el servidor pide la 🔑 de un gerente */}
+            <Button variant="outline" icon={<UserRound />} onClick={() => openDialog('transfer')}>
+              Transferir
+            </Button>
           </div>
         </section>
       )}
@@ -178,9 +177,11 @@ export function OccupancyPage() {
         emptyText="No hay mesas libres."
         onClose={() => setDialog(null)}
         onPick={(t) =>
-          move.mutate(
+          authorized.run(
+            move,
             { id: occ.id, targetTableId: t.id, tableName: t.name },
-            { onSuccess: done, onError: () => setDialog(null) },
+            `Trasladar a la mesa ${t.name}`,
+            { onDone: done, onError: () => setDialog(null) },
           )
         }
       />
@@ -192,9 +193,11 @@ export function OccupancyPage() {
         emptyText="No hay otras mesas ocupadas."
         onClose={() => setDialog(null)}
         onPick={(t) =>
-          merge.mutate(
+          authorized.run(
+            merge,
             { id: occ.id, sourceOccupancyId: t.occupancy!.id, tableName: t.name },
-            { onSuccess: done, onError: () => setDialog(null) },
+            `Unir la mesa ${t.name}`,
+            { onDone: done, onError: () => setDialog(null) },
           )
         }
       />
@@ -205,9 +208,11 @@ export function OccupancyPage() {
         loading={guests.isPending}
         onClose={() => setDialog(null)}
         onSave={(n) =>
-          guests.mutate(
+          authorized.run(
+            guests,
             { id: occ.id, guests: n, version: occ.version },
-            { onSuccess: done, onError: () => setDialog(null) },
+            `Cambiar a ${n} comensales`,
+            { onDone: done, onError: () => setDialog(null) },
           )
         }
       />
@@ -217,12 +222,15 @@ export function OccupancyPage() {
         loading={transfer.isPending}
         onClose={() => setDialog(null)}
         onSave={(waiterId, waiterName) =>
-          transfer.mutate(
+          authorized.run(
+            transfer,
             { id: occ.id, waiterId, waiterName },
-            { onSuccess: done, onError: () => setDialog(null) },
+            `Transferir a ${waiterName}`,
+            { onDone: done, onError: () => setDialog(null) },
           )
         }
       />
+      {authorized.dialog}
     </div>
   );
 }

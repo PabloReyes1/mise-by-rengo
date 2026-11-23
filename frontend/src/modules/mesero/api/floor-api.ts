@@ -1,5 +1,6 @@
 // Consultas y acciones de mesas del mesero (Docs/08 §2.5). Dueño: Pablito.
 // Las lecturas van directo a la API; las acciones pasan por la outbox (core/offline).
+import type { Authorization } from '@mise/shared/contracts/auth';
 import type {
   FloorResponse,
   MergeOccupancyRequest,
@@ -52,8 +53,11 @@ export function useBranchUsers() {
   });
 }
 
+/** Toda acción de mesas puede repetirse con la 🔑 de quien sí puede (SC-42). */
+export type WithAuthorization<T> = T & { authorization?: Authorization };
+
 /** Acción de mesas: al aplicarse vuelve a leer el mapa y la ocupación. */
-function useFloorAction<TVars>(
+function useFloorAction<TVars extends { authorization?: Authorization }>(
   build: (vars: TVars) => {
     type: string;
     entityId: string;
@@ -67,7 +71,14 @@ function useFloorAction<TVars>(
   return useMutation({
     // Sin conexión TanStack pausaría la mutación y la acción no llegaría a la outbox (SC-39)
     networkMode: 'always',
-    mutationFn: (vars: TVars) => runOperation<Occupancy>(build(vars)),
+    mutationFn: (vars: TVars) => {
+      const op = build(vars);
+      // La 🔑 viaja en el cuerpo (Docs/08 §1); el servidor la valida al aplicar la acción
+      const body = vars.authorization
+        ? { ...(op.body as object), authorization: vars.authorization }
+        : op.body;
+      return runOperation<Occupancy>({ ...op, body });
+    },
     onSuccess: (outcome: OperationOutcome<Occupancy>) => {
       if (outcome.status === 'applied')
         qc.setQueryData(occupancyKey(outcome.data.id), outcome.data);
@@ -80,7 +91,7 @@ function useFloorAction<TVars>(
 export function useOpenTable() {
   return useFloorAction(
     (v: Omit<OpenOccupancyRequest, 'id' | 'billId'> & { tableName?: string }) => {
-      const { tableName, ...rest } = v;
+      const { tableName, authorization: _authorization, ...rest } = v;
       const id = newId();
       // La Cuenta 1 también nace con id del dispositivo (SC-28)
       const body: OpenOccupancyRequest = { ...rest, id, billId: newId() };
@@ -97,14 +108,16 @@ export function useOpenTable() {
 }
 
 export function useUpdateGuests() {
-  return useFloorAction((v: { id: string; guests: number; version: number }) => ({
-    type: 'occupancy.update',
-    entityId: v.id,
-    method: 'PATCH',
-    path: `/occupancies/${v.id}`,
-    body: { guests: v.guests, version: v.version },
-    label: `Cambiar a ${v.guests} comensales`,
-  }));
+  return useFloorAction(
+    (v: WithAuthorization<{ id: string; guests: number; version: number }>) => ({
+      type: 'occupancy.update',
+      entityId: v.id,
+      method: 'PATCH',
+      path: `/occupancies/${v.id}`,
+      body: { guests: v.guests, version: v.version },
+      label: `Cambiar a ${v.guests} comensales`,
+    }),
+  );
 }
 
 export function useMoveOccupancy() {

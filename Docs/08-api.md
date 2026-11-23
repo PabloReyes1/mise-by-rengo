@@ -106,13 +106,13 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST/PUT | `/api/zones[/:id]` | `{ name, sort?, active? }` | `config.tables` |
 | POST | `/api/tables` | `{ zoneId, name, capacity, shape?, posX?, posY?, width?, height? }` | `config.tables` |
 | PUT | `/api/tables/:id` | Mismos campos opcionales + `blocked?` (bloquear/desbloquear), `active?` (dar de baja) y `version` → `409 STALE_VERSION` si cambió (SC-31) | `config.tables` |
-| POST | `/api/occupancies` | `{ id, billId?, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone? }` → crea ocupación + Cuenta 1 (`201`). Reenviar el mismo `id` responde `200` con la misma ocupación (SC-28, SC-29). Contrato v1: `shared/contracts/floor` | `table.open` |
+| POST | `/api/occupancies` | `{ id, billId?, tableId?, orderTypeCode, guests, waiterId?, customerName?, customerPhone?, authorization? }` → crea ocupación + Cuenta 1 (`201`). Reenviar el mismo `id` responde `200` con la misma ocupación (SC-28, SC-29). Contrato v1: `shared/contracts/floor` | `table.open` |
 | GET | `/api/occupancies?status=ABIERTA` | Ocupaciones abiertas de la sucursal | Autenticado |
 | GET | `/api/occupancies/:id` | Detalle con pedidos, ítems, cuentas y pagos (en H1 solo cuentas; pedidos en H2, pagos en H3) | Mesero dueño o `table.view_all` |
 | POST | `/api/occupancies/:id/merge` | `{ sourceOccupancyId, authorization? }` — une la mesa de `sourceOccupancyId` a la de `:id`: sus cuentas pasan a `:id` ("Cuenta 1 · Mesa 6"), se suman los comensales, la origen queda `FUSIONADA` y su mesa `UNIDA` (SC-34) | `table.merge` |
 | POST | `/api/occupancies/:id/move` | `{ targetTableId, authorization? }` — a una mesa `LIBRE`; la anterior queda `LIBRE` y la bitácora guarda las dos (`409 TABLE_OCCUPIED` si no está libre) | `table.move` |
 | POST | `/api/occupancies/:id/transfer` | `{ waiterId, authorization? }` — el mesero debe estar activo en la sucursal; queda en la bitácora | `table.transfer_waiter` |
-| PATCH | `/api/occupancies/:id` | `{ guests, version }` | Mesero dueño o `table.view_all` |
+| PATCH | `/api/occupancies/:id` | `{ guests, version, authorization? }` — con 🔑 de quien tenga `table.view_all`, cambia la mesa de otro mesero (SC-33) | Mesero dueño, `table.view_all` o 🔑 |
 
 ### 2.6 Pedidos y KDS
 | Método | Ruta | Descripción | Permiso |
