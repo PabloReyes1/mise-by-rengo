@@ -33,13 +33,13 @@ function auditActor(a: Actor, branchId: string) {
 
 // ─── Conversión a la API ─────────────────────────────────────────────────────
 
-const orderInclude = {
+export const orderInclude = {
   items: {
     orderBy: { id: 'asc' },
     include: { modifiers: { orderBy: { id: 'asc' } }, components: { orderBy: { id: 'asc' } } },
   },
 } satisfies Prisma.OrderInclude;
-type OrderRow = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
+export type OrderRow = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 type ItemRow = OrderRow['items'][number];
 
 interface StoredModifier {
@@ -80,7 +80,7 @@ function toItem(i: ItemRow): OrderItem {
   };
 }
 
-function toOrder(o: OrderRow): Order {
+export function toOrder(o: OrderRow): Order {
   return {
     id: toApiId(o.id),
     occupancyId: toApiId(o.occupancyId),

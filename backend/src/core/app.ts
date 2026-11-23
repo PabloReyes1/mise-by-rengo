@@ -13,6 +13,7 @@ import { billingModule } from '../modules/billing/index.js';
 import { catalogModule } from '../modules/catalog/index.js';
 import { configModule } from '../modules/config/index.js';
 import { floorModule } from '../modules/floor/index.js';
+import { kitchenModule } from '../modules/kitchen/index.js';
 import { ordersModule } from '../modules/orders/index.js';
 import { realtimeModule } from '../modules/realtime/index.js';
 import { syncModule } from '../modules/sync/index.js';
@@ -98,6 +99,7 @@ export async function buildApp(options: BuildAppOptions): Promise<App> {
     await app.register(catalogModule);
     await app.register(floorModule);
     await app.register(ordersModule);
+    await app.register(kitchenModule);
     await app.register(billingModule);
   }
 

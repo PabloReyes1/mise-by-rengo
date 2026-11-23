@@ -30,7 +30,7 @@ const ITEM_TRANSITIONS: Record<ItemStatus, readonly ItemStatus[]> = {
   BORRADOR: ['ENVIADO'],
   ENVIADO: ['EN_PREPARACION', 'CANCELADO'],
   EN_PREPARACION: ['LISTO', 'CANCELADO'],
-  LISTO: ['ENTREGADO', 'CANCELADO'], // cancelar = merma
+  LISTO: ['EN_PREPARACION', 'ENTREGADO', 'CANCELADO'], // recall del KDS / entregar / merma
   ENTREGADO: ['CANCELADO'], // merma
   CANCELADO: [],
 };
