@@ -1,5 +1,5 @@
 // Editor de un grupo de modificadores (RF-013, RF-014). Quitar uno de la lista lo desactiva (historial).
-import type { ModifierGroup } from '@mise/shared/contracts/catalog';
+import type { Category, ModifierGroup } from '@mise/shared/contracts/catalog';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
@@ -8,9 +8,11 @@ import { toMoney, useSaveModifierGroup, type ModifierGroupDraft } from '../api/a
 
 export function ModifierGroupEditor({
   group,
+  categories,
   onClose,
 }: {
   group: ModifierGroup | null;
+  categories: Category[];
   onClose: () => void;
 }) {
   const [draft, setDraft] = useState<ModifierGroupDraft>(
@@ -20,17 +22,18 @@ export function ModifierGroupEditor({
           required: group.required,
           minSelect: group.minSelect,
           maxSelect: group.maxSelect,
+          categoryIds: group.categoryIds,
           modifiers: group.modifiers
             .filter((m) => m.status !== 'INACTIVE')
             .map((m) => ({ id: m.id, name: m.name, priceDelta: m.priceDelta, status: m.status })),
         }
-      : { name: '', required: false, minSelect: 0, maxSelect: 1, modifiers: [] },
+      : { name: '', required: false, minSelect: 0, maxSelect: 1, categoryIds: [], modifiers: [] },
   );
   const save = useSaveModifierGroup();
   const rangeError =
     draft.minSelect > draft.maxSelect ? 'El mínimo no puede ser mayor que el máximo' : undefined;
   const pricesOk = draft.modifiers.every((m) => m.name.trim() && toMoney(m.priceDelta));
-  const valid = draft.name.trim() && !rangeError && pricesOk;
+  const valid = draft.name.trim() && !rangeError && pricesOk && draft.categoryIds.length > 0;
   const setMod = (i: number, patch: Partial<ModifierGroupDraft['modifiers'][number]>) =>
     setDraft({
       ...draft,
@@ -73,6 +76,38 @@ export function ModifierGroupEditor({
         value={draft.name}
         onChange={(e) => setDraft({ ...draft, name: e.target.value })}
       />
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-semibold">Categorías donde se usa</legend>
+        <p className="text-sm text-secondary">
+          Solo los productos de estas categorías pueden elegir este grupo (ej. el término de la
+          carne no aparece en Ensaladas).
+        </p>
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+          {categories.map((c) => (
+            <label
+              key={c.id}
+              className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-surface"
+            >
+              <input
+                type="checkbox"
+                className="size-5"
+                checked={draft.categoryIds.includes(c.id)}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    categoryIds: e.target.checked
+                      ? [...draft.categoryIds, c.id]
+                      : draft.categoryIds.filter((id) => id !== c.id),
+                  })
+                }
+              />
+              <span className="text-base">{c.name}</span>
+              {!c.active && <span className="text-sm text-secondary">(inactiva)</span>}
+            </label>
+          ))}
+        </div>
+        {draft.categoryIds.length === 0 && <p className="text-sm">Elige al menos una categoría.</p>}
+      </fieldset>
       <Switch
         label="Obligatorio"
         hint="El mesero no puede enviar el producto sin elegir"

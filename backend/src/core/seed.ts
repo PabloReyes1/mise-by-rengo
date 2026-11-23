@@ -161,6 +161,9 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
             minSelect: g.minSelect,
             maxSelect: g.maxSelect,
             sort,
+            categories: {
+              create: g.categories.map((c) => ({ categoryId: categoryIds.get(c)! })),
+            },
             modifiers: {
               create: g.modifiers.map((m, i) => ({
                 id: newDbId(),

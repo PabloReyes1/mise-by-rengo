@@ -1,11 +1,42 @@
 {
-  "$comment": "Menú DE EJEMPLO (opcional al dar de alta un cliente, Docs/13 §2 paso 6). También es el menú de desarrollo mientras no existe la pantalla de admin. Precios con impuestos incluidos, como string decimal.",
+  "$comment": "Menú DE EJEMPLO (opcional al dar de alta un cliente con --with-menu, Docs/13 §2 paso 6; también es el menú de desarrollo y de demo). Precios con impuestos incluidos, como string decimal. Cada grupo de modificadores dice en qué categorías está disponible (categories): un producto solo puede usar grupos de su categoría.",
   "categories": [
-    { "key": "entradas", "name": "Entradas" },
-    { "key": "platos-fuertes", "name": "Platos fuertes" },
-    { "key": "bebidas", "name": "Bebidas" },
-    { "key": "postres", "name": "Postres" },
-    { "key": "combos", "name": "Combos" }
+    {
+      "key": "entradas",
+      "name": "Entradas"
+    },
+    {
+      "key": "platos-fuertes",
+      "name": "Platos fuertes"
+    },
+    {
+      "key": "bebidas",
+      "name": "Bebidas"
+    },
+    {
+      "key": "postres",
+      "name": "Postres"
+    },
+    {
+      "key": "combos",
+      "name": "Combos"
+    },
+    {
+      "key": "desayunos",
+      "name": "Desayunos"
+    },
+    {
+      "key": "sopas",
+      "name": "Sopas"
+    },
+    {
+      "key": "ensaladas",
+      "name": "Ensaladas"
+    },
+    {
+      "key": "cervezas",
+      "name": "Cervezas y tragos"
+    }
   ],
   "modifierGroups": [
     {
@@ -15,10 +46,20 @@
       "minSelect": 1,
       "maxSelect": 1,
       "modifiers": [
-        { "name": "Término medio", "priceDelta": "0.00" },
-        { "name": "Tres cuartos", "priceDelta": "0.00" },
-        { "name": "Bien cocido", "priceDelta": "0.00" }
-      ]
+        {
+          "name": "Término medio",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Tres cuartos",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Bien cocido",
+          "priceDelta": "0.00"
+        }
+      ],
+      "categories": ["platos-fuertes"]
     },
     {
       "key": "extras",
@@ -27,10 +68,20 @@
       "minSelect": 0,
       "maxSelect": 3,
       "modifiers": [
-        { "name": "Aguacate", "priceDelta": "8.00" },
-        { "name": "Queso fresco", "priceDelta": "6.00" },
-        { "name": "Tortillas extra", "priceDelta": "4.00" }
-      ]
+        {
+          "name": "Aguacate",
+          "priceDelta": "8.00"
+        },
+        {
+          "name": "Queso fresco",
+          "priceDelta": "6.00"
+        },
+        {
+          "name": "Tortillas extra",
+          "priceDelta": "4.00"
+        }
+      ],
+      "categories": ["platos-fuertes", "entradas", "desayunos"]
     },
     {
       "key": "tamano-bebida",
@@ -39,8 +90,151 @@
       "minSelect": 1,
       "maxSelect": 1,
       "modifiers": [
-        { "name": "Normal", "priceDelta": "0.00" },
-        { "name": "Grande", "priceDelta": "5.00" }
+        {
+          "name": "Normal",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Grande",
+          "priceDelta": "5.00"
+        }
+      ],
+      "categories": ["bebidas"]
+    },
+    {
+      "key": "huevos",
+      "name": "Huevos",
+      "required": true,
+      "minSelect": 1,
+      "maxSelect": 1,
+      "categories": ["desayunos"],
+      "modifiers": [
+        {
+          "name": "Estrellados",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Revueltos",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Rancheros",
+          "priceDelta": "3.00"
+        }
+      ]
+    },
+    {
+      "key": "aderezo",
+      "name": "Aderezo",
+      "required": true,
+      "minSelect": 1,
+      "maxSelect": 1,
+      "categories": ["ensaladas"],
+      "modifiers": [
+        {
+          "name": "Vinagreta",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "César",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Ranch",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Sin aderezo",
+          "priceDelta": "0.00"
+        }
+      ]
+    },
+    {
+      "key": "proteina",
+      "name": "Agregar proteína",
+      "required": false,
+      "minSelect": 0,
+      "maxSelect": 1,
+      "categories": ["ensaladas", "sopas"],
+      "modifiers": [
+        {
+          "name": "Pollo",
+          "priceDelta": "15.00"
+        },
+        {
+          "name": "Camarón",
+          "priceDelta": "25.00"
+        },
+        {
+          "name": "Lomito",
+          "priceDelta": "22.00"
+        }
+      ]
+    },
+    {
+      "key": "acompanamiento",
+      "name": "Acompañamiento",
+      "required": true,
+      "minSelect": 1,
+      "maxSelect": 2,
+      "categories": ["platos-fuertes"],
+      "modifiers": [
+        {
+          "name": "Arroz",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Frijoles",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Papas fritas",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Ensalada",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Chirmol",
+          "priceDelta": "0.00"
+        }
+      ]
+    },
+    {
+      "key": "hielo",
+      "name": "Hielo",
+      "required": false,
+      "minSelect": 0,
+      "maxSelect": 1,
+      "categories": ["bebidas", "cervezas"],
+      "modifiers": [
+        {
+          "name": "Sin hielo",
+          "priceDelta": "0.00"
+        },
+        {
+          "name": "Poco hielo",
+          "priceDelta": "0.00"
+        }
+      ]
+    },
+    {
+      "key": "michelada",
+      "name": "Preparación",
+      "required": false,
+      "minSelect": 0,
+      "maxSelect": 1,
+      "categories": ["cervezas"],
+      "modifiers": [
+        {
+          "name": "Michelada",
+          "priceDelta": "10.00"
+        },
+        {
+          "name": "Con limón y sal",
+          "priceDelta": "3.00"
+        }
       ]
     }
   ],
@@ -127,6 +321,183 @@
       "category": "combos",
       "price": "75.00",
       "isCombo": true
+    },
+    {
+      "key": "tostadas",
+      "sku": "ENT-003",
+      "name": "Tostadas de guacamol",
+      "category": "entradas",
+      "price": "30.00"
+    },
+    {
+      "key": "dobladas",
+      "sku": "ENT-004",
+      "name": "Dobladas de loroco",
+      "category": "entradas",
+      "price": "34.00",
+      "modifierGroups": ["extras"]
+    },
+    {
+      "key": "pollo-plancha",
+      "sku": "PF-004",
+      "name": "Pollo a la plancha",
+      "category": "platos-fuertes",
+      "price": "68.00",
+      "modifierGroups": ["acompanamiento", "extras"]
+    },
+    {
+      "key": "lomito",
+      "sku": "PF-005",
+      "name": "Lomito en salsa de chile pasa",
+      "category": "platos-fuertes",
+      "price": "110.00",
+      "modifierGroups": ["termino", "acompanamiento"]
+    },
+    {
+      "key": "pescado",
+      "sku": "PF-006",
+      "name": "Filete de pescado al ajillo",
+      "category": "platos-fuertes",
+      "price": "98.00",
+      "modifierGroups": ["acompanamiento"]
+    },
+    {
+      "key": "kak-ik",
+      "sku": "PF-007",
+      "name": "Kak'ik",
+      "category": "platos-fuertes",
+      "price": "72.00",
+      "modifierGroups": ["extras"]
+    },
+    {
+      "key": "desayuno-chapin",
+      "sku": "DES-001",
+      "name": "Desayuno chapín",
+      "category": "desayunos",
+      "price": "45.00",
+      "modifierGroups": ["huevos", "extras"]
+    },
+    {
+      "key": "panqueques",
+      "sku": "DES-002",
+      "name": "Panqueques con miel",
+      "category": "desayunos",
+      "price": "35.00"
+    },
+    {
+      "key": "omelette",
+      "sku": "DES-003",
+      "name": "Omelette de vegetales",
+      "category": "desayunos",
+      "price": "42.00",
+      "modifierGroups": ["extras"]
+    },
+    {
+      "key": "caldo-res",
+      "sku": "SOP-001",
+      "name": "Caldo de res",
+      "category": "sopas",
+      "price": "55.00"
+    },
+    {
+      "key": "sopa-tortilla",
+      "sku": "SOP-002",
+      "name": "Sopa de tortilla",
+      "category": "sopas",
+      "price": "38.00",
+      "modifierGroups": ["proteina"]
+    },
+    {
+      "key": "crema-loroco",
+      "sku": "SOP-003",
+      "name": "Crema de loroco",
+      "category": "sopas",
+      "price": "36.00"
+    },
+    {
+      "key": "ensalada-cesar",
+      "sku": "ENS-001",
+      "name": "Ensalada César",
+      "category": "ensaladas",
+      "price": "48.00",
+      "modifierGroups": ["aderezo", "proteina"]
+    },
+    {
+      "key": "ensalada-casa",
+      "sku": "ENS-002",
+      "name": "Ensalada de la casa",
+      "category": "ensaladas",
+      "price": "40.00",
+      "modifierGroups": ["aderezo", "proteina"]
+    },
+    {
+      "key": "jamaica",
+      "sku": "BEB-004",
+      "name": "Rosa de jamaica",
+      "category": "bebidas",
+      "price": "15.00",
+      "modifierGroups": ["tamano-bebida", "hielo"]
+    },
+    {
+      "key": "licuado",
+      "sku": "BEB-005",
+      "name": "Licuado de fresa",
+      "category": "bebidas",
+      "price": "22.00",
+      "modifierGroups": ["tamano-bebida"]
+    },
+    {
+      "key": "agua",
+      "sku": "BEB-006",
+      "name": "Agua pura",
+      "category": "bebidas",
+      "price": "10.00"
+    },
+    {
+      "key": "gaseosa",
+      "sku": "BEB-007",
+      "name": "Gaseosa",
+      "category": "bebidas",
+      "price": "12.00",
+      "modifierGroups": ["hielo"]
+    },
+    {
+      "key": "gallo",
+      "sku": "CER-001",
+      "name": "Cerveza Gallo",
+      "category": "cervezas",
+      "price": "20.00",
+      "modifierGroups": ["michelada"]
+    },
+    {
+      "key": "cabro",
+      "sku": "CER-002",
+      "name": "Cerveza Cabro",
+      "category": "cervezas",
+      "price": "20.00",
+      "modifierGroups": ["michelada"]
+    },
+    {
+      "key": "ron",
+      "sku": "CER-003",
+      "name": "Cuba libre",
+      "category": "cervezas",
+      "price": "35.00",
+      "modifierGroups": ["hielo"]
+    },
+    {
+      "key": "flan",
+      "sku": "POS-003",
+      "name": "Flan de caramelo",
+      "category": "postres",
+      "price": "20.00"
+    },
+    {
+      "key": "pie-limon",
+      "sku": "POS-004",
+      "name": "Pie de limón",
+      "category": "postres",
+      "price": "25.00"
     }
   ],
   "combos": [
@@ -138,8 +509,15 @@
           "minSelect": 1,
           "maxSelect": 1,
           "options": [
-            { "product": "pepian", "priceDelta": "0.00", "default": true },
-            { "product": "jocon", "priceDelta": "0.00" }
+            {
+              "product": "pepian",
+              "priceDelta": "0.00",
+              "default": true
+            },
+            {
+              "product": "jocon",
+              "priceDelta": "0.00"
+            }
           ]
         },
         {
@@ -147,8 +525,15 @@
           "minSelect": 1,
           "maxSelect": 1,
           "options": [
-            { "product": "horchata", "priceDelta": "0.00", "default": true },
-            { "product": "limonada", "priceDelta": "0.00" }
+            {
+              "product": "horchata",
+              "priceDelta": "0.00",
+              "default": true
+            },
+            {
+              "product": "limonada",
+              "priceDelta": "0.00"
+            }
           ]
         }
       ]

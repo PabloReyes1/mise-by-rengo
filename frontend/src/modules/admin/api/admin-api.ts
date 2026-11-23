@@ -119,6 +119,8 @@ export interface ModifierGroupDraft {
   required: boolean;
   minSelect: number;
   maxSelect: number;
+  /** Categorías donde se puede usar (una o más) */
+  categoryIds: string[];
   modifiers: {
     id?: string | undefined;
     name: string;

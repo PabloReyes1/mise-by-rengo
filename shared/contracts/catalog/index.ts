@@ -35,6 +35,8 @@ export const modifierGroupSchema = z
     minSelect: z.number().int().min(0),
     maxSelect: z.number().int().min(1),
     sort: z.number().int(),
+    /** Categorías donde está disponible: un producto solo elige grupos de su categoría */
+    categoryIds: z.array(idSchema),
     modifiers: z.array(modifierSchema),
   })
   .refine((g) => g.minSelect <= g.maxSelect, {
@@ -57,6 +59,8 @@ export const saveModifierGroupSchema = z
     minSelect: z.number().int().min(0),
     maxSelect: z.number().int().min(1),
     sort: z.number().int().optional(),
+    /** Una o más categorías donde se puede usar el grupo (ej. "Término" solo en Carnes) */
+    categoryIds: z.array(idSchema).min(1, 'Elige al menos una categoría'),
     /** Lista completa: los que no vengan se desactivan (no se borran, por el historial) */
     modifiers: z.array(modifierInputSchema),
   })

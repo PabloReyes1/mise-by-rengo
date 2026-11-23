@@ -51,6 +51,7 @@ export function MenuPage() {
     return (
       <ModifierGroupEditor
         group={data.modifierGroups.find((g) => g.id === view.id) ?? null}
+        categories={data.categories}
         onClose={() => setView({ kind: 'list' })}
       />
     );

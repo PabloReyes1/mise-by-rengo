@@ -38,14 +38,14 @@ model ClientSettings {
 }
 
 model License {
-  id                   String    @id @db.Uuid
-  plan                 String
-  status               String    @default("ACTIVA")
-  modules              Json      @default("{}")
-  limits               Json      @default("{}")
-  validUntil           DateTime? @map("valid_until") @db.Date
-  graceDays            Int       @default(0) @map("grace_days")
-  updatedByPlatformAt  DateTime  @default(now()) @map("updated_by_platform_at") @db.Timestamptz(6)
+  id                  String    @id @db.Uuid
+  plan                String
+  status              String    @default("ACTIVA")
+  modules             Json      @default("{}")
+  limits              Json      @default("{}")
+  validUntil          DateTime? @map("valid_until") @db.Date
+  graceDays           Int       @default(0) @map("grace_days")
+  updatedByPlatformAt DateTime  @default(now()) @map("updated_by_platform_at") @db.Timestamptz(6)
 
   @@map("license")
 }

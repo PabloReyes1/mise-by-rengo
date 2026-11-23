@@ -39,6 +39,7 @@ const termino: ModifierGroup = {
   minSelect: 1,
   maxSelect: 1,
   sort: 0,
+  categoryIds: [],
   modifiers: [
     { id: ID(11), name: 'Término medio', priceDelta: '0.00', status: 'ACTIVE', sort: 0 },
     { id: ID(12), name: 'Bien cocido', priceDelta: '0.00', status: 'ACTIVE', sort: 1 },
@@ -51,6 +52,7 @@ const extras: ModifierGroup = {
   minSelect: 0,
   maxSelect: 2,
   sort: 1,
+  categoryIds: [],
   modifiers: [
     { id: ID(21), name: 'Aguacate', priceDelta: '8.00', status: 'ACTIVE', sort: 0 },
     { id: ID(22), name: 'Queso fresco', priceDelta: '6.00', status: 'ACTIVE', sort: 1 },

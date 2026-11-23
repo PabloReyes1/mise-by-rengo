@@ -62,6 +62,8 @@ export function ProductEditor({
   const set = <K extends keyof ProductDraft>(k: K, v: ProductDraft[K]) =>
     setDraft({ ...draft, [k]: v });
   const money = toMoney(price);
+  // Solo los grupos disponibles en la categoría del producto
+  const groupsHere = menu.modifierGroups.filter((g) => g.categoryIds.includes(draft.categoryId));
   const valid = draft.name.trim() && draft.sku.trim() && money;
 
   return (
@@ -117,7 +119,20 @@ export function ProductEditor({
             label="Categoría"
             value={draft.categoryId}
             options={menu.categories.map((c) => ({ value: c.id, label: c.name }))}
-            onChange={(e) => set('categoryId', e.target.value)}
+            onChange={(e) => {
+              // Los grupos que no están en la nueva categoría se quitan (ya no se pueden usar)
+              const categoryId = e.target.value;
+              const allowed = new Set(
+                menu.modifierGroups
+                  .filter((g) => g.categoryIds.includes(categoryId))
+                  .map((g) => g.id),
+              );
+              setDraft({
+                ...draft,
+                categoryId,
+                modifierGroupIds: draft.modifierGroupIds.filter((id) => allowed.has(id)),
+              });
+            }}
           />
           <Select
             label="Estado"
@@ -136,10 +151,13 @@ export function ProductEditor({
 
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-sm font-semibold">Modificadores</legend>
-          {menu.modifierGroups.length === 0 && (
-            <p className="text-sm text-secondary">No hay grupos de modificadores.</p>
+          {groupsHere.length === 0 && (
+            <p className="text-sm text-secondary">
+              Esta categoría no tiene grupos de modificadores. Se asignan al crear o editar el grupo
+              (Modificadores).
+            </p>
           )}
-          {menu.modifierGroups.map((g) => (
+          {groupsHere.map((g) => (
             <label
               key={g.id}
               className="flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-2 hover:bg-surface"

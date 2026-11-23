@@ -52,6 +52,8 @@ erDiagram
     kitchen_stations ||--o{ categories : "prepara (futuro)"
     products ||--o{ product_modifier_groups : ""
     modifier_groups ||--o{ product_modifier_groups : ""
+    categories ||--o{ category_modifier_groups : ""
+    modifier_groups ||--o{ category_modifier_groups : ""
     modifier_groups ||--o{ modifiers : contiene
     products ||--o{ combo_groups : "si es combo"
     combo_groups ||--o{ combo_group_options : opciones
@@ -192,6 +194,8 @@ erDiagram
 **`product_branch_prices`**: product_id, branch_id, price.
 **`modifier_groups`**: id, name, required, min_select, max_select, sort.
 **`modifiers`**: id, group_id, name, price_delta numeric(12,2) ≥ 0, status, sort.
+**`category_modifier_groups`**: category_id, group_id (PK compuesta). Categorías donde está disponible cada grupo (una o más, RENGO 2026-11-23): un producto solo puede usar grupos de su categoría, así "Término de la carne" no aparece en Ensaladas. Al quitar una categoría del grupo, los productos de esa categoría dejan de usarlo. Migración `h2_modifier_group_categories` (los grupos que ya existían quedan en las categorías de los productos que los usaban).
+
 **`product_modifier_groups`**: product_id, group_id, sort.
 **`combo_groups`**: id, combo_product_id, name ("Bebida"), min_select, max_select, sort.
 **`combo_group_options`**: id, combo_group_id, product_id, price_delta, default.

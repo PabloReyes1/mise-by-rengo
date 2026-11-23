@@ -68,9 +68,15 @@ describe('seedClient (Docs/13 §2 pasos 6 y 7)', () => {
 
   it('con --with-menu carga categorías, productos, modificadores y el combo', async () => {
     await seedClient(prisma, { ...base, adminUsername: 'admin', withMenu: true });
-    expect(await prisma.category.count()).toBe(5);
-    expect(await prisma.product.count()).toBe(11);
-    expect(await prisma.modifierGroup.count()).toBe(3);
+    expect(await prisma.category.count()).toBe(9);
+    expect(await prisma.product.count()).toBe(34);
+    expect(await prisma.modifierGroup.count()).toBe(9);
+    // "Término" solo está disponible en Platos fuertes
+    const termino = await prisma.modifierGroup.findFirstOrThrow({
+      where: { name: 'Término de la carne' },
+      include: { categories: { include: { category: true } } },
+    });
+    expect(termino.categories.map((c) => c.category.name)).toEqual(['Platos fuertes']);
     expect(await prisma.comboGroup.count()).toBe(2);
     const pepian = await prisma.product.findUniqueOrThrow({
       where: { sku: 'PF-001' },

@@ -94,7 +94,7 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | PATCH | `/api/products/:id/status` | `{ status: "SOLD_OUT" }` | `menu.toggle_soldout` |
 | POST | `/api/products/:id/image` (multipart) | Sube y redimensiona | `config.menu` |
 | GET | `/api/products/:id/image?v=<updatedAt>` | Imagen WebP, `Cache-Control: public, max-age=31536000, immutable`, `ETag` | Público |
-| POST/PUT | `/api/modifier-groups[/:id]`, `/api/modifiers[/:id]` | | `config.menu` |
+| POST/PUT | `/api/modifier-groups[/:id]`, `/api/modifiers[/:id]` | El grupo lleva `categoryIds` (una o más categorías donde se usa); `GET /api/menu` lo devuelve en cada grupo. Un producto con un grupo que no está en su categoría → `400 VALIDATION_ERROR` | `config.menu` |
 | POST/PUT | `/api/products/:id/combo-groups` | | `config.menu` |
 | POST | `/api/menu/import` (CSV/XLSX) · GET `/api/menu/export` | F2 | `config.menu` |
 

@@ -33,6 +33,8 @@ const menuSchema = z.object({
       required: z.boolean().default(false),
       minSelect: z.number().int().min(0),
       maxSelect: z.number().int().min(1),
+      /** Categorías donde está disponible el grupo (una o más) */
+      categories: z.array(z.string()).min(1),
       modifiers: z.array(z.object({ name: z.string().min(1), priceDelta: money })).default([]),
     }),
   ),
@@ -215,6 +217,9 @@ export function validateTemplate(t: Template): string[] {
   const products = new Map(t.menu.products.map((p) => [p.key, p]));
 
   for (const g of t.menu.modifierGroups) {
+    for (const c of g.categories) {
+      if (!categories.has(c)) problems.push(`Modificadores ${g.name}: la categoría ${c} no existe`);
+    }
     if (g.minSelect > g.maxSelect) {
       problems.push(
         `Modificadores ${g.name}: el mínimo (${g.minSelect}) es mayor que el máximo (${g.maxSelect})`,
@@ -227,6 +232,8 @@ export function validateTemplate(t: Template): string[] {
     for (const g of p.modifierGroups) {
       if (!groups.has(g))
         problems.push(`Producto ${p.name}: el grupo de modificadores ${g} no existe`);
+      else if (!t.menu.modifierGroups.find((x) => x.key === g)!.categories.includes(p.category))
+        problems.push(`Producto ${p.name}: el grupo ${g} no está disponible en su categoría`);
     }
   }
   for (const sku of duplicates(t.menu.products.map((p) => p.sku))) {

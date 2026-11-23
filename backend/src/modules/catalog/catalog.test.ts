@@ -47,9 +47,9 @@ afterAll(async () => {
 describe('GET /api/menu (Docs/08 §2.4)', () => {
   it('trae categorías, productos con precio en string, modificadores y combos, sin imágenes', async () => {
     const m = await menu();
-    expect(m.categories).toHaveLength(5);
-    expect(m.products).toHaveLength(11);
-    expect(m.modifierGroups).toHaveLength(3);
+    expect(m.categories).toHaveLength(9);
+    expect(m.products).toHaveLength(34);
+    expect(m.modifierGroups).toHaveLength(9);
     const pepian = m.products.find((p: { sku: string }) => p.sku === 'PF-001');
     expect(pepian).toMatchObject({
       name: 'Pepián de pollo',
@@ -76,7 +76,7 @@ describe('categorías y productos (config.menu)', () => {
       method: 'POST',
       url: '/api/categories',
       headers: admin,
-      payload: { name: 'Desayunos' },
+      payload: { name: 'Antojitos' },
     });
     expect(cat.statusCode).toBe(201);
     const product = await app.inject({
@@ -85,8 +85,8 @@ describe('categorías y productos (config.menu)', () => {
       headers: admin,
       payload: {
         categoryId: cat.json().id,
-        name: 'Desayuno chapín',
-        sku: 'DES-001',
+        name: 'Garnachas',
+        sku: 'ANT-001',
         price: '45.00',
       },
     });
@@ -167,6 +167,78 @@ describe('agotado (RF-011, menu.toggle_soldout)', () => {
   });
 });
 
+describe('modificadores por categoría (2026-11-23)', () => {
+  type Named = { id: string; name: string };
+  const byName = <T extends Named>(list: T[], name: string) => list.find((x) => x.name === name)!;
+
+  it('cada grupo dice en qué categorías está disponible', async () => {
+    const m = await menu();
+    const termino = byName(m.modifierGroups, 'Término de la carne');
+    expect(termino.categoryIds).toEqual([byName(m.categories, 'Platos fuertes').id]);
+  });
+
+  it('un producto no puede usar un grupo que no está en su categoría', async () => {
+    const m = await menu();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/products',
+      headers: admin,
+      payload: {
+        categoryId: byName(m.categories, 'Ensaladas').id,
+        name: 'Ensalada rara',
+        sku: 'ENS-099',
+        price: '40.00',
+        modifierGroupIds: [byName(m.modifierGroups, 'Término de la carne').id],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/no está disponible/);
+  });
+
+  it('al quitar una categoría del grupo, sus productos dejan de usarlo', async () => {
+    const m = await menu();
+    const extras = byName(m.modifierGroups, 'Extras') as Named & {
+      categoryIds: string[];
+      modifiers: { id: string; name: string; priceDelta: string }[];
+    };
+    const platos = byName(m.categories, 'Platos fuertes').id;
+    const res = await app.inject({
+      method: 'PUT',
+      url: `/api/modifier-groups/${extras.id}`,
+      headers: admin,
+      payload: {
+        name: 'Extras',
+        required: false,
+        minSelect: 0,
+        maxSelect: 3,
+        categoryIds: extras.categoryIds.filter((c) => c !== platos),
+        modifiers: extras.modifiers.map(({ id, name, priceDelta }) => ({ id, name, priceDelta })),
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const after = await menu();
+    const pepian = after.products.find((p: { sku: string }) => p.sku === 'PF-001');
+    expect(pepian.modifierGroupIds).not.toContain(extras.id);
+  });
+
+  it('un grupo necesita al menos una categoría', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/modifier-groups',
+      headers: admin,
+      payload: {
+        name: 'X',
+        required: false,
+        minSelect: 0,
+        maxSelect: 1,
+        categoryIds: [],
+        modifiers: [],
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
 describe('modificadores y combos (RF-013 a RF-015)', () => {
   it('quitar un modificador del grupo lo desactiva, no lo borra (historial)', async () => {
     const m = await menu();
@@ -181,6 +253,7 @@ describe('modificadores y combos (RF-013 a RF-015)', () => {
         required: false,
         minSelect: 0,
         maxSelect: 3,
+        categoryIds: extras.categoryIds,
         modifiers: [
           ...keep.map((x: { id: string; name: string; priceDelta: string }) => ({
             id: x.id,

@@ -75,6 +75,7 @@ function toProduct(p: ProductRow): Product {
 
 const groupInclude = {
   modifiers: { orderBy: { sort: 'asc' } },
+  categories: { select: { categoryId: true } },
 } satisfies Prisma.ModifierGroupInclude;
 
 function toGroup(
@@ -87,6 +88,7 @@ function toGroup(
     minSelect: g.minSelect,
     maxSelect: g.maxSelect,
     sort: g.sort,
+    categoryIds: g.categories.map((c) => toApiId(c.categoryId)).sort(),
     modifiers: g.modifiers.map((m) => ({
       id: toApiId(m.id),
       name: m.name,
@@ -192,6 +194,16 @@ export async function saveProduct(
     const groupIds = input.modifierGroupIds.map(toDbId);
     if ((await tx.modifierGroup.count({ where: { id: { in: groupIds } } })) !== groupIds.length) {
       throw new AppError('VALIDATION_ERROR', 'Algún grupo de modificadores no existe');
+    }
+    // Solo grupos disponibles en la categoría del producto (ej. sin "Término" en Ensaladas)
+    const allowed = await tx.categoryModifierGroup.count({
+      where: { categoryId, groupId: { in: groupIds } },
+    });
+    if (allowed !== groupIds.length) {
+      throw new AppError(
+        'VALIDATION_ERROR',
+        'Algún grupo de modificadores no está disponible en la categoría del producto',
+      );
     }
     const clash = await tx.product.findUnique({ where: { sku: input.sku } });
     const dbId = id ? toDbId(id) : null;
@@ -331,6 +343,8 @@ export interface ModifierGroupInput {
   minSelect: number;
   maxSelect: number;
   sort?: number | undefined;
+  /** Categorías donde se puede usar (una o más) */
+  categoryIds: string[];
   modifiers: { id?: string | undefined; name: string; priceDelta: string; status: ProductStatus }[];
 }
 
@@ -364,6 +378,19 @@ export async function saveModifierGroup(
         data: { id: groupId, ...groupData, sort: input.sort ?? (await tx.modifierGroup.count()) },
       });
     }
+
+    // Categorías del grupo. Los productos de las categorías que se quitan dejan de usarlo.
+    const categoryIds = [...new Set(input.categoryIds.map(toDbId))];
+    if ((await tx.category.count({ where: { id: { in: categoryIds } } })) !== categoryIds.length) {
+      throw new AppError('VALIDATION_ERROR', 'Alguna categoría no existe');
+    }
+    await tx.categoryModifierGroup.deleteMany({ where: { groupId } });
+    await tx.categoryModifierGroup.createMany({
+      data: categoryIds.map((categoryId) => ({ categoryId, groupId })),
+    });
+    await tx.productModifierGroup.deleteMany({
+      where: { groupId, product: { categoryId: { notIn: categoryIds } } },
+    });
 
     const keep = new Set<string>();
     for (const [sort, m] of input.modifiers.entries()) {

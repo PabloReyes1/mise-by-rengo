@@ -24,8 +24,9 @@ model Category {
   stationId String? @map("station_id") @db.Uuid
   active    Boolean @default(true)
 
-  station  KitchenStation? @relation(fields: [stationId], references: [id])
-  products Product[]
+  station        KitchenStation?         @relation(fields: [stationId], references: [id])
+  products       Product[]
+  modifierGroups CategoryModifierGroup[]
 
   @@map("categories")
 }
@@ -58,8 +59,8 @@ model Product {
   costTargetOverride Decimal? @map("cost_target_override") @db.Decimal(5, 2)
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  category       Category              @relation(fields: [categoryId], references: [id])
-  image          Media?                @relation(fields: [imageMediaId], references: [id])
+  category       Category               @relation(fields: [categoryId], references: [id])
+  image          Media?                 @relation(fields: [imageMediaId], references: [id])
   modifierGroups ProductModifierGroup[]
   comboGroups    ComboGroup[]
   comboOptions   ComboGroupOption[]
@@ -76,8 +77,10 @@ model ModifierGroup {
   maxSelect Int     @default(1) @map("max_select")
   sort      Int     @default(0)
 
-  modifiers Modifier[]
-  products  ProductModifierGroup[]
+  modifiers  Modifier[]
+  products   ProductModifierGroup[]
+  /// Categorías donde el grupo está disponible (2026-11-23): un producto solo elige grupos de su categoría
+  categories CategoryModifierGroup[]
 
   @@map("modifier_groups")
 }
@@ -94,6 +97,18 @@ model Modifier {
 
   @@index([groupId])
   @@map("modifiers")
+}
+
+model CategoryModifierGroup {
+  categoryId String @map("category_id") @db.Uuid
+  groupId    String @map("group_id") @db.Uuid
+
+  category Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  group    ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, groupId])
+  @@index([groupId])
+  @@map("category_modifier_groups")
 }
 
 model ProductModifierGroup {

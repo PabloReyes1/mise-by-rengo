@@ -139,6 +139,12 @@ describe('validateTemplate detecta errores de referencia y formato', () => {
     expect(validateTemplate(t)).toContainEqual(expect.stringContaining('config.roles'));
   });
 
+  it('un producto con un grupo que no está disponible en su categoría', () => {
+    const t = load();
+    t.menu.products.find((p) => p.key === 'guacamol')!.modifierGroups = ['termino'];
+    expect(validateTemplate(t)).toContainEqual(expect.stringContaining('no está disponible'));
+  });
+
   it('dos mesas con el mismo nombre, aunque estén en zonas distintas (SC-30)', () => {
     const t = load();
     t.tables.zones[1]!.tables[0]!.name = t.tables.zones[0]!.tables[0]!.name.toUpperCase();
