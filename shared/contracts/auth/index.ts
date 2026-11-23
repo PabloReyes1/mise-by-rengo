@@ -192,3 +192,23 @@ export const discountLimitsRequestSchema = z.object({
   maxDiscountAmount: moneySchema.nullable(),
 });
 export type DiscountLimitsRequest = z.infer<typeof discountLimitsRequestSchema>;
+
+// GET /api/devices (config.devices, H3 #21): dispositivos de la sucursal del que pregunta
+export const adminDeviceSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  type: deviceTypeSchema,
+  /** Navegador y sistema con que se emparejó */
+  platform: z.string(),
+  appVersion: z.string().nullable(),
+  lastSeenAt: isoDateTimeSchema.nullable(),
+  createdAt: isoDateTimeSchema,
+  revokedAt: isoDateTimeSchema.nullable(),
+  /** Es el dispositivo desde el que se pregunta */
+  current: z.boolean(),
+});
+export type AdminDevice = z.infer<typeof adminDeviceSchema>;
+export const devicesResponseSchema = z.array(adminDeviceSchema);
+
+// PUT /api/devices/:id (config.devices): cambiar el nombre
+export const renameDeviceRequestSchema = z.object({ name: z.string().trim().min(1).max(60) });

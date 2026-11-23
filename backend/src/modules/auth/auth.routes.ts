@@ -11,6 +11,9 @@ import {
   pinLoginRequestSchema,
   refreshRequestSchema,
   sessionResponseSchema,
+  adminDeviceSchema,
+  devicesResponseSchema,
+  renameDeviceRequestSchema,
 } from '@mise/shared/contracts/auth';
 import { idSchema } from '@mise/shared/contracts/common';
 import type { FastifyRequest } from 'fastify';
@@ -20,6 +23,7 @@ import { authenticate } from '../../core/auth.js';
 import { AppError } from '../../core/errors.js';
 import { toDbId } from '../../core/ids.js';
 import { authorize } from './authorize.js';
+import { listDevices, renameDevice } from './devices.service.js';
 import {
   authenticateDevice,
   createPairingCode,
@@ -90,9 +94,40 @@ export const authRoutes: FastifyPluginCallbackZod = (app, _options, done) => {
       schema: { params: z.object({ id: idSchema }) },
     },
     async (req, reply) => {
+      // Revocar el propio dispositivo lo dejaría fuera a media acción: se hace desde otro (SC-65)
+      if (req.params.id === req.auth!.deviceId)
+        throw new AppError('VALIDATION_ERROR', 'No puedes revocar el dispositivo que estás usando');
       await revokeDevice(prisma, req.params.id, { userId: req.auth!.userId, ip: req.ip });
       return reply.status(204).send();
     },
+  );
+
+  // Lista y nombre de los dispositivos de la sucursal (H3 #21)
+  app.get(
+    '/api/devices',
+    {
+      preHandler: [authenticate, authorize('config.devices')],
+      schema: { response: { 200: devicesResponseSchema } },
+    },
+    (req) => listDevices(prisma, req.auth!.deviceId),
+  );
+
+  app.put(
+    '/api/devices/:id',
+    {
+      preHandler: [authenticate, authorize('config.devices')],
+      schema: {
+        params: z.object({ id: idSchema }),
+        body: renameDeviceRequestSchema,
+        response: { 200: adminDeviceSchema },
+      },
+    },
+    (req) =>
+      renameDevice(prisma, req.params.id, req.body.name, {
+        userId: req.auth!.userId,
+        deviceId: req.auth!.deviceId,
+        ip: req.ip,
+      }),
   );
 
   app.post(

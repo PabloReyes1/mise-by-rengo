@@ -5,6 +5,7 @@ import type {
   ModifierGroup,
   Product,
 } from '@mise/shared/contracts/catalog';
+import type { AdminDevice } from '@mise/shared/contracts/auth';
 import type { License, Settings } from '@mise/shared/contracts/config';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
@@ -149,3 +150,27 @@ export function useCreatePairingCode() {
 
 /** Se movió a core/format (también lo usa caja). */
 export { toMoney } from '../../../core/format/index.js';
+
+// Dispositivos de la sucursal (H3 #21)
+const DEVICES_KEY = ['devices'] as const;
+
+export function useDevices() {
+  return useQuery({ queryKey: DEVICES_KEY, queryFn: () => apiFetch<AdminDevice[]>('/devices') });
+}
+
+export function useRenameDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      apiFetch<AdminDevice>(`/devices/${id}`, { method: 'PUT', body: { name } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: DEVICES_KEY }),
+  });
+}
+
+export function useRevokeDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch<void>(`/devices/${id}`, { method: 'DELETE' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: DEVICES_KEY }),
+  });
+}

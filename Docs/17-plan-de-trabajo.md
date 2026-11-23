@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | #21 Administración (parte 5): lista de dispositivos de la sucursal, renombrar y revocar (no el propio). Impresoras y rutas: no se hacen (ADR-003 actualizado, diálogo del sistema) | H3 | Deniscito (`auth`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 4): cajas (`cash`, de Pablito): crear, editar fondo y conteo, mover la principal y desactivar; pantalla Configuración › Cajas | H3 | Deniscito (`admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 3): métodos de pago (`billing`, de Pablito) y motivos (`config`, de Deniscito): crear, editar, desactivar y ordenar; pantallas Configuración › Métodos de pago y Motivos | H3 | Deniscito (`config`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 2): roles y permisos. `GET /api/permissions`, crear, editar y borrar roles, topes de descuento por rol (`config.discounts`); pantalla Configuración › Roles. Además: nadie da ni toca permisos que no tiene (el gerente no crea administradores) | H3 | Deniscito (`auth`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |

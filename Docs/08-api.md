@@ -84,7 +84,10 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/POST/PUT/DELETE | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users` o `config.discounts`) |
 | PUT | `/api/roles/:id/discount-limits` | `config.discounts` (S-05) |
 | GET | `/api/permissions` (catálogo) | `config.roles`, `config.users` o `config.discounts` |
-| GET/POST/PUT | `/api/devices`, `/api/printers`, `/api/devices/:id/printer-routes` | `config.devices` |
+| GET | `/api/devices` | Dispositivos de la sucursal del que pregunta `[{ id, name, type, platform, appVersion, lastSeenAt, createdAt, revokedAt, current }]` (H3 #21) | `config.devices` |
+| PUT | `/api/devices/:id` | Cambiar el nombre `{ name }` (auditoría `device.rename`) | `config.devices` |
+| DELETE | `/api/devices/:id` | Revocar: cierra sus sesiones y ya no entra; no se revoca el dispositivo que hace la petición (400, SC-65) | `config.devices` |
+| ~~GET/POST/PUT~~ | ~~`/api/printers`, `/api/devices/:id/printer-routes`~~ | **No se hacen:** con ADR-003 actualizado (2026-11-23) se imprime con el diálogo del sistema y no se configuran impresoras en Mise | — |
 | GET | `/api/license` | `config.restaurant` |
 | GET | `/api/config/logo?v=<settingsVersion>` | Público; WebP con caché de un año (SC-19) |
 | GET | `/api/bootstrap?since=<settingsVersion>` | Paquete para offline: configuración, menú (sin imágenes), mesas, roles, métodos, motivos, plantillas | Autenticado |

@@ -43,8 +43,12 @@ async function loginAs(username: string, password: string): Promise<Headers> {
 }
 
 const roleId = (name: string) => roles.find((r) => r.name === name)!.id;
-const call = (method: 'GET' | 'POST' | 'PUT', url: string, headers: Headers, payload?: object) =>
-  app.inject({ method, url, headers, ...(payload ? { payload } : {}) });
+const call = (
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  url: string,
+  headers: Headers,
+  payload?: object,
+) => app.inject({ method, url, headers, ...(payload ? { payload } : {}) });
 
 const newWaiter = (over: object = {}) => ({
   id: newId(),
@@ -212,5 +216,30 @@ describe('usuarios (RF-030, H3 #21)', () => {
     expect((await call('POST', `/api/users/${dev.id}/pin`, gina, { pin: '1234' })).statusCode).toBe(
       403,
     );
+  });
+});
+
+describe('dispositivos (H3 #21, SC-65)', () => {
+  it('lista los de la sucursal, renombra y revoca; no el que se está usando', async () => {
+    const other = await pairDevice();
+    const list = (await call('GET', '/api/devices', admin)).json();
+    const me = list.find((d: { current: boolean }) => d.current);
+    expect(me).toBeDefined();
+    expect(list.find((d: { id: string }) => d.id === other.deviceId)).toMatchObject({
+      name: 'Tablet',
+      type: 'ADMIN',
+      revokedAt: null,
+      current: false,
+    });
+    const renamed = await call('PUT', `/api/devices/${other.deviceId}`, admin, {
+      name: 'Tablet barra',
+    });
+    expect(renamed.json().name).toBe('Tablet barra');
+    const self = await call('DELETE', `/api/devices/${me.id}`, admin);
+    expect(self.statusCode).toBe(400);
+    expect((await call('DELETE', `/api/devices/${other.deviceId}`, admin)).statusCode).toBe(204);
+    const after = (await call('GET', '/api/devices', admin)).json();
+    expect(after.at(-1)).toMatchObject({ id: other.deviceId });
+    expect(after.at(-1).revokedAt).not.toBeNull();
   });
 });
