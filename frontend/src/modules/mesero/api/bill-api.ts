@@ -2,7 +2,9 @@
 // Reasignado a Deniscito (doc 17 §3.1). Las acciones pasan por la outbox (también sin conexión).
 import type { Authorization } from '@mise/shared/contracts/auth';
 import type {
+  ApplyDiscountRequest,
   Bill,
+  BillDiscountsResponse,
   PayBillRequest,
   PaymentMethod,
   PrecheckResponse,
@@ -154,4 +156,61 @@ export function usePayBill(occupancyId: string) {
     body: v.body,
     label: `Cobrar ${v.bill.name}`,
   }));
+}
+
+/** Descuentos de una cuenta (Docs/03 §5 regla 2, H3 #19). */
+export function useBillDiscounts(billId: string | null) {
+  return useQuery({
+    queryKey: ['bill', billId, 'discounts'],
+    queryFn: () => apiFetch<BillDiscountsResponse>(`/bills/${billId}/discounts`),
+    enabled: Boolean(billId),
+  });
+}
+
+/** Motivos de descuento activos. */
+export function useDiscountReasons() {
+  return useQuery({
+    queryKey: ['reasons', 'DISCOUNT'],
+    queryFn: () => apiFetch<{ id: string; name: string }[]>('/reasons?type=DISCOUNT'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Aplicar un descuento: por encima del tope, la ventana 🔑 lo reintenta con autorización. */
+export function useApplyDiscount(occupancyId: string) {
+  const qc = useQueryClient();
+  const action = useBillAction<
+    {
+      bill: Bill;
+      body: Omit<ApplyDiscountRequest, 'id' | 'authorization'>;
+      authorization?: Authorization;
+    },
+    BillDiscountsResponse
+  >(occupancyId, (v) => {
+    const id = newId();
+    return {
+      type: 'bill.discount',
+      entityId: v.bill.id,
+      method: 'POST',
+      path: `/bills/${v.bill.id}/discounts`,
+      body: { id, ...v.body },
+      label: `Descuento en ${v.bill.name}`,
+    };
+  });
+  return Object.assign(action, {
+    refresh: (billId: string) =>
+      void qc.invalidateQueries({ queryKey: ['bill', billId, 'discounts'] }),
+  });
+}
+
+export function useRemoveDiscount(occupancyId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (v: { discountId: string; billId: string }) =>
+      apiFetch<BillDiscountsResponse>(`/discounts/${v.discountId}`, { method: 'DELETE' }),
+    onSuccess: (_r, v) => {
+      void qc.invalidateQueries({ queryKey: ['bill', v.billId, 'discounts'] });
+      void qc.invalidateQueries({ queryKey: billsKey(occupancyId) });
+    },
+  });
 }

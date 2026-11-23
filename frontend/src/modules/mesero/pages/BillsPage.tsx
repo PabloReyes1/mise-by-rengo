@@ -3,7 +3,7 @@
 // pre-cuenta. Reasignado a Deniscito (doc 17 §3.1).
 import type { Bill } from '@mise/shared/contracts/billing';
 import type { OrderItem } from '@mise/shared/contracts/orders';
-import { ArrowLeft, ArrowRightLeft, Plus, Printer, Scissors, Wallet } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, Percent, Plus, Printer, Scissors, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { usePublicConfig, useRegional } from '../../../core/config/index.js';
@@ -23,7 +23,10 @@ import { useAuthorizedAction } from '../api/authorized-action.js';
 import {
   useCreateBill,
   useMoveItems,
+  useApplyDiscount,
+  useBillDiscounts,
   usePayBill,
+  useRemoveDiscount,
   usePrecheck,
   useRenameBill,
   useSplitItem,
@@ -32,6 +35,7 @@ import { useFloor, useOccupancy } from '../api/floor-api.js';
 import { useOccupancyBills, useOccupancyOrders } from '../api/order-api.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
+import { DiscountDialog } from '../components/DiscountDialog.js';
 import { PaymentDialog, type PaymentResult } from '../components/PaymentDialog.js';
 
 const BILL_STATUS: Record<Bill['status'], { label: string; tone: BadgeTone }> = {
@@ -65,6 +69,10 @@ export function BillsPage() {
   const split = useSplitItem(id);
   const precheck = usePrecheck(id);
   const pay = usePayBill(id);
+  const applyDiscount = useApplyDiscount(id);
+  const removeDiscount = useRemoveDiscount(id);
+  const [discounting, setDiscounting] = useState<Bill | null>(null);
+  const discountsQuery = useBillDiscounts(discounting?.id ?? null);
   const navigate = useNavigate();
   const [paying, setPaying] = useState<Bill | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
@@ -364,6 +372,11 @@ export function BillsPage() {
                 </Button>
               )}
               {editable && mine.length > 0 && (
+                <Button variant="outline" icon={<Percent />} onClick={() => setDiscounting(b)}>
+                  Descuento
+                </Button>
+              )}
+              {editable && mine.length > 0 && (
                 <Button icon={<Wallet />} onClick={() => setPaying(b)}>
                   Cobrar
                 </Button>
@@ -423,6 +436,24 @@ export function BillsPage() {
             },
           );
         }}
+      />
+      <DiscountDialog
+        bill={discounting}
+        items={discounting ? itemsOf(discounting) : []}
+        discounts={discountsQuery.data?.discounts ?? []}
+        loading={applyDiscount.isPending || removeDiscount.isPending}
+        error={actionError(applyDiscount.error ?? removeDiscount.error)}
+        onClose={() => setDiscounting(null)}
+        onApply={(input) => {
+          const bill = discounting!;
+          authorized.run(applyDiscount, { bill, body: input }, `Descuento en ${bill.name}`, {
+            onDone: (o) => {
+              applyDiscount.refresh(bill.id);
+              after(o);
+            },
+          });
+        }}
+        onRemove={(d) => removeDiscount.mutate({ discountId: d.id, billId: discounting!.id })}
       />
       <PaymentDialog
         bill={paying}
