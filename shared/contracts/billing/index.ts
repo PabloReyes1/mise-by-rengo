@@ -203,3 +203,41 @@ export const billDiscountsResponseSchema = z.object({
   discounts: z.array(appliedDiscountSchema),
 });
 export type BillDiscountsResponse = z.infer<typeof billDiscountsResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Reabrir cuentas pagadas en efectivo (Docs/05 paso 14, RF-069). H3 #20, reasignado a Deniscito.
+// ---------------------------------------------------------------------------
+
+// POST /api/bills/:id/reopen (bill.reopen o 🔑) — solo en línea
+export const reopenBillRequestSchema = z.object({
+  reasonId: idSchema,
+  note: z.string().trim().max(140).optional(),
+  /** Caja con turno abierto donde se registra el reverso; si no viene, la principal */
+  cashRegisterId: idSchema.optional(),
+  version: versionSchema,
+  authorization: authorizationSchema.optional(),
+});
+
+/** Cuenta pagada (o reabierta) del día, para la caja. */
+export const paidBillSummarySchema = z.object({
+  id: idSchema,
+  occupancyId: idSchema,
+  name: z.string(),
+  /** "Mesa 5" o "Para llevar" */
+  where: z.string(),
+  status: billStatusSchema,
+  folio: z.string().nullable(),
+  total: moneySchema,
+  paidAt: isoDateTimeSchema.nullable(),
+  /** Solo se reabre si todos los pagos fueron en efectivo (PA-051) */
+  cashOnly: z.boolean(),
+  reopenCount: z.int(),
+  version: versionSchema,
+});
+export type PaidBillSummary = z.infer<typeof paidBillSummarySchema>;
+
+// GET /api/bills/today (payment.register): pagadas hoy y reabiertas pendientes de cobrar
+export const todayBillsResponseSchema = z.object({
+  paid: z.array(paidBillSummarySchema),
+  reopened: z.array(paidBillSummarySchema),
+});

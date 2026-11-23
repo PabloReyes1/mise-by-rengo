@@ -2,7 +2,7 @@ import type { MenuResponse } from '@mise/shared/contracts/catalog';
 import { newId } from '@mise/shared/domain/ids';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { App } from '../../core/app.js';
-import { toDbId } from '../../core/ids.js';
+import { toApiId, toDbId } from '../../core/ids.js';
 import { resetDb } from '../../core/test-db.js';
 import { prisma, setupFixture } from '../../core/test-app.js';
 import { createPairingCode } from '../auth/index.js';
@@ -213,5 +213,81 @@ describe('cobrar (Docs/05 pasos 11 y 12)', () => {
     await prisma.clientSettings.updateMany({ data: { tipsEnabled: true, tipSuggestedPct: 10 } });
     const ok = (await post(`/api/bills/${bill.id}/pay`, body('2.40'))).json();
     expect(ok.bill).toMatchObject({ tipAmount: '2.40', status: 'PAGADA' });
+  });
+});
+
+describe('reabrir cuentas pagadas en efectivo (Docs/05 paso 14, RF-069)', () => {
+  const reopenReason = async () =>
+    (await prisma.reason.findFirstOrThrow({ where: { type: 'REOPEN_BILL' } })).id;
+
+  async function payCash() {
+    const shift = (await openShift()).json();
+    const { bill } = await tableWithCoffee('5');
+    const paid = (
+      await post(`/api/bills/${bill.id}/pay`, {
+        tipAmount: '0.00',
+        version: bill.version,
+        payments: [{ id: newId(), methodId: method('CASH'), amount: '24.00', tendered: '50.00' }],
+      })
+    ).json();
+    return { shift, paid };
+  }
+
+  it('revierte los pagos, registra el reverso en el turno abierto y la cuenta vuelve a cobrarse con folio nuevo', async () => {
+    const { shift, paid } = await payCash();
+    const res = await post(`/api/bills/${paid.bill.id}/reopen`, {
+      reasonId: toApiId(await reopenReason()),
+      version: paid.bill.version,
+    });
+    expect(res.statusCode).toBe(200);
+    const bill = await prisma.bill.findUniqueOrThrow({ where: { id: toDbId(paid.bill.id) } });
+    expect(bill).toMatchObject({ status: 'ABIERTA', folio: null, reopenCount: 1 });
+    expect(await prisma.payment.count({ where: { status: 'REVERTIDO' } })).toBe(1);
+    const summary = (
+      await app.inject({ method: 'GET', url: `/api/shifts/${shift.id}`, headers: admin })
+    ).json();
+    // 100 de fondo + 24 cobrado − 24 de reverso = 100
+    expect(summary).toMatchObject({ cashSalesTotal: '24.00', expectedCash: '100.00' });
+    const today = (
+      await app.inject({ method: 'GET', url: '/api/bills/today', headers: admin })
+    ).json();
+    expect(today.reopened.map((b: { id: string }) => b.id)).toEqual([paid.bill.id]);
+    const again = (
+      await post(`/api/bills/${paid.bill.id}/pay`, {
+        tipAmount: '0.00',
+        version: bill.version,
+        payments: [{ id: newId(), methodId: method('CASH'), amount: '24.00' }],
+      })
+    ).json();
+    expect(again.bill.status).toBe('PAGADA');
+    expect(again.bill.folio).not.toBe(paid.bill.folio);
+  });
+
+  it('con tarjeta no se reabre (PA-051)', async () => {
+    const { bill } = await tableWithCoffee('5');
+    const paid = (
+      await post(`/api/bills/${bill.id}/pay`, {
+        tipAmount: '0.00',
+        version: bill.version,
+        payments: [card('24.00')],
+      })
+    ).json();
+    await openShift();
+    const res = await post(`/api/bills/${paid.bill.id}/reopen`, {
+      reasonId: toApiId(await reopenReason()),
+      version: paid.bill.version,
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.code).toBe('REOPEN_NOT_ALLOWED');
+  });
+
+  it('sin turno abierto no se puede reabrir', async () => {
+    const { shift, paid } = await payCash();
+    await post(`/api/shifts/${shift.id}/close`, { countedCash: '124.00' });
+    const res = await post(`/api/bills/${paid.bill.id}/reopen`, {
+      reasonId: toApiId(await reopenReason()),
+      version: paid.bill.version,
+    });
+    expect(res.json().error.message).toMatch(/turno abierto/);
   });
 });

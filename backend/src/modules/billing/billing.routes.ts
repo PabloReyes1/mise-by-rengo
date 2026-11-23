@@ -10,6 +10,8 @@ import {
   payBillRequestSchema,
   paymentMethodSchema,
   receiptSchema,
+  reopenBillRequestSchema,
+  todayBillsResponseSchema,
   precheckRequestSchema,
   precheckResponseSchema,
   splitOrderItemRequestSchema,
@@ -36,6 +38,7 @@ import {
 } from './billing.service.js';
 import { applyDiscount, getDiscounts, removeDiscount } from './discount.service.js';
 import { getReceipt, listPaymentMethods, payBill } from './payment.service.js';
+import { reopenBill, todayBills } from './reopen.service.js';
 
 const params = z.object({ id: idSchema });
 
@@ -184,6 +187,29 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       const result = await removeDiscount(prisma, b, req.params.id, actor(req));
       announce(app, b, EV.billUpdated, ['branch'], { occupancyId: result.bill.occupancyId });
       return result;
+    },
+  );
+
+  // Reabrir cuentas pagadas en efectivo (Docs/05 paso 14, H3 #20): solo en línea
+  app.get(
+    '/api/bills/today',
+    {
+      preHandler: [authenticate, authorize('payment.register')],
+      schema: { response: { 200: todayBillsResponseSchema } },
+    },
+    async (req) => todayBills(prisma, await branch(req)),
+  );
+  app.post(
+    '/api/bills/:id/reopen',
+    {
+      preHandler: [authenticate, authorize('bill.reopen'), tableAuthorization],
+      schema: { params, body: reopenBillRequestSchema },
+    },
+    async (req) => {
+      const b = await branch(req);
+      const r = await reopenBill(prisma, b, req.params.id, req.body, actor(req));
+      announce(app, b, EV.billUpdated, ['branch', 'cash'], { occupancyId: r.occupancyId });
+      return { ok: true, occupancyId: r.occupancyId };
     },
   );
 
