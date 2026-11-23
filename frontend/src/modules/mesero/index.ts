@@ -2,3 +2,4 @@
 export { FloorPage } from './pages/FloorPage.js';
 export { OccupancyPage } from './pages/OccupancyPage.js';
 export { OrderPage } from './pages/OrderPage.js';
+export { MeseroLayout } from './pages/MeseroLayout.js';

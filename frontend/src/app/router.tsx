@@ -9,7 +9,7 @@ import {
   TablesPage,
 } from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
-import { FloorPage, OccupancyPage, OrderPage } from '../modules/mesero/index.js';
+import { FloorPage, MeseroLayout, OccupancyPage, OrderPage } from '../modules/mesero/index.js';
 import { KdsPage } from '../modules/cocina/index.js';
 import { AppShell } from './AppShell.js';
 import { DEVICE_AREAS } from './device-areas.js';
@@ -22,9 +22,15 @@ const areaChildren: Record<string, RouteObject[]> = {
   '/kds': [{ index: true, element: <KdsPage /> }],
   // Mesero (Pablito, H1)
   '/mesero': [
-    { index: true, element: <FloorPage /> },
-    { path: 'ocupacion/:id', element: <OccupancyPage /> },
-    { path: 'ocupacion/:id/pedido', element: <OrderPage /> },
+    {
+      // Tiempo real y aviso de pedidos listos sobre todas las pantallas del mesero
+      element: <MeseroLayout />,
+      children: [
+        { index: true, element: <FloorPage /> },
+        { path: 'ocupacion/:id', element: <OccupancyPage /> },
+        { path: 'ocupacion/:id/pedido', element: <OrderPage /> },
+      ],
+    },
   ],
   '/admin': [
     {

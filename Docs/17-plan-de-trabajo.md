@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | #16 Aviso "listo" al mesero: sonido + vibración + aviso fijo sobre todas sus pantallas hasta entregar (se guarda en el dispositivo; llega también al reconectar); `MeseroLayout` escucha el tiempo real una sola vez | H2 | Pablito (`mesero`) | Deniscito | Seguir el orden del plan |
 | 2026-11-23 | Imprimir la comanda desde el mesero (al enviar, reimprimir por ronda, cancelación) | H2 | Pablito (`mesero`) | Deniscito | Conectar la comanda (#14) con la toma de pedido |
 | 2026-11-23 | Publicar eventos de tiempo real desde `floor`, `orders` y `billing`; el mesero vuelve a leer al recibirlos (`mesero/api/realtime-sync.ts`) | H2 | Pablito | Deniscito | Conectar el tiempo real (#13) con la sala |
 | 2026-11-23 | Cancelar ítem enviado desde el mesero: motivo obligatorio (`GET /api/reasons`), nota opcional, 🔑 si falta `order.cancel_sent`; los motivos se descargan con el mapa | H2 | Pablito (`mesero`) | Deniscito | Seguir el orden del plan |

@@ -36,9 +36,9 @@ import {
   useOccupancyBills,
   useOccupancyOrders,
 } from '../api/order-api.js';
-import { useMeseroRealtime } from '../api/realtime-sync.js';
 import { CancelItemDialog } from '../components/CancelItemDialog.js';
 import { comandaTable, printCancellation, printOrderComanda } from '../components/comanda.js';
+import { readyAlerts } from '../hooks/ready-alerts.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
 import { OrderList } from '../components/OrderList.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
@@ -50,7 +50,6 @@ type Dialog = 'move' | 'merge' | 'transfer' | null;
 export function OccupancyPage() {
   const { id = '' } = useParams();
   const occupancy = useOccupancy(id);
-  useMeseroRealtime();
   const floor = useFloor();
   const regional = useRegional();
   const [dialog, setDialog] = useState<Dialog>(null);
@@ -204,7 +203,13 @@ export function OccupancyPage() {
                 deliver,
                 { orderId: o.id, label: `Entregar ronda ${o.roundNumber} de ${title}` },
                 `Entregar la ronda ${o.roundNumber} de ${title}`,
-                { onDone: done },
+                {
+                  onDone: (outcome) => {
+                    // Entregado: se quita el aviso de "listo" (también sin conexión)
+                    readyAlerts.remove(o.id);
+                    done(outcome);
+                  },
+                },
               );
             }}
             onPrint={(o) =>

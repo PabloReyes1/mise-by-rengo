@@ -11,7 +11,6 @@ import { useSession } from '../../../core/session/index.js';
 import { Button, Card, cx } from '../../../core/ui/index.js';
 import { useFloor, useOpenOccupancies } from '../api/floor-api.js';
 import { useCancelReasons, useMenu } from '../api/order-api.js';
-import { useMeseroRealtime } from '../api/realtime-sync.js';
 import { QUEUED_MESSAGE } from '../components/errors.js';
 import { OpenTableDialog } from '../components/OpenTableDialog.js';
 import { TableCard } from '../components/TableCard.js';
@@ -19,7 +18,6 @@ import { TakeawayDialog } from '../components/TakeawayDialog.js';
 
 export function FloorPage() {
   const floor = useFloor();
-  useMeseroRealtime();
   // El menú se descarga con conexión para poder tomar pedidos después sin internet (Docs/09 §8)
   useMenu();
   useCancelReasons();
