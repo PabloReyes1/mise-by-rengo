@@ -8,6 +8,7 @@ import { encodeEposPrint, eposEnvelope } from './epos-xml.js';
 import { encodeEscPos } from './escpos.js';
 import { layoutRows, renderText, wrap, type PrintDocument } from './layout.js';
 import { printDocument, RETRY_DELAYS_MS } from './print-service.js';
+import { PLAIN_TICKET, withTemplate } from './template.js';
 import { eposLan, eposUrl, parseEposResponse } from './transports/epos-lan.js';
 import { PrintError, type PrinterConfig, type Transport } from './types.js';
 
@@ -428,5 +429,62 @@ describe('comprobante de retiro o depósito (Docs/11 §4.5)', () => {
     expect(text).toContain('REIMPRESIÓN');
     expect(text).not.toContain('Autorizó');
     expect(text).not.toContain('Nota:');
+  });
+});
+
+describe('plantilla del ticket (H3 #21)', () => {
+  const doc: PrintDocument = {
+    title: 'Recibo',
+    lines: [
+      { kind: 'text', text: 'MI RESTAURANTE', align: 'center' },
+      { kind: 'pair', left: 'TOTAL', right: 'Q100.00' },
+      { kind: 'rule', char: '=' },
+    ],
+  };
+
+  it('pone el encabezado arriba y el pie antes de la última raya; sin plantilla no agrega nada', () => {
+    const out = withTemplate(
+      doc,
+      { header: 'NIT 123-4\n\n Zona 10 ', footer: 'Gracias', showLogo: false, paperWidth: 58 },
+      '/api/config/logo?v=1',
+    );
+    expect(out.lines.slice(0, 2)).toEqual([
+      { kind: 'text', text: 'NIT 123-4', align: 'center' },
+      { kind: 'text', text: 'Zona 10', align: 'center' },
+    ]);
+    expect(out.lines.at(-2)).toEqual({ kind: 'text', text: 'Gracias', align: 'center' });
+    expect(out.lines.at(-1)).toEqual({ kind: 'rule', char: '=' });
+    expect(out.logoUrl).toBeUndefined();
+    expect(withTemplate(doc, PLAIN_TICKET, null).lines).toEqual(doc.lines);
+  });
+
+  it('con showLogo el ticket lleva el logo arriba, en gris', () => {
+    const out = withTemplate(doc, { ...PLAIN_TICKET, showLogo: true }, '/api/config/logo?v=1');
+    const html = ticketHtml(out, 80);
+    expect(html).toContain('<img src="/api/config/logo?v=1"');
+    expect(html.indexOf('<img')).toBeLessThan(html.indexOf('MI RESTAURANTE'));
+    expect(withTemplate(doc, { ...PLAIN_TICKET, showLogo: true }, null).logoUrl).toBeUndefined();
+  });
+
+  it('la pre-cuenta ya no trae un pie fijo: lo pone la plantilla', () => {
+    const text = renderText(
+      precuentaDocument({
+        restaurant: 'X',
+        where: 'Mesa 1',
+        billName: 'Cuenta 1',
+        billPosition: '1 de 1',
+        waiterName: 'Ana',
+        guests: 2,
+        printedAt: 'hoy',
+        items: [],
+        subtotal: 'Q0.00',
+        discount: null,
+        total: 'Q0.00',
+        tip: null,
+        reprint: false,
+      }),
+      80,
+    );
+    expect(text).not.toContain('Gracias');
   });
 });

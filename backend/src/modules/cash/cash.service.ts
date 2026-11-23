@@ -70,14 +70,15 @@ async function toSummary(db: Db, s: ShiftRow, actor: Actor): Promise<ShiftSummar
   };
 }
 
-/** GET /api/cash-registers: cajas activas de la sucursal con su turno abierto. */
+/** GET /api/cash-registers: cajas activas de la sucursal (o todas) con su turno abierto. */
 export async function listCashRegisters(
   prisma: PrismaClient,
   branchId: string,
   actor: Actor,
+  includeInactive = false,
 ): Promise<CashRegister[]> {
   const registers = await prisma.cashRegister.findMany({
-    where: { branchId, active: true },
+    where: { branchId, ...(includeInactive ? {} : { active: true }) },
     orderBy: [{ isMain: 'desc' }, { name: 'asc' }],
     include: {
       shifts: {
@@ -104,6 +105,7 @@ export async function listCashRegisters(
         name: r.name,
         openingFloatMode: r.openingFloatMode as CashRegister['openingFloatMode'],
         openingFloatAmount: money(r.openingFloatAmount),
+        countByDenomination: r.countByDenomination as CashRegister['countByDenomination'],
         isMain: r.isMain,
         active: r.active,
         suggestedFloat: last?.countedCash ? money(last.countedCash) : null,

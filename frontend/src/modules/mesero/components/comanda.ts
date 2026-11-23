@@ -6,7 +6,7 @@ import { formatDateTime, type Regional } from '../../../core/format/index.js';
 import {
   cancellationDocument,
   comandaDocument,
-  printWithDialog,
+  type PrintDocument,
   type ComandaItem,
 } from '../../../core/print/index.js';
 import type { OrderDraft } from '../hooks/order-draft.js';
@@ -35,6 +35,8 @@ interface Context {
   occupancy: Occupancy;
   table: string | null;
   regional: Regional;
+  /** Imprime con la plantilla COMANDA (useTicketPrinter) */
+  print: (doc: PrintDocument) => Promise<void>;
 }
 
 function common(ctx: Context) {
@@ -49,7 +51,7 @@ function common(ctx: Context) {
 
 /** Imprime la comanda de una ronda que ya está en el servidor. */
 export function printOrderComanda(order: Order, ctx: Context): void {
-  void printWithDialog(
+  void ctx.print(
     comandaDocument({
       ...common(ctx),
       folio: order.folio ?? order.tempFolio ?? 'SIN FOLIO',
@@ -63,7 +65,7 @@ export function printOrderComanda(order: Order, ctx: Context): void {
 
 /** Sin conexión la ronda aún no tiene folio: se imprime desde el borrador que se envió. */
 export function printDraftComanda(draft: OrderDraft, roundNumber: number, ctx: Context): void {
-  void printWithDialog(
+  void ctx.print(
     comandaDocument({
       ...common(ctx),
       folio: 'SIN CONEXIÓN',
@@ -88,7 +90,7 @@ export function printCancellation(
   input: { order: Order | undefined; item: OrderItem; reason: string; cancelledBy: string },
   ctx: Context,
 ): void {
-  void printWithDialog(
+  void ctx.print(
     cancellationDocument({
       folio: input.order?.folio ?? input.order?.tempFolio ?? '—',
       table: ctx.table,

@@ -3,10 +3,17 @@
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router';
 import {
   AdminLayout,
+  CashRegistersPage,
+  CostingPage,
   DevicesPage,
+  IngredientsPage,
   MenuPage,
+  PaymentMethodsPage,
+  ReasonsPage,
   RestaurantPage,
+  RolesPage,
   TablesPage,
+  TicketsPage,
   UsersPage,
 } from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
@@ -51,8 +58,15 @@ const areaChildren: Record<string, RouteObject[]> = {
         { path: 'restaurante', element: <RestaurantPage /> },
         { path: 'menu', element: <MenuPage /> },
         { path: 'mesas', element: <TablesPage /> },
+        { path: 'insumos', element: <IngredientsPage /> },
+        { path: 'costeo', element: <CostingPage /> },
+        { path: 'cajas', element: <CashRegistersPage /> },
+        { path: 'tickets', element: <TicketsPage /> },
+        { path: 'metodos-pago', element: <PaymentMethodsPage /> },
+        { path: 'motivos', element: <ReasonsPage /> },
         { path: 'dispositivos', element: <DevicesPage /> },
         { path: 'usuarios', element: <UsersPage /> },
+        { path: 'roles', element: <RolesPage /> },
       ],
     },
   ],

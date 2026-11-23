@@ -1,8 +1,11 @@
-// Consultas y cambios de usuarios y roles (Docs/08 §2.3; H3 #21).
+// Consultas y cambios de usuarios, roles y permisos (Docs/08 §2.3; H3 #21).
 import type {
   AdminUser,
+  CreateRoleRequest,
   CreateUserRequest,
+  DiscountLimitsRequest,
   Role,
+  UpdateRoleRequest,
   UpdateUserRequest,
 } from '@mise/shared/contracts/auth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -44,4 +47,39 @@ export const useUpdateUser = () =>
 export const useSetUserPin = () =>
   useUserMutation(({ id, pin }: { id: string; pin: string | null }) =>
     apiFetch<AdminUser>(`/users/${id}/pin`, { method: 'POST', body: { pin } }),
+  );
+
+// Roles y permisos (Docs/03; H3 #21)
+
+export function usePermissions() {
+  return useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => apiFetch<{ code: string; description: string }[]>('/permissions'),
+    staleTime: Infinity,
+  });
+}
+
+/** Cualquier cambio de un rol vuelve a leer la lista de roles. */
+function useRoleMutation<TVars, TResult>(fn: (vars: TVars) => Promise<TResult>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ROLES_KEY }),
+  });
+}
+
+export const useCreateRole = () =>
+  useRoleMutation((body: CreateRoleRequest) => apiFetch<Role>('/roles', { method: 'POST', body }));
+
+export const useUpdateRole = () =>
+  useRoleMutation(({ id, body }: { id: string; body: UpdateRoleRequest }) =>
+    apiFetch<Role>(`/roles/${id}`, { method: 'PUT', body }),
+  );
+
+export const useDeleteRole = () =>
+  useRoleMutation((id: string) => apiFetch<void>(`/roles/${id}`, { method: 'DELETE' }));
+
+export const useSetDiscountLimits = () =>
+  useRoleMutation(({ id, body }: { id: string; body: DiscountLimitsRequest }) =>
+    apiFetch<Role>(`/roles/${id}/discount-limits`, { method: 'PUT', body }),
   );

@@ -43,8 +43,12 @@ async function loginAs(username: string, password: string): Promise<Headers> {
 }
 
 const roleId = (name: string) => roles.find((r) => r.name === name)!.id;
-const call = (method: 'GET' | 'POST' | 'PUT', url: string, headers: Headers, payload?: object) =>
-  app.inject({ method, url, headers, ...(payload ? { payload } : {}) });
+const call = (
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  url: string,
+  headers: Headers,
+  payload?: object,
+) => app.inject({ method, url, headers, ...(payload ? { payload } : {}) });
 
 const newWaiter = (over: object = {}) => ({
   id: newId(),
@@ -188,5 +192,54 @@ describe('usuarios (RF-030, H3 #21)', () => {
     expect(mesero.permissions).toContain('order.create');
     expect(typeof mesero.isSystem).toBe('boolean');
     expect(mesero.userCount).toBeGreaterThanOrEqual(0);
+  });
+  it('el gerente no crea administradores ni toca al administrador (SC-61)', async () => {
+    await createTestUser('gina', 'Gerente', { password: 'clave-gerente-1' });
+    const gina = await loginAs('gina', 'clave-gerente-1');
+    const boss = await call(
+      'POST',
+      '/api/users',
+      gina,
+      newWaiter({ roleIds: [roleId('Administrador')] }),
+    );
+    expect(boss.statusCode).toBe(403);
+    expect(boss.json().error.details.missing).toContain('config.roles');
+    expect((await call('POST', '/api/users', gina, newWaiter())).statusCode).toBe(201);
+    const dev = (await call('GET', '/api/users', admin))
+      .json()
+      .find((u: { username: string }) => u.username === 'dev');
+    const takeover = await call('PUT', `/api/users/${dev.id}`, gina, {
+      ...dev,
+      password: 'me-quedo-con-todo',
+    });
+    expect(takeover.statusCode).toBe(403);
+    expect((await call('POST', `/api/users/${dev.id}/pin`, gina, { pin: '1234' })).statusCode).toBe(
+      403,
+    );
+  });
+});
+
+describe('dispositivos (H3 #21, SC-65)', () => {
+  it('lista los de la sucursal, renombra y revoca; no el que se está usando', async () => {
+    const other = await pairDevice();
+    const list = (await call('GET', '/api/devices', admin)).json();
+    const me = list.find((d: { current: boolean }) => d.current);
+    expect(me).toBeDefined();
+    expect(list.find((d: { id: string }) => d.id === other.deviceId)).toMatchObject({
+      name: 'Tablet',
+      type: 'ADMIN',
+      revokedAt: null,
+      current: false,
+    });
+    const renamed = await call('PUT', `/api/devices/${other.deviceId}`, admin, {
+      name: 'Tablet barra',
+    });
+    expect(renamed.json().name).toBe('Tablet barra');
+    const self = await call('DELETE', `/api/devices/${me.id}`, admin);
+    expect(self.statusCode).toBe(400);
+    expect((await call('DELETE', `/api/devices/${other.deviceId}`, admin)).statusCode).toBe(204);
+    const after = (await call('GET', '/api/devices', admin)).json();
+    expect(after.at(-1)).toMatchObject({ id: other.deviceId });
+    expect(after.at(-1).revokedAt).not.toBeNull();
   });
 });

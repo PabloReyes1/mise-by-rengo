@@ -1,5 +1,5 @@
 {
-  "$comment": "Unidades de medida (Docs/07 §4.6). Las conversiones por insumo se configuran por cliente.",
+  "$comment": "Unidades de medida y sus conversiones (Docs/07 §4.6, RF-131). 1 from = factor × to. Las conversiones por insumo (ej. 1 u de huevo = 50 g) quedan pendientes (SC-67).",
   "units": [
     { "code": "kg", "name": "Kilogramo", "dimension": "MASS" },
     { "code": "g", "name": "Gramo", "dimension": "MASS" },
@@ -7,5 +7,10 @@
     { "code": "ml", "name": "Mililitro", "dimension": "VOLUME" },
     { "code": "u", "name": "Unidad", "dimension": "COUNT" },
     { "code": "oz", "name": "Onza", "dimension": "MASS" }
+  ],
+  "unitConversions": [
+    { "from": "kg", "to": "g", "factor": "1000" },
+    { "from": "l", "to": "ml", "factor": "1000" },
+    { "from": "oz", "to": "g", "factor": "28.349523" }
   ]
 }

@@ -1,19 +1,35 @@
-// Navegación de administración. Cada sección aparece solo si el usuario tiene su permiso.
+// Navegación de administración. Cada sección aparece solo si el usuario tiene su permiso y, si es
+// de un módulo de la licencia (ej. recetas), si el módulo está activo.
 import { NavLink, Outlet } from 'react-router';
+import { usePublicConfig } from '../../../core/config/index.js';
 import { hasPermission, useSession } from '../../../core/session/index.js';
 import { cx } from '../../../core/ui/index.js';
 
-const SECTIONS = [
+const SECTIONS: { to: string; label: string; permission: string | string[]; module?: string }[] = [
   { to: '/admin/restaurante', label: 'Restaurante', permission: 'config.restaurant' },
   { to: '/admin/menu', label: 'Menú', permission: 'config.menu' },
   { to: '/admin/mesas', label: 'Mesas', permission: 'config.tables' },
+  { to: '/admin/insumos', label: 'Insumos', permission: 'config.recipes', module: 'recipes' },
+  { to: '/admin/costeo', label: 'Costeo', permission: 'config.recipes', module: 'recipes' },
+  { to: '/admin/cajas', label: 'Cajas', permission: 'config.restaurant' },
+  { to: '/admin/tickets', label: 'Tickets', permission: 'config.restaurant' },
+  { to: '/admin/metodos-pago', label: 'Métodos de pago', permission: 'config.payments' },
+  // Los motivos de descuento también los administra quien tiene config.discounts
+  { to: '/admin/motivos', label: 'Motivos', permission: ['config.payments', 'config.discounts'] },
   { to: '/admin/dispositivos', label: 'Dispositivos', permission: 'config.devices' },
   { to: '/admin/usuarios', label: 'Usuarios', permission: 'config.users' },
+  // Quien solo fija topes de descuento (config.discounts, S-05) también entra a Roles
+  { to: '/admin/roles', label: 'Roles', permission: ['config.roles', 'config.discounts'] },
 ];
 
 export function AdminLayout() {
   const session = useSession();
-  const visible = SECTIONS.filter((s) => hasPermission(session, s.permission));
+  const modules = usePublicConfig().data?.modules ?? {};
+  const visible = SECTIONS.filter(
+    (s) =>
+      [s.permission].flat().some((p) => hasPermission(session, p)) &&
+      (!s.module || modules[s.module] !== false),
+  );
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <nav aria-label="Administración" className="-mx-4 overflow-x-auto px-4">

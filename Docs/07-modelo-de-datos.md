@@ -310,6 +310,8 @@ Implementado en H2: `backend/prisma/schema/orders.prisma` (migración `h2_orders
 
 Fórmulas: `costo = Σ cantidad_convertida × (1 + merma%) × costo_unitario`; `precio_sugerido = redondeo(costo / food_cost_pct)`; `margen_real = (precio − costo) / precio`.
 
+*Implementado en H3 #22 (migración `h3_recipes`, SC-67). `unit_conversions` se recorre en los dos sentidos y encadenada (oz→g→kg); la migración y el seed cargan kg→g, l→ml y oz→g. `recipes.computed_cost` se recalcula al guardar la receta y al cambiar el costo de un insumo. Quedan para después, como migraciones aditivas: `ingredient_unit_conversions`, `recipes.combo_option_id` y las sub-recetas (`recipe_lines.subrecipe_id` ya existe, sin uso, F2). `products.cost_target_override` no se usa: el objetivo por producto vive en `cost_targets` (scope `PRODUCT`).*
+
 ### 4.7 Auditoría, sincronización y sistema
 
 **`audit_log`** (solo `INSERT`)

@@ -116,6 +116,39 @@ export const paymentMethodSchema = z.object({
 });
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
+// GET /api/payment-methods?all=true (config.payments): también los inactivos, para administrarlos
+export const listPaymentMethodsQuerySchema = z.object({
+  all: z.enum(['true', 'false']).optional(),
+});
+export const paymentMethodAdminSchema = paymentMethodSchema.extend({
+  active: z.boolean(),
+  sort: z.number().int(),
+});
+export type PaymentMethodAdmin = z.infer<typeof paymentMethodAdminSchema>;
+
+const paymentMethodNameSchema = z.string().trim().min(1, 'Escribe el nombre').max(40);
+
+// POST /api/payment-methods (config.payments) — idempotente por id. Solo el efectivo da cambio (RF-027)
+export const createPaymentMethodRequestSchema = z.object({
+  id: idSchema,
+  name: paymentMethodNameSchema,
+  kind: z.enum(PAYMENT_KINDS),
+  givesChange: z.boolean().default(false),
+  requiresReference: z.boolean().default(false),
+  sort: z.number().int().min(0).max(999).optional(),
+});
+export type CreatePaymentMethodRequest = z.input<typeof createPaymentMethodRequestSchema>;
+
+// PUT /api/payment-methods/:id (config.payments). El tipo no cambia: los cobros viejos y el corte lo usan
+export const updatePaymentMethodRequestSchema = z.object({
+  name: paymentMethodNameSchema,
+  givesChange: z.boolean(),
+  requiresReference: z.boolean(),
+  active: z.boolean(),
+  sort: z.number().int().min(0).max(999),
+});
+export type UpdatePaymentMethodRequest = z.infer<typeof updatePaymentMethodRequestSchema>;
+
 // POST /api/bills/:id/pay (payment.register)
 export const payBillRequestSchema = z.object({
   /** Propina elegida (sugerida y editable, S-10); 0 si no hay */

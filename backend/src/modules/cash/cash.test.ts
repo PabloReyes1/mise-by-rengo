@@ -239,3 +239,81 @@ describe('corte de caja (Docs/05 paso 13)', () => {
     expect((await open(cashier)).statusCode).toBe(201);
   });
 });
+
+describe('administrar cajas (H3 #21, SC-64)', () => {
+  const fields = {
+    name: 'Caja barra',
+    openingFloatMode: 'FIJO',
+    openingFloatAmount: '300.00',
+    countByDenomination: 'OBLIGATORIO',
+    isMain: false,
+  };
+  const put = (id: string, body: object) =>
+    app.inject({ method: 'PUT', url: `/api/cash-registers/${id}`, headers: admin, payload: body });
+
+  it('crear una caja (idempotente); el cajero no administra ni ve las inactivas', async () => {
+    const id = newId();
+    const res = await post('/api/cash-registers', admin, { ...fields, id });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ ...fields, active: true, openShift: null });
+    expect((await post('/api/cash-registers', admin, { ...fields, id })).statusCode).toBe(200);
+    const dup = await post('/api/cash-registers', admin, {
+      ...fields,
+      id: newId(),
+      name: 'caja barra',
+    });
+    expect(dup.statusCode).toBe(400);
+    expect(
+      (await post('/api/cash-registers', cashier, { ...fields, id: newId(), name: 'X' })).json()
+        .error.code,
+    ).toBe('AUTHORIZATION_REQUIRED');
+    const all = await app.inject({
+      method: 'GET',
+      url: '/api/cash-registers?all=true',
+      headers: cashier,
+    });
+    expect(all.statusCode).toBe(403);
+  });
+
+  it('una sola principal: marcar otra le quita la marca; la principal no se desmarca ni se desactiva', async () => {
+    const barra = (await post('/api/cash-registers', admin, { ...fields, id: newId() })).json();
+    const main = await put(registerId, { ...fields, name: 'Caja 1', isMain: false, active: true });
+    expect(main.json().error.message).toMatch(/Siempre hay una caja principal/);
+    const moved = await put(barra.id, { ...fields, isMain: true, active: true });
+    expect(moved.json().isMain).toBe(true);
+    const list = (
+      await app.inject({ method: 'GET', url: '/api/cash-registers', headers: admin })
+    ).json();
+    expect(list.filter((r: { isMain: boolean }) => r.isMain)).toHaveLength(1);
+    const off = await put(barra.id, { ...fields, isMain: true, active: false });
+    expect(off.json().error.message).toMatch(/principal no se desactiva/);
+  });
+
+  it('no se desactiva con un turno abierto; desactivada sale de Caja pero no de la administración', async () => {
+    const barra = (await post('/api/cash-registers', admin, { ...fields, id: newId() })).json();
+    const shift = (
+      await post('/api/shifts', cashier, {
+        id: newId(),
+        cashRegisterId: barra.id,
+        openingFloat: '1.00',
+      })
+    ).json();
+    expect(shift.openingFloat).toBe('300.00');
+    const busy = await put(barra.id, { ...fields, active: false });
+    expect(busy.json().error.message).toMatch(/turno abierto/);
+    await post(`/api/shifts/${shift.id}/close`, admin, {
+      countedCash: '300.00',
+      counts: [{ denomination: '100.00', quantity: 3 }],
+    });
+    expect((await put(barra.id, { ...fields, active: false })).json().active).toBe(false);
+    const forCash = (
+      await app.inject({ method: 'GET', url: '/api/cash-registers', headers: cashier })
+    ).json();
+    expect(forCash.some((r: { id: string }) => r.id === barra.id)).toBe(false);
+    const all = (
+      await app.inject({ method: 'GET', url: '/api/cash-registers?all=true', headers: admin })
+    ).json();
+    expect(all.some((r: { id: string }) => r.id === barra.id)).toBe(true);
+    expect(await prisma.auditLog.count({ where: { action: 'cash.register.update' } })).toBe(1);
+  });
+});

@@ -5,10 +5,11 @@ import type {
   ModifierGroup,
   Product,
 } from '@mise/shared/contracts/catalog';
-import type { License, Settings } from '@mise/shared/contracts/config';
+import type { AdminDevice } from '@mise/shared/contracts/auth';
+import type { DocType, License, Settings, TicketTemplate } from '@mise/shared/contracts/config';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
-import { PUBLIC_CONFIG_KEY } from '../../../core/config/index.js';
+import { PUBLIC_CONFIG_KEY, ticketTemplatesKey } from '../../../core/config/index.js';
 
 export const MENU_KEY = ['menu'] as const;
 const SETTINGS_KEY = ['config', 'settings'] as const;
@@ -149,3 +150,40 @@ export function useCreatePairingCode() {
 
 /** Se movió a core/format (también lo usa caja). */
 export { toMoney } from '../../../core/format/index.js';
+
+// Dispositivos de la sucursal (H3 #21)
+const DEVICES_KEY = ['devices'] as const;
+
+export function useDevices() {
+  return useQuery({ queryKey: DEVICES_KEY, queryFn: () => apiFetch<AdminDevice[]>('/devices') });
+}
+
+export function useRenameDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      apiFetch<AdminDevice>(`/devices/${id}`, { method: 'PUT', body: { name } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: DEVICES_KEY }),
+  });
+}
+
+export function useRevokeDevice() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiFetch<void>(`/devices/${id}`, { method: 'DELETE' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: DEVICES_KEY }),
+  });
+}
+
+// Plantillas de ticket de la sucursal del dispositivo (H3 #21). Se leen con useTicketTemplates
+export function useSaveTicketTemplate(branchId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ docType, body }: { docType: DocType; body: Omit<TicketTemplate, 'docType'> }) =>
+      apiFetch<TicketTemplate>(`/branches/${branchId}/ticket-templates/${docType}`, {
+        method: 'PUT',
+        body,
+      }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ticketTemplatesKey(branchId) }),
+  });
+}

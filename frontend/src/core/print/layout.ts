@@ -33,6 +33,8 @@ export interface PrintDocument {
   beep?: boolean;
   /** Pulso al cajón de dinero (Docs/11 §5) */
   openDrawer?: boolean;
+  /** Logo arriba del ticket (plantilla con showLogo); solo en la impresión con el diálogo */
+  logoUrl?: string;
 }
 
 /** Fila lista para imprimir: el texto ya cabe en el ancho de su tamaño de letra. */

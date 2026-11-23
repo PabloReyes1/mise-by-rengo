@@ -1,7 +1,13 @@
 // Controles de formulario (Docs/18 §4.1): borde secondary (cumple 3:1 de componentes), texto primary,
 // errores con ícono error + texto primary (el color nunca es la única señal).
 import { CircleAlert } from 'lucide-react';
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import {
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from 'react';
 import { cx } from './cx.js';
 
 const CONTROL =
@@ -59,6 +65,30 @@ export function TextInput({ label, hint, error, className, ...rest }: TextInputP
           aria-describedby={describedBy}
           aria-invalid={invalid || undefined}
           className={CONTROL}
+          {...rest}
+        />
+      )}
+    </Field>
+  );
+}
+
+export interface TextAreaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
+  label: string;
+  hint?: string | undefined;
+  error?: string | undefined;
+}
+
+/** Texto de varias líneas (encabezado y pie del ticket, notas largas). */
+export function TextArea({ label, hint, error, className, rows = 3, ...rest }: TextAreaProps) {
+  return (
+    <Field label={label} hint={hint} error={error} className={className}>
+      {({ id, describedBy, invalid }) => (
+        <textarea
+          id={id}
+          rows={rows}
+          aria-describedby={describedBy}
+          aria-invalid={invalid || undefined}
+          className={cx(CONTROL, 'py-2')}
           {...rest}
         />
       )}

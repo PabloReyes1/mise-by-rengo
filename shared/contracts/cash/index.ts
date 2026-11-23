@@ -5,6 +5,8 @@ import { authorizationSchema } from '../auth/index.js';
 import { idSchema, isoDateTimeSchema, moneySchema } from '../common/index.js';
 
 export const FLOAT_MODES = ['FIJO', 'VARIABLE'] as const;
+/** Conteo por denominación en el corte (PA-025) */
+export const COUNT_MODES = ['OPCIONAL', 'OBLIGATORIO'] as const;
 export const SHIFT_STATUSES = ['ABIERTO', 'EN_CORTE', 'CERRADO_PROVISIONAL', 'CERRADO'] as const;
 export const MOVEMENT_TYPES = ['DEPOSITO', 'RETIRO', 'REVERSO_REAPERTURA'] as const;
 
@@ -34,6 +36,7 @@ export const cashRegisterSchema = z.object({
   /** FIJO: el fondo lo pone el sistema; VARIABLE: lo escribe el cajero (PA-024) */
   openingFloatMode: z.enum(FLOAT_MODES),
   openingFloatAmount: moneySchema,
+  countByDenomination: z.enum(COUNT_MODES),
   /** Caja principal: recibe el efectivo que cobran los meseros (PA-052) */
   isMain: z.boolean(),
   active: z.boolean(),
@@ -43,8 +46,28 @@ export const cashRegisterSchema = z.object({
 });
 export type CashRegister = z.infer<typeof cashRegisterSchema>;
 
-// GET /api/cash-registers (autenticado)
+// GET /api/cash-registers (autenticado): las activas de la sucursal. Con ?all=true
+// (config.restaurant, H3 #21) también las inactivas, para administrarlas
 export const cashRegistersResponseSchema = z.array(cashRegisterSchema);
+export const listCashRegistersQuerySchema = z.object({ all: z.enum(['true', 'false']).optional() });
+
+const registerFieldsSchema = z.object({
+  name: z.string().trim().min(1, 'Escribe el nombre').max(40),
+  openingFloatMode: z.enum(FLOAT_MODES),
+  /** Fondo de cada turno si es FIJO (en VARIABLE se ignora) */
+  openingFloatAmount: moneySchema,
+  countByDenomination: z.enum(COUNT_MODES),
+  /** Marcarla principal le quita la marca a la otra de la sucursal (PA-052) */
+  isMain: z.boolean(),
+});
+
+// POST /api/cash-registers (config.restaurant) — idempotente por id, en la sucursal del dispositivo
+export const createCashRegisterRequestSchema = registerFieldsSchema.extend({ id: idSchema });
+export type CreateCashRegisterRequest = z.infer<typeof createCashRegisterRequestSchema>;
+
+// PUT /api/cash-registers/:id (config.restaurant)
+export const updateCashRegisterRequestSchema = registerFieldsSchema.extend({ active: z.boolean() });
+export type UpdateCashRegisterRequest = z.infer<typeof updateCashRegisterRequestSchema>;
 
 // POST /api/shifts (cash.open_shift) — solo en línea (PA-042); idempotente por id
 export const openShiftRequestSchema = z.object({

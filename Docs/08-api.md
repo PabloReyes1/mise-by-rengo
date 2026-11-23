@@ -30,7 +30,7 @@
 | 402 | `LICENSE_SUSPENDED`, `LICENSE_READ_ONLY` |
 | 403 | `FORBIDDEN`, `AUTHORIZATION_REQUIRED` (pide 🔑), `MODULE_DISABLED`, `BRANCH_FORBIDDEN`, `DEVICE_REVOKED` |
 | 404 | `NOT_FOUND` |
-| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN` (no puede quedar sin nadie activo que administre usuarios) |
+| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN`, `ROLE_NAME_TAKEN`, `ROLE_IN_USE`, `INGREDIENT_NAME_TAKEN` (no puede quedar sin nadie activo que administre usuarios) |
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
@@ -73,15 +73,22 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/PUT | `/api/config/settings` | `config.restaurant` |
 | POST | `/api/config/logo` (multipart) | `config.restaurant` |
 | GET/POST/PUT | `/api/branches`, `/api/branches/:id` | `config.restaurant` |
-| GET/PUT | `/api/branches/:id/ticket-templates/:docType` | `config.restaurant` |
+| GET | `/api/branches/:id/ticket-templates` | Las 5 plantillas de la sucursal `[{ docType, header, footer, showLogo, paperWidth }]`: cualquier sesión, porque el mesero y la caja imprimen con ellas (H3 #21, SC-66) | Sesión |
+| PUT | `/api/branches/:id/ticket-templates/:docType` | Editar una plantilla | `config.restaurant` |
 | GET/POST/PUT | `/api/service-periods` | `config.restaurant` |
 | GET | `/api/reasons?type=` | Motivos activos `[{ id, type, name, sort }]` para elegir al cancelar un ítem, reabrir, etc. (2026-11-23) | Sesión |
-| POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (admin H3) | `config.payments` |
-| GET/POST/PUT | `/api/payment-methods` | `config.payments` |
+| GET | `/api/reasons?all=true[&type=]` | Todos los motivos, también los inactivos (`active`), para administrarlos (H3 #21) | `config.payments`; con solo `config.discounts`, solo los de `DISCOUNT` |
+| POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (SC-63) | `config.payments`; los de `DISCOUNT` también `config.discounts` |
+| GET | `/api/payment-methods` | Métodos activos para cobrar (cualquier sesión); con `?all=true`, todos con `active` y `sort` | Sesión; `?all=true` pide `config.payments` |
+| POST/PUT | `/api/payment-methods[/:id]` | Crear y editar métodos de pago (SC-63) | `config.payments` |
 | GET/POST/PUT | `/api/users`, `/api/users/:id`, `POST /api/users/:id/pin` | `config.users` |
-| GET/POST/PUT | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users`, para asignar roles) |
-| GET | `/api/permissions` (catálogo) | `config.roles` |
-| GET/POST/PUT | `/api/devices`, `/api/printers`, `/api/devices/:id/printer-routes` | `config.devices` |
+| GET/POST/PUT/DELETE | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users` o `config.discounts`) |
+| PUT | `/api/roles/:id/discount-limits` | `config.discounts` (S-05) |
+| GET | `/api/permissions` (catálogo) | `config.roles`, `config.users` o `config.discounts` |
+| GET | `/api/devices` | Dispositivos de la sucursal del que pregunta `[{ id, name, type, platform, appVersion, lastSeenAt, createdAt, revokedAt, current }]` (H3 #21) | `config.devices` |
+| PUT | `/api/devices/:id` | Cambiar el nombre `{ name }` (auditoría `device.rename`) | `config.devices` |
+| DELETE | `/api/devices/:id` | Revocar: cierra sus sesiones y ya no entra; no se revoca el dispositivo que hace la petición (400, SC-65) | `config.devices` |
+| ~~GET/POST/PUT~~ | ~~`/api/printers`, `/api/devices/:id/printer-routes`~~ | **No se hacen:** con ADR-003 actualizado (2026-11-23) se imprime con el diálogo del sistema y no se configuran impresoras en Mise | — |
 | GET | `/api/license` | `config.restaurant` |
 | GET | `/api/config/logo?v=<settingsVersion>` | Público; WebP con caché de un año (SC-19) |
 | GET | `/api/bootstrap?since=<settingsVersion>` | Paquete para offline: configuración, menú (sin imágenes), mesas, roles, métodos, motivos, plantillas | Autenticado |
@@ -93,6 +100,20 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 - `POST /api/users/:id/pin` `{ pin }` pone o cambia el PIN; `{ pin: null }` lo quita.
 - `GET /api/roles` → `[{ id, name, description, isSystem, permissions, maxDiscountPct, maxDiscountAmount, userCount }]`.
 - Todo cambio queda en auditoría (`user.create`, `user.update`, `user.pin_set`, `user.pin_removed`) sin secretos.
+- Nadie da ni toca permisos que no tiene: asignar un rol con permisos que tú no tienes, o editar o poner PIN a un usuario con permisos que tú no tienes → 403 `FORBIDDEN` con `details.missing` (SC-61). Con 🔑 cuentan también los permisos de quien autoriza.
+
+**Métodos de pago y motivos (H3 #21, 2026-11-23, SC-63):**
+- `POST /api/payment-methods` `{ id, name, kind, givesChange?, requiresReference?, sort? }` → 201 (200 si el `id` ya existía). `PUT /api/payment-methods/:id` `{ name, givesChange, requiresReference, active, sort }`: el `kind` no cambia. Solo `CASH` puede dar cambio (en otro tipo `givesChange` queda en `false`). Nombre repetido → 400. No se desactiva el último método activo (400).
+- `POST /api/reasons` `{ id, type, name, sort? }` → 201 (al final de su tipo si no trae `sort`). `PUT /api/reasons/:id` `{ name, active, sort }`: el `type` no cambia; nombre repetido dentro del tipo → 400; no se desactiva el último motivo activo de un tipo (400).
+- Auditoría: `config.payment_method.create/update`, `config.reason.create/update` (solo los campos que cambiaron).
+
+**Roles y permisos (H3 #21, 2026-11-23, SC-62):**
+- `GET /api/permissions` → `[{ code, description }]`: el catálogo del producto (Docs/03 §3), el mismo de `templates/seed/permissions.json` (en código: `PERMISSIONS` de `shared/contracts/auth`).
+- `POST /api/roles` `{ id, name, description?, permissions }` → 201 (200 si el `id` ya existía). `PUT /api/roles/:id` `{ name, description?, permissions }` reemplaza los permisos. Nombre repetido (sin importar mayúsculas) → 409 `ROLE_NAME_TAKEN`; código fuera del catálogo → 400. El rol de sistema (Administrador) no se renombra. Si nadie activo quedaría con `config.users` o `config.roles` → 409 `LAST_ADMIN` (`details.permission`).
+- `DELETE /api/roles/:id` → 204. No se borra el rol de sistema (400) ni uno que tenga usuarios (409 `ROLE_IN_USE`).
+- `PUT /api/roles/:id/discount-limits` `{ maxDiscountPct, maxDiscountAmount }` (`config.discounts`, S-05): porcentaje de 0 a 100; `null` = sin tope en esa medida.
+- Los permisos van en el token de acceso: un cambio de rol se aplica cuando la sesión se renueva (≤ 15 min) o al volver a entrar.
+- Auditoría: `role.create`, `role.update`, `role.delete`, `role.discount_limits`.
 
 ### 2.4 Menú
 | Método | Ruta | Descripción | Permiso |
@@ -156,7 +177,9 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 ### 2.8 Caja
 | Método | Ruta | Descripción | Permiso |
 |---|---|---|---|
-| GET | `/api/cash-registers` | Cajas de la sucursal y turno abierto | Autenticado |
+| GET | `/api/cash-registers` | Cajas activas de la sucursal y turno abierto (con `countByDenomination`). Con `?all=true`, también las inactivas | Autenticado; `?all=true` pide `config.restaurant` |
+| POST | `/api/cash-registers` | Crear caja en la sucursal del dispositivo `{ id, name, openingFloatMode, openingFloatAmount, countByDenomination, isMain }` → 201 (200 si el `id` ya existía). La primera de la sucursal es la principal (SC-64) | `config.restaurant` |
+| PUT | `/api/cash-registers/:id` | Editar `{ name, openingFloatMode, openingFloatAmount, countByDenomination, isMain, active }`. Marcar `isMain` se la quita a la otra; la principal no se desmarca ni se desactiva; no se desactiva con turno abierto (400). Auditoría `cash.register.create/update` | `config.restaurant` |
 | POST | `/api/shifts` | `{ id, cashRegisterId, openingFloat, counts? }` — **solo en línea** (PA-042); no se acepta por `sync/push` | `cash.open_shift` |
 | GET | `/api/shifts/:id` | Resumen (el esperado solo con `cash.view_expected`) | `cash.open_shift` |
 | POST | `/api/shifts/:id/movements` | `{ id, type, amount, reasonId, note, authorization? }` → el turno con sus movimientos; cada uno trae `userName` y `authorizedByName` (quien dio la 🔑) para el comprobante (doc 11 §4.5) | `cash.movement` |
@@ -172,6 +195,17 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/PUT | `/api/recipes/:id`, `/api/products/:id/recipe`, `/api/modifiers/:id/recipe` | `config.recipes` |
 | GET/PUT | `/api/cost-targets` | `config.recipes` |
 | GET | `/api/costing/products?belowTarget=true` | Costo, precio sugerido, precio asignado, margen real, alerta | `config.recipes` |
+
+**Implementado (H3 #22, 2026-11-23, SC-67).** Todas piden `config.recipes` y que la licencia no tenga `modules.recipes = false` (si no, 403 `MODULE_DISABLED`). Costos como string con hasta 4 decimales (`"0.0450"`); porcentajes como número (30 = 30 %).
+- `GET /api/units` → `[{ id, code, name, dimension }]`. Las unidades y conversiones son datos del producto (`templates/seed/units.json`): no hay POST ni PUT.
+- `GET /api/ingredients[?all=true]` → insumos activos (con `all`, también los inactivos), con `unitCost` (por unidad base) y `recipeCount`. `POST /api/ingredients` `{ id, name, category, baseUnitId, unitCost }` → 201 (200 si el `id` ya existía); nombre repetido sin importar mayúsculas → 409 `INGREDIENT_NAME_TAKEN`. `PUT /api/ingredients/:id` `{ name, category, baseUnitId, active }`: el costo no se cambia aquí; la unidad base no se cambia si el insumo ya está en una receta (400).
+- `POST /api/ingredients/:id/cost` `{ unitCost }` → `{ ingredient, affected }`: guarda el costo en el historial, recalcula las recetas que lo usan y devuelve los productos cuyo costo cambió, con su alerta (RF-138). `GET /api/ingredients/:id/costs` → historial `[{ unitCost, validFrom, setByName }]` (los 50 últimos).
+- `GET/PUT /api/products/:id/recipe` y `/api/modifiers/:id/recipe`: `PUT { lines: [{ ingredientId, quantity, unitId, wastePct }] }` reemplaza las líneas y responde la receta con el costo de cada línea y el total; sin líneas la borra (responde `null`). La unidad de la línea debe convertirse a la unidad base del insumo (misma dimensión) o 400; un insumo no se repite. `GET /api/recipes/:id` no se hizo: se llega por el producto o el modificador.
+- `GET /api/cost-targets` → `{ client, categories: [{ categoryId, ... }], products: [{ productId, ... }] }` con `{ targetFoodCostPct, roundingStep ("0.50" | "1.00" | "5.00"), roundingMode (UP | NEAREST) }`; `client: null` = se usa el de por defecto (30 %, Q 1.00 hacia arriba). `PUT /api/cost-targets` `{ scope: CLIENT | CATEGORY | PRODUCT, categoryId?, productId?, target }`: `target: null` quita el de una categoría o producto.
+- `GET /api/costing/products[?belowTarget=true]` → por producto activo o agotado: precio, `hasRecipe`, `cost`, `target` y de dónde sale (`targetScope`: PRODUCT > CATEGORY > CLIENT > DEFAULT), `suggestedPrice`, `foodCostPct`, `marginPct` y `belowTarget` (el costo pasa el % objetivo). El combo suma su propia receta y la de sus opciones por defecto.
+- `GET /api/costing/modifiers` → `[{ modifierId, cost }]`, solo los modificadores que tienen receta (para la lista de Configuración › Costeo).
+- Venta (RF-139): al enviar un pedido, cada ítem guarda en `unit_cost_snapshot` el costo de la receta del producto + la de sus modificadores + la de los componentes del combo y sus modificadores (`null` si nada tiene receta).
+- Auditoría: `config.ingredient.create/update/cost`, `config.recipe.update`, `config.cost_target.update`.
 
 ### 2.10 Dashboard y reportes
 | Método | Ruta | Descripción | Permiso |

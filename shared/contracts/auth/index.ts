@@ -138,12 +138,12 @@ export type UpdateUserRequest = z.infer<typeof updateUserRequestSchema>;
 // POST /api/users/:id/pin (config.users) — null quita el PIN (ya no entra por PIN ni autoriza)
 export const setPinRequestSchema = z.object({ pin: pinSchema.nullable() });
 
-// GET /api/roles (config.users o config.roles)
+// GET /api/roles (config.users, config.roles o config.discounts)
 export const roleSchema = z.object({
   id: idSchema,
   name: z.string(),
   description: z.string(),
-  /** Roles de la plantilla: no se borran ni se renombran */
+  /** Rol de sistema (Administrador): no se borra ni se renombra */
   isSystem: z.boolean(),
   permissions: z.array(z.string()),
   maxDiscountPct: moneySchema.nullable(),
@@ -152,3 +152,63 @@ export const roleSchema = z.object({
 });
 export type Role = z.infer<typeof roleSchema>;
 export const rolesResponseSchema = z.array(roleSchema);
+
+export { PERMISSIONS, PERMISSION_CODES, type PermissionCode } from './permissions.js';
+
+// GET /api/permissions (config.roles, config.users o config.discounts): catálogo del producto
+export const permissionsResponseSchema = z.array(
+  z.object({ code: z.string(), description: z.string() }),
+);
+
+const roleNameSchema = z.string().trim().min(1, 'Escribe el nombre del rol').max(60);
+const permissionListSchema = z
+  .array(z.string().min(1).max(60))
+  .min(1, 'Elige al menos un permiso')
+  .max(100);
+
+// POST /api/roles (config.roles) — idempotente por id
+export const createRoleRequestSchema = z.object({
+  id: idSchema,
+  name: roleNameSchema,
+  description: z.string().trim().max(200).default(''),
+  permissions: permissionListSchema,
+});
+export type CreateRoleRequest = z.input<typeof createRoleRequestSchema>;
+
+// PUT /api/roles/:id (config.roles). El nombre de un rol de sistema no cambia
+export const updateRoleRequestSchema = z.object({
+  name: roleNameSchema,
+  description: z.string().trim().max(200).default(''),
+  permissions: permissionListSchema,
+});
+export type UpdateRoleRequest = z.input<typeof updateRoleRequestSchema>;
+
+/** Porcentaje de 0.00 a 100.00 */
+const percentSchema = moneySchema.refine((v) => Number(v) <= 100, 'El porcentaje va de 0 a 100');
+
+// PUT /api/roles/:id/discount-limits (config.discounts, S-05). null = sin tope en esa medida
+export const discountLimitsRequestSchema = z.object({
+  maxDiscountPct: percentSchema.nullable(),
+  maxDiscountAmount: moneySchema.nullable(),
+});
+export type DiscountLimitsRequest = z.infer<typeof discountLimitsRequestSchema>;
+
+// GET /api/devices (config.devices, H3 #21): dispositivos de la sucursal del que pregunta
+export const adminDeviceSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  type: deviceTypeSchema,
+  /** Navegador y sistema con que se emparejó */
+  platform: z.string(),
+  appVersion: z.string().nullable(),
+  lastSeenAt: isoDateTimeSchema.nullable(),
+  createdAt: isoDateTimeSchema,
+  revokedAt: isoDateTimeSchema.nullable(),
+  /** Es el dispositivo desde el que se pregunta */
+  current: z.boolean(),
+});
+export type AdminDevice = z.infer<typeof adminDeviceSchema>;
+export const devicesResponseSchema = z.array(adminDeviceSchema);
+
+// PUT /api/devices/:id (config.devices): cambiar el nombre
+export const renameDeviceRequestSchema = z.object({ name: z.string().trim().min(1).max(60) });

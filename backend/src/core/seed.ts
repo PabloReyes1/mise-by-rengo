@@ -1,6 +1,6 @@
 // Datos iniciales de un cliente nuevo (Docs/13 §2 pasos 6 y 7, RF-254).
-// Carga templates/seed + la plantilla elegida. Las tablas de otros módulos (métodos de pago,
-// unidades) se agregan aquí cuando existan, cada una por su dueño. Las zonas y mesas de ejemplo
+// Carga templates/seed + la plantilla elegida. Las tablas de otros módulos se agregan aquí
+// cuando existan, cada una por su dueño. Las zonas y mesas de ejemplo
 // (tablas del módulo floor) solo se cargan con withTables (S-45).
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { newDbId } from './ids.js';
@@ -77,6 +77,21 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
     for (const r of t.cashRegisters) {
       await tx.cashRegister.create({ data: { id: newDbId(), branchId, ...r } });
     }
+
+    // Unidades y conversiones (RF-131). skipDuplicates: la migración h3_recipes ya las pudo cargar
+    await tx.unit.createMany({
+      data: t.seed.units.map((u) => ({ id: newDbId(), ...u })),
+      skipDuplicates: true,
+    });
+    const units = new Map((await tx.unit.findMany()).map((u) => [u.code, u.id]));
+    await tx.unitConversion.createMany({
+      data: t.seed.unitConversions.map((c) => ({
+        fromUnitId: units.get(c.from)!,
+        toUnitId: units.get(c.to)!,
+        factor: c.factor,
+      })),
+      skipDuplicates: true,
+    });
 
     await tx.orderType.createMany({
       data: t.seed.orderTypes.map((o) => ({ id: newDbId(), ...o })),

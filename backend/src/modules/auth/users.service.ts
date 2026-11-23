@@ -1,27 +1,26 @@
 // Administración de usuarios (Docs/08 §2.3, RF-030, RNF-001; H3 #21). Dueño: Deniscito;
 // reasignado a Pablito (doc 17 §3.1). Contraseña y PIN con argon2id; nunca salen de aquí.
-import type {
-  AdminUser,
-  CreateUserRequest,
-  Role,
-  UpdateUserRequest,
-} from '@mise/shared/contracts/auth';
+import type { AdminUser, CreateUserRequest, UpdateUserRequest } from '@mise/shared/contracts/auth';
 import { AppError } from '../../core/errors.js';
 import { toApiId, toDbId } from '../../core/ids.js';
 import { hashSecret } from '../../core/secrets.js';
 import type { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { recordAudit } from '../audit/index.js';
 
-type Tx = Prisma.TransactionClient;
+export type Tx = Prisma.TransactionClient;
 
 export interface AdminActor {
   userId: string;
   deviceId: string;
   ip: string;
+  /** Permisos de quien hace el cambio (los del token) */
+  permissions: string[];
+  /** Quien autorizó con 🔑, si hizo falta: sus permisos también cuentan */
+  authorizedBy?: string | null | undefined;
 }
 
-/** Permiso que mantiene viva la administración: siempre debe quedar alguien activo con él */
-const ADMIN_PERMISSION = 'config.users';
+/** Permisos que mantienen viva la administración: siempre debe quedar alguien activo con cada uno */
+const ADMIN_PERMISSIONS = ['config.users', 'config.roles'] as const;
 
 const userInclude = { roles: true, branches: true } as const;
 type UserRow = Prisma.UserGetPayload<{ include: typeof userInclude }>;
@@ -41,8 +40,6 @@ function toAdminUser(u: UserRow): AdminUser {
   };
 }
 
-const money = (d: Prisma.Decimal | null) => (d === null ? null : d.toFixed(2));
-
 export async function listUsers(prisma: PrismaClient): Promise<AdminUser[]> {
   const rows = await prisma.user.findMany({
     include: userInclude,
@@ -51,21 +48,40 @@ export async function listUsers(prisma: PrismaClient): Promise<AdminUser[]> {
   return rows.map(toAdminUser);
 }
 
-export async function listRoles(prisma: PrismaClient): Promise<Role[]> {
-  const rows = await prisma.role.findMany({
-    include: { permissions: true, _count: { select: { users: true } } },
-    orderBy: { name: 'asc' },
+/** Permisos de los roles dados (o de los roles que tiene un usuario). */
+async function permissionsOf(tx: Tx, where: { roleIds?: string[]; userId?: string }) {
+  const rows = await tx.rolePermission.findMany({
+    where: where.userId
+      ? { role: { users: { some: { userId: where.userId } } } }
+      : { roleId: { in: (where.roleIds ?? []).map(toDbId) } },
+    select: { permissionCode: true },
   });
-  return rows.map((r) => ({
-    id: toApiId(r.id),
-    name: r.name,
-    description: r.description,
-    isSystem: r.isSystem,
-    permissions: r.permissions.map((p) => p.permissionCode).sort(),
-    maxDiscountPct: money(r.maxDiscountPct),
-    maxDiscountAmount: money(r.maxDiscountAmount),
-    userCount: r._count.users,
-  }));
+  return new Set(rows.map((r) => r.permissionCode));
+}
+
+/**
+ * Nadie da ni toca permisos que no tiene (SC-61): el gerente con config.users no puede crear un
+ * administrador ni cambiarle la contraseña al administrador. Con 🔑 cuentan los permisos de quien
+ * autorizó.
+ */
+export async function assertWithinActor(
+  tx: Tx,
+  actor: AdminActor,
+  target: { roleIds?: string[]; userId?: string; codes?: string[] },
+) {
+  const own = new Set(actor.permissions);
+  if (actor.authorizedBy)
+    for (const p of await permissionsOf(tx, { userId: toDbId(actor.authorizedBy) })) own.add(p);
+  const wanted = target.codes ?? [...(await permissionsOf(tx, target))];
+  const missing = [...new Set(wanted)].filter((p) => !own.has(p));
+  if (missing.length > 0)
+    throw new AppError(
+      'FORBIDDEN',
+      target.userId
+        ? 'Ese usuario tiene permisos que tú no tienes: solo lo puede cambiar alguien con esos permisos'
+        : 'No puedes dar permisos que tú no tienes',
+      { missing: missing.sort() },
+    );
 }
 
 /** Los roles y sucursales que se asignan tienen que existir. */
@@ -77,19 +93,27 @@ async function assertRefs(tx: Tx, roleIds: string[], branchIds: string[]) {
     throw new AppError('VALIDATION_ERROR', 'Sucursal inválida');
 }
 
-/** Siempre tiene que quedar al menos un usuario activo que pueda administrar usuarios. */
-async function assertAdminRemains(tx: Tx) {
-  const admins = await tx.user.count({
-    where: {
-      active: true,
-      roles: { some: { role: { permissions: { some: { permissionCode: ADMIN_PERMISSION } } } } },
-    },
-  });
-  if (admins === 0)
-    throw new AppError(
-      'LAST_ADMIN',
-      'Tiene que quedar al menos un usuario activo que pueda administrar usuarios',
-    );
+/**
+ * Siempre tiene que quedar al menos un usuario activo que pueda administrar usuarios y otro (o el
+ * mismo) que pueda administrar roles (Docs/03 §2). Se revisa después de cada cambio de usuario o rol.
+ */
+export async function assertAdminRemains(tx: Tx) {
+  for (const permissionCode of ADMIN_PERMISSIONS) {
+    const admins = await tx.user.count({
+      where: {
+        active: true,
+        roles: { some: { role: { permissions: { some: { permissionCode } } } } },
+      },
+    });
+    if (admins === 0)
+      throw new AppError(
+        'LAST_ADMIN',
+        permissionCode === 'config.users'
+          ? 'Tiene que quedar al menos un usuario activo que pueda administrar usuarios'
+          : 'Tiene que quedar al menos un usuario activo que pueda administrar roles',
+        { permission: permissionCode },
+      );
+  }
 }
 
 async function assertUsernameFree(tx: Tx, username: string, exceptId?: string) {
@@ -111,6 +135,7 @@ export async function createUser(
   const row = await prisma.$transaction(async (tx) => {
     await assertUsernameFree(tx, input.username);
     await assertRefs(tx, input.roleIds, input.branchIds);
+    await assertWithinActor(tx, actor, { roleIds: input.roleIds });
     const created = await tx.user.create({
       data: {
         id,
@@ -159,6 +184,8 @@ export async function updateUser(
     const before = await tx.user.findUnique({ where: { id }, include: userInclude });
     if (!before) throw new AppError('NOT_FOUND', 'Usuario no encontrado');
     await assertRefs(tx, input.roleIds, input.branchIds);
+    await assertWithinActor(tx, actor, { userId: id });
+    await assertWithinActor(tx, actor, { roleIds: input.roleIds });
     await tx.userRole.deleteMany({ where: { userId: id } });
     await tx.userBranch.deleteMany({ where: { userId: id } });
     const after = await tx.user.update({
@@ -224,6 +251,7 @@ export async function setUserPin(
   return prisma.$transaction(async (tx) => {
     const exists = await tx.user.count({ where: { id } });
     if (!exists) throw new AppError('NOT_FOUND', 'Usuario no encontrado');
+    await assertWithinActor(tx, actor, { userId: id });
     const row = await tx.user.update({
       where: { id },
       data: { pinHash, pinSetAt: pinHash ? new Date() : null },

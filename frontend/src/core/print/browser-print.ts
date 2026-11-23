@@ -24,12 +24,15 @@ export function ticketHtml(doc: PrintDocument, width: PaperWidth): string {
       return `<div style="${style}">${escapeHtml(row.text) || '&nbsp;'}</div>`;
     })
     .join('');
+  const logo = doc.logoUrl
+    ? `<div style="text-align:center;white-space:normal"><img src="${escapeHtml(doc.logoUrl)}" alt="" style="max-width:60%;max-height:25mm;filter:grayscale(1)"></div>`
+    : '';
   return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>${escapeHtml(doc.title)}</title>
 <style>
 @page { size: ${width}mm auto; margin: 0; }
 html, body { margin: 0; padding: 0; background: #fff; color: #000; }
 body { width: ${width === 80 ? 72 : 48}mm; padding: 2mm; font: 12px/1.25 ui-monospace, 'Courier New', monospace; white-space: pre; }
-</style></head><body>${rows}</body></html>`;
+</style></head><body>${logo}${rows}</body></html>`;
 }
 
 /**
@@ -56,8 +59,26 @@ export function printWithDialog(doc: PrintDocument, width: PaperWidth = 80): Pro
     win.document.open();
     win.document.write(ticketHtml(doc, width));
     win.document.close();
-    win.focus();
-    win.print();
-    resolve();
+    // Con logo se espera a que cargue (máximo 1.5 s) para que salga en el papel
+    const pending = [...win.document.images].filter((img) => !img.complete);
+    const ready = Promise.race([
+      Promise.all(
+        pending.map(
+          (img) =>
+            new Promise<void>((done) => {
+              img.addEventListener('load', () => done(), { once: true });
+              img.addEventListener('error', () => done(), { once: true });
+            }),
+        ),
+      ),
+      new Promise<void>((done) => setTimeout(done, 1500)),
+    ]);
+    const print = () => {
+      win.focus();
+      win.print();
+      resolve();
+    };
+    if (pending.length === 0) print();
+    else void ready.then(print);
   });
 }

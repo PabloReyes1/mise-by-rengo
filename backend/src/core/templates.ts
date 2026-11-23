@@ -19,6 +19,13 @@ const seedSchema = z.object({
       dimension: z.enum(['MASS', 'VOLUME', 'COUNT']),
     }),
   ),
+  unitConversions: z.array(
+    z.object({
+      from: z.string().min(1),
+      to: z.string().min(1),
+      factor: z.string().regex(/^\d+(\.\d+)?$/, 'debe ser un número, ej. "1000"'),
+    }),
+  ),
   orderTypes: z.array(
     z.object({ code: z.string().min(1), name: z.string().min(1), requiresTable: z.boolean() }),
   ),
@@ -228,6 +235,14 @@ export function validateTemplate(t: Template): string[] {
   }
   if (!t.roles.some((r) => r.permissions.includes('config.roles'))) {
     problems.push('Ningún rol tiene config.roles: siempre debe quedar uno (Docs/03 §2)');
+  }
+
+  const units = new Map(t.seed.units.map((u) => [u.code, u.dimension]));
+  for (const c of t.seed.unitConversions) {
+    const from = units.get(c.from);
+    const to = units.get(c.to);
+    if (!from || !to) problems.push(`Conversión ${c.from}→${c.to}: la unidad no existe`);
+    else if (from !== to) problems.push(`Conversión ${c.from}→${c.to}: mezcla dimensiones`);
   }
 
   const categories = new Set(t.menu.categories.map((c) => c.key));

@@ -22,6 +22,23 @@ export function formatMoney(amount: string, regional: Regional): string {
   }).format(amount as `${number}`);
 }
 
+/** Costo de insumo o receta: de 2 a 4 decimales ("Q 0.045" por gramo, "Q 120.00" por kg). */
+export function formatCost(amount: string, regional: Regional): string {
+  return new Intl.NumberFormat(regional.locale, {
+    style: 'currency',
+    currency: regional.currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
+  }).format(amount as `${number}`);
+}
+
+/** Texto escrito → cantidad o costo con hasta 4 decimales ("15", "0.045"); null si no es válido. */
+export function toQuantity(input: string): string | null {
+  const value = input.trim().replace(',', '.');
+  if (!/^\d{1,8}(\.\d{1,4})?$/.test(value) || Number(value) <= 0) return null;
+  return value;
+}
+
 /** Hora local de la sucursal (las fechas se guardan en UTC). */
 export function formatTime(iso: string, regional: Regional): string {
   return new Intl.DateTimeFormat(regional.locale, {

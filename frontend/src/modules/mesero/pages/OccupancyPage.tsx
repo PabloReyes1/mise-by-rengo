@@ -15,7 +15,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
-import { useRegional } from '../../../core/config/index.js';
+import { useRegional, useTicketPrinter } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { useOutbox } from '../../../core/offline/index.js';
 import { useSession } from '../../../core/session/index.js';
@@ -53,6 +53,7 @@ export function OccupancyPage() {
   const occupancy = useOccupancy(id);
   const floor = useFloor();
   const regional = useRegional();
+  const printComanda = useTicketPrinter('COMANDA');
   const [dialog, setDialog] = useState<Dialog>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -219,6 +220,7 @@ export function OccupancyPage() {
                 occupancy: occ,
                 table: comandaTable(occ, floor.data?.zones ?? []),
                 regional,
+                print: printComanda,
               })
             }
             onCancelItem={
@@ -251,7 +253,12 @@ export function OccupancyPage() {
                   reason: reasons.data?.find((r) => r.id === reasonId)?.name ?? '—',
                   cancelledBy: session?.user.fullName ?? occ.waiterName,
                 },
-                { occupancy: occ, table: comandaTable(occ, floor.data?.zones ?? []), regional },
+                {
+                  occupancy: occ,
+                  table: comandaTable(occ, floor.data?.zones ?? []),
+                  regional,
+                  print: printComanda,
+                },
               );
             },
             onError: () => setCancelling(null),
