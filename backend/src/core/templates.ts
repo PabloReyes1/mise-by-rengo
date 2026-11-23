@@ -186,6 +186,13 @@ export function loadTemplate(templatesDir: string, name: string): Template {
   };
 }
 
+/** SOLO DESARROLLO Y DEMOS: un usuario por rol (S-46). Nunca se carga al dar de alta un cliente. */
+export function loadDemoUsers(templatesDir: string, name: string): DevUser[] {
+  return z
+    .array(devUserSchema)
+    .parse(readJson(join(templatesDir, name), 'demo-users.json')['demoUsers']);
+}
+
 /** SOLO DESARROLLO: el usuario local. Nunca se carga al dar de alta un cliente. */
 export function loadDevUser(templatesDir: string, name: string): DevUser {
   return devUserSchema.parse(readJson(join(templatesDir, name), 'dev-user.json')['devUser']);

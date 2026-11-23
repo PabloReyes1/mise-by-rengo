@@ -5,33 +5,149 @@
       "key": "salon",
       "name": "Salón",
       "tables": [
-        { "name": "1", "capacity": 2, "shape": "SQUARE" },
-        { "name": "2", "capacity": 2, "shape": "SQUARE" },
-        { "name": "3", "capacity": 4, "shape": "SQUARE" },
-        { "name": "4", "capacity": 4, "shape": "SQUARE" },
-        { "name": "5", "capacity": 4, "shape": "ROUND" },
-        { "name": "6", "capacity": 4, "shape": "ROUND" },
-        { "name": "7", "capacity": 6, "shape": "RECTANGLE" },
-        { "name": "8", "capacity": 8, "shape": "RECTANGLE" }
+        {
+          "name": "1",
+          "capacity": 2,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "2",
+          "capacity": 2,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "3",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "4",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "5",
+          "capacity": 4,
+          "shape": "ROUND"
+        },
+        {
+          "name": "6",
+          "capacity": 4,
+          "shape": "ROUND"
+        },
+        {
+          "name": "7",
+          "capacity": 6,
+          "shape": "RECTANGLE"
+        },
+        {
+          "name": "8",
+          "capacity": 8,
+          "shape": "RECTANGLE"
+        },
+        {
+          "name": "9",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "10",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "11",
+          "capacity": 2,
+          "shape": "ROUND"
+        },
+        {
+          "name": "12",
+          "capacity": 10,
+          "shape": "RECTANGLE"
+        }
       ]
     },
     {
       "key": "terraza",
       "name": "Terraza",
       "tables": [
-        { "name": "T1", "capacity": 2, "shape": "ROUND" },
-        { "name": "T2", "capacity": 2, "shape": "ROUND" },
-        { "name": "T3", "capacity": 4, "shape": "SQUARE" },
-        { "name": "T4", "capacity": 4, "shape": "SQUARE" }
+        {
+          "name": "T1",
+          "capacity": 2,
+          "shape": "ROUND"
+        },
+        {
+          "name": "T2",
+          "capacity": 2,
+          "shape": "ROUND"
+        },
+        {
+          "name": "T3",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "T4",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "T5",
+          "capacity": 4,
+          "shape": "ROUND"
+        },
+        {
+          "name": "T6",
+          "capacity": 6,
+          "shape": "RECTANGLE"
+        }
+      ]
+    },
+    {
+      "key": "segundo-nivel",
+      "name": "Segundo nivel",
+      "tables": [
+        {
+          "name": "S1",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "S2",
+          "capacity": 4,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "S3",
+          "capacity": 6,
+          "shape": "RECTANGLE"
+        },
+        {
+          "name": "S4",
+          "capacity": 8,
+          "shape": "RECTANGLE"
+        }
       ]
     },
     {
       "key": "barra",
       "name": "Barra",
       "tables": [
-        { "name": "Barra 1", "capacity": 1, "shape": "SQUARE" },
-        { "name": "Barra 2", "capacity": 1, "shape": "SQUARE" },
-        { "name": "Barra 3", "capacity": 1, "shape": "SQUARE" }
+        {
+          "name": "Barra 1",
+          "capacity": 1,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "Barra 2",
+          "capacity": 1,
+          "shape": "SQUARE"
+        },
+        {
+          "name": "Barra 3",
+          "capacity": 1,
+          "shape": "SQUARE"
+        }
       ]
     }
   ]

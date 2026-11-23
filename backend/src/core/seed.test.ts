@@ -98,11 +98,28 @@ describe('seedClient (Docs/13 §2 pasos 6 y 7)', () => {
       orderBy: { sort: 'asc' },
       include: { tables: true },
     });
-    expect(zones.map((z) => z.name)).toEqual(['Salón', 'Terraza', 'Barra']);
-    expect(zones.flatMap((z) => z.tables)).toHaveLength(15);
+    expect(zones.map((z) => z.name)).toEqual(['Salón', 'Terraza', 'Segundo nivel', 'Barra']);
+    expect(zones.flatMap((z) => z.tables)).toHaveLength(25);
     expect(zones.flatMap((z) => z.tables).every((m) => m.status === 'LIBRE' && m.active)).toBe(
       true,
     );
+  });
+
+  it('con --demo-users crea un usuario por rol con PIN (S-46)', async () => {
+    await seedClient(prisma, { ...base, adminUsername: 'admin', demoUsers: true });
+    const users = await prisma.user.findMany({
+      where: { username: { not: 'admin' } },
+      include: { roles: { include: { role: true } } },
+      orderBy: { username: 'asc' },
+    });
+    expect(users.map((u) => [u.username, u.roles[0]!.role.name])).toEqual([
+      ['ana', 'Mesero'],
+      ['carlos', 'Cajero'],
+      ['cocina', 'Cocina'],
+      ['luis', 'Mesero'],
+      ['maria', 'Gerente'],
+    ]);
+    expect(users.every((u) => u.pinHash)).toBe(true);
   });
 
   it('el usuario de desarrollo solo se crea si se pide', async () => {

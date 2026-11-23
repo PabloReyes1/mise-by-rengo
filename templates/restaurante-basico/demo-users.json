@@ -1,0 +1,40 @@
+{
+  "$comment": "SOLO DESARROLLO Y DEMOS (S-46). Un usuario por rol para probar permisos y la autorización 🔑. El seed solo los crea con --demo-users; nuevo-cliente.sh NUNCA los carga. Contraseña de todos: demo-1234.",
+  "demoUsers": [
+    {
+      "username": "maria",
+      "fullName": "María Gerente",
+      "password": "demo-1234",
+      "pin": "2222",
+      "roles": ["Gerente"]
+    },
+    {
+      "username": "carlos",
+      "fullName": "Carlos Cajero",
+      "password": "demo-1234",
+      "pin": "3333",
+      "roles": ["Cajero"]
+    },
+    {
+      "username": "ana",
+      "fullName": "Ana Mesera",
+      "password": "demo-1234",
+      "pin": "1111",
+      "roles": ["Mesero"]
+    },
+    {
+      "username": "luis",
+      "fullName": "Luis Mesero",
+      "password": "demo-1234",
+      "pin": "4444",
+      "roles": ["Mesero"]
+    },
+    {
+      "username": "cocina",
+      "fullName": "Cocina",
+      "password": "demo-1234",
+      "pin": "5555",
+      "roles": ["Cocina"]
+    }
+  ]
+}

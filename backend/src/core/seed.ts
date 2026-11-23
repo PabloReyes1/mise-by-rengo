@@ -5,7 +5,7 @@
 import type { PrismaClient } from '../generated/prisma/client.js';
 import { newDbId } from './ids.js';
 import { hashSecret, temporaryPassword } from './secrets.js';
-import { loadDevUser, loadTemplate } from './templates.js';
+import { loadDemoUsers, loadDevUser, loadTemplate, type DevUser } from './templates.js';
 
 export interface SeedOptions {
   templatesDir: string;
@@ -22,6 +22,8 @@ export interface SeedOptions {
   withTables?: boolean;
   /** SOLO DESARROLLO: crear el usuario dev */
   devUser?: boolean;
+  /** SOLO DESARROLLO Y DEMOS: un usuario por rol con PIN (S-46) */
+  demoUsers?: boolean;
 }
 
 export interface SeedResult {
@@ -102,8 +104,11 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
       },
     });
 
-    if (options.devUser) {
-      const dev = loadDevUser(options.templatesDir, options.template);
+    const users: DevUser[] = [
+      ...(options.devUser ? [loadDevUser(options.templatesDir, options.template)] : []),
+      ...(options.demoUsers ? loadDemoUsers(options.templatesDir, options.template) : []),
+    ];
+    for (const dev of users) {
       await tx.user.create({
         data: {
           id: newDbId(),
