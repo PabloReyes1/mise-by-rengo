@@ -5,7 +5,7 @@ import type { Bill } from '@mise/shared/contracts/billing';
 import type { OrderItem } from '@mise/shared/contracts/orders';
 import { ArrowLeft, ArrowRightLeft, Percent, Plus, Printer, Scissors, Wallet } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import { usePublicConfig, useRegional } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney } from '../../../core/format/index.js';
 import { precuentaDocument, printWithDialog, reciboDocument } from '../../../core/print/index.js';
@@ -56,6 +56,9 @@ const itemDetail = (i: OrderItem) =>
 
 export function BillsPage() {
   const { id = '' } = useParams();
+  // La pantalla Caja manda su caja: el cobro se anota en ella (SC-59); desde el celular, en la principal
+  const cashRegisterId = (useLocation().state as { cashRegisterId?: string } | null)
+    ?.cashRegisterId;
   const occupancy = useOccupancy(id);
   const floor = useFloor();
   const bills = useOccupancyBills(id);
@@ -144,7 +147,7 @@ export function BillsPage() {
     const current = fresh.find((b) => b.id === bill.id) ?? bill;
     authorized.run(
       pay,
-      { bill: current, body: { ...result, version: current.version } },
+      { bill: current, body: { ...result, version: current.version, cashRegisterId } },
       `Cobrar ${bill.name}`,
       {
         onDone: (o) => {

@@ -90,6 +90,24 @@ async function cashShift(tx: Tx, branchId: string, cashRegisterId: string | unde
   return { register, shift };
 }
 
+/**
+ * Caja a la que se anota un cobro sin efectivo (tarjeta, transferencia): la que cobra o, si el
+ * cobro viene del celular del mesero, la principal, con su turno si está abierto. Así sale en
+ * "Ventas por método" del corte de esa caja (SC-59). Si no hay caja, el cobro sigue sin caja.
+ */
+async function nonCashRegister(tx: Tx, branchId: string, cashRegisterId: string | undefined) {
+  const register = await tx.cashRegister.findFirst({
+    where: cashRegisterId
+      ? { id: toDbId(cashRegisterId), branchId, active: true }
+      : { branchId, isMain: true, active: true },
+  });
+  if (!register) return null;
+  const shift = await tx.shift.findFirst({
+    where: { cashRegisterId: register.id, status: 'ABIERTO' },
+  });
+  return { register, shift };
+}
+
 /** Cierra la ocupación si todas sus cuentas con ítems están pagadas (Docs/05 paso 12). */
 async function closeIfPaid(tx: Tx, occupancyId: string, now: Date): Promise<boolean> {
   const bills = await tx.bill.findMany({
@@ -197,6 +215,7 @@ export async function payBill(
     }
 
     const cash = needsCash ? await cashShift(tx, branchId, input.cashRegisterId) : null;
+    const register = cash ?? (await nonCashRegister(tx, branchId, input.cashRegisterId));
     const now = new Date();
     for (const p of input.payments) {
       const m = methods.get(p.methodId)!;
@@ -228,9 +247,8 @@ export async function payBill(
             : null,
         paidAt: now,
         paidBy: toDbId(actor.userId),
-        cashRegisterId:
-          cash?.register.id ?? (input.cashRegisterId ? toDbId(input.cashRegisterId) : null),
-        shiftId: cash?.shift.id ?? null,
+        cashRegisterId: register?.register.id ?? null,
+        shiftId: register?.shift?.id ?? null,
         customerNit: input.customerNit || 'CF',
         customerTaxName: input.customerTaxName || null,
         version: { increment: 1 },

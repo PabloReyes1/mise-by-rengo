@@ -29,6 +29,7 @@ export function TodayBills({ cashRegisterId }: { cashRegisterId: string }) {
                 </span>
                 <Link
                   to={`/mesero/ocupacion/${b.occupancyId}/cuentas`}
+                  state={{ cashRegisterId }}
                   className="inline-flex min-h-12 items-center rounded-md bg-primary px-4 font-semibold text-white no-underline"
                 >
                   Corregir y cobrar

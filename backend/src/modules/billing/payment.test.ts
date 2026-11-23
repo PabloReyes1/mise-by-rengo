@@ -161,6 +161,24 @@ describe('cobrar (Docs/05 pasos 11 y 12)', () => {
     expect(byCard.statusCode).toBe(200);
   });
 
+  it('la tarjeta cobrada desde el celular (sin caja) se anota en la caja principal y sale en su corte (SC-59)', async () => {
+    const shift = (await openShift()).json();
+    const { bill } = await tableWithCoffee('5');
+    const res = await post(`/api/bills/${bill.id}/pay`, {
+      tipAmount: '0.00',
+      version: bill.version,
+      payments: [card('24.00')],
+    });
+    expect(res.statusCode).toBe(200);
+    const row = await prisma.bill.findUniqueOrThrow({ where: { id: toDbId(bill.id) } });
+    expect(row.cashRegisterId && toApiId(row.cashRegisterId)).toBe(registerId);
+    expect(row.shiftId && toApiId(row.shiftId)).toBe(shift.id);
+    const report = (
+      await app.inject({ method: 'GET', url: `/api/shifts/${shift.id}/report`, headers: admin })
+    ).json();
+    expect(report.salesByMethod).toEqual([expect.objectContaining({ count: 1, amount: '24.00' })]);
+  });
+
   it('repetir el mismo cobro devuelve el mismo recibo sin duplicar pagos', async () => {
     const { bill } = await tableWithCoffee('5');
     const body = { tipAmount: '0.00', version: bill.version, payments: [card('24.00')] };

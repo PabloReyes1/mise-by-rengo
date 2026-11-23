@@ -55,7 +55,7 @@ export function CajaPage() {
         )}
       </header>
       {register.openShift ? <ShiftView register={register} /> : <OpenShift register={register} />}
-      <OpenTables />
+      <OpenTables cashRegisterId={register.id} />
       <TodayBills cashRegisterId={register.id} />
     </div>
   );
@@ -318,9 +318,10 @@ function MovementForm({
 
 /**
  * Cuentas por cobrar (H3 #19): la caja cobra cualquier mesa abierta (table.view_all) en la misma
- * pantalla de cuentas del mesero (cobro, descuentos, pre-cuenta).
+ * pantalla de cuentas del mesero (cobro, descuentos, pre-cuenta). Lleva la caja para que el cobro
+ * sin efectivo se anote en ella (SC-59).
  */
-export function OpenTables() {
+export function OpenTables({ cashRegisterId }: { cashRegisterId: string }) {
   const regional = useRegional();
   const open = useOpenOccupancies();
   const floor = useFloorNames();
@@ -347,6 +348,7 @@ export function OpenTables() {
             </span>
             <Link
               to={`/mesero/ocupacion/${o.id}/cuentas`}
+              state={{ cashRegisterId }}
               className="inline-flex min-h-12 items-center gap-2 rounded-md bg-primary px-4 font-semibold text-white no-underline"
             >
               Cobrar
