@@ -8,7 +8,9 @@ import {
   EMPTY_DRAFT,
   removeLine,
   setQuantity,
+  toLocalOrder,
   toSendOrder,
+  isLocalOrder,
   type DraftLine,
 } from './order-draft.js';
 
@@ -128,5 +130,29 @@ describe('borrador del pedido', () => {
     expect(sendOrderRequestSchema.parse(body)).toMatchObject({
       items: [{ id: ID(4), billId: ID(9), quantity: 1, unitPrice: '95.00', note: 'bien caliente' }],
     });
+  });
+});
+
+describe('copia local sin conexión (doc 17 §5, arreglo 1)', () => {
+  it('la ronda local trae los mismos ids, nombres, totales y queda "Sin enviar"', () => {
+    const draft = addLine(EMPTY_DRAFT, churrasco(ID(4), { quantity: 2 }));
+    const body = toSendOrder(draft, {
+      id: ID(5),
+      occupancyId: ID(6),
+      billId: ID(7),
+      now: new Date('2026-11-23T12:00:00Z'),
+    });
+    const local = toLocalOrder(draft, body, { roundNumber: 2, userId: ID(8) });
+    expect(local).toMatchObject({ id: ID(5), roundNumber: 2, status: 'ENVIADO', folio: null });
+    // (95 + 0 + 8) × 2 = 206; por unidad, modificadores 8
+    expect(local.items[0]).toMatchObject({
+      id: ID(4),
+      productName: 'Churrasco',
+      modifiersTotal: '8.00',
+      lineTotal: '206.00',
+      billId: ID(7),
+    });
+    expect(isLocalOrder(local)).toBe(true);
+    expect(isLocalOrder({ folio: '000001', tempFolio: null })).toBe(false);
   });
 });

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney } from '../../../core/format/index.js';
+import { useSession } from '../../../core/session/index.js';
 import { Button, cx, Modal, Select } from '../../../core/ui/index.js';
 import { useAuthorizedAction } from '../api/authorized-action.js';
 import { useFloor, useOccupancy } from '../api/floor-api.js';
@@ -22,6 +23,7 @@ import {
   draftTotal,
   MAX_QUANTITY,
   setQuantity,
+  toLocalOrder,
   toSendOrder,
   type DraftLine,
 } from '../hooks/order-draft.js';
@@ -36,6 +38,7 @@ export function OrderPage() {
   const menu = useMenu();
   const bills = useOccupancyBills(id);
   const orders = useOccupancyOrders(id);
+  const session = useSession();
   const { draft, update, clear } = useOrderDraft(id);
   const send = useSendOrder(id);
   const authorized = useAuthorizedAction();
@@ -92,23 +95,33 @@ export function OrderPage() {
       billId: targetBill.id,
       now: new Date(),
     });
-    authorized.run(send, { body, label: `Pedido de ${title}` }, `Enviar el pedido de ${title}`, {
-      onDone: (outcome) => {
-        // Comanda (#14): se abre el diálogo de imprimir; sin conexión, desde el borrador enviado
-        if (occupancy.data) {
-          const ctx = {
-            occupancy: occupancy.data,
-            table: comandaTable(occupancy.data, floor.data?.zones ?? []),
-            regional,
-          };
-          if (outcome.status === 'applied') printOrderComanda(outcome.data, ctx);
-          else printDraftComanda(draft, (orders.data?.length ?? 0) + 1, ctx);
-        }
-        clear();
-        setReviewing(false);
-        void navigate(`/mesero/ocupacion/${id}`, { state: { sent: outcome.status } });
-      },
+    // Copia local por si queda sin conexión: la mesa la muestra como "Sin enviar"
+    const local = toLocalOrder(draft, body, {
+      roundNumber: (orders.data?.length ?? 0) + 1,
+      userId: session?.user.id ?? '',
     });
+    authorized.run(
+      send,
+      { body, label: `Pedido de ${title}`, local },
+      `Enviar el pedido de ${title}`,
+      {
+        onDone: (outcome) => {
+          // Comanda (#14): se abre el diálogo de imprimir; sin conexión, desde el borrador enviado
+          if (occupancy.data) {
+            const ctx = {
+              occupancy: occupancy.data,
+              table: comandaTable(occupancy.data, floor.data?.zones ?? []),
+              regional,
+            };
+            if (outcome.status === 'applied') printOrderComanda(outcome.data, ctx);
+            else printDraftComanda(draft, (orders.data?.length ?? 0) + 1, ctx);
+          }
+          clear();
+          setReviewing(false);
+          void navigate(`/mesero/ocupacion/${id}`, { state: { sent: outcome.status } });
+        },
+      },
+    );
   };
 
   return (

@@ -2,8 +2,8 @@
 // Lógica pura: agregar, juntar líneas iguales, cambiar cantidad, totales y armar la ronda.
 // El precio de cada línea es el del menú al momento de agregarla: es el que vio el mesero y el
 // que respeta el servidor (Docs/09 §6.3).
-import type { SendOrderRequest } from '@mise/shared/contracts/orders';
-import { lineTotal, sumMoney } from '@mise/shared/domain/billing';
+import type { Order, SendOrderRequest } from '@mise/shared/contracts/orders';
+import { fromCents, lineTotal, sumMoney, toCents } from '@mise/shared/domain/billing';
 
 export const MAX_QUANTITY = 99;
 
@@ -134,3 +134,65 @@ export function toSendOrder(
     })),
   };
 }
+
+/**
+ * Copia local de la ronda enviada sin conexión (arreglo 1 de la demo de H2, doc 17 §5): la mesa
+ * la muestra como "Sin enviar" hasta que el servidor la acepte. Mismos ids que el envío.
+ */
+export function toLocalOrder(
+  draft: OrderDraft,
+  body: SendOrderRequest,
+  input: { roundNumber: number; userId: string },
+): Order {
+  return {
+    id: body.id,
+    occupancyId: body.occupancyId,
+    roundNumber: input.roundNumber,
+    folio: null,
+    tempFolio: null,
+    status: 'ENVIADO',
+    sentBy: input.userId,
+    sentAt: body.clientSentAt,
+    acceptedAt: null,
+    readyAt: null,
+    deliveredAt: null,
+    deliveredAuto: false,
+    syncedLate: false,
+    printedAt: null,
+    version: 0,
+    items: draft.lines.map((l, i) => {
+      const item = body.items[i]!;
+      const total = draftLineTotal(l);
+      // Por unidad: lo que suma la línea de 1 unidad menos el precio del producto
+      const perUnit = toCents(draftLineTotal({ ...l, quantity: 1 })) - toCents(l.unitPrice);
+      return {
+        id: item.id,
+        orderId: body.id,
+        billId: item.billId,
+        productId: l.productId,
+        productName: l.name,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        modifiersTotal: fromCents(perUnit),
+        lineTotal: total,
+        note: l.note.trim() || null,
+        status: 'ENVIADO',
+        modifiers: l.modifiers,
+        components: (l.components ?? []).map((c) => ({
+          comboGroupId: c.comboGroupId,
+          productId: c.productId,
+          name: c.name,
+          priceDelta: c.priceDelta,
+          modifiers: c.modifiers,
+        })),
+        splitFromId: null,
+        readyAt: null,
+        cancelledAt: null,
+        version: 0,
+      };
+    }),
+  };
+}
+
+/** Pedido que existe solo en el celular: todavía sin folio del servidor. */
+export const isLocalOrder = (o: Pick<Order, 'folio' | 'tempFolio'>) => !o.folio && !o.tempFolio;

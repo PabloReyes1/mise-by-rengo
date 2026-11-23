@@ -4,6 +4,7 @@ import { HandPlatter, Printer, X } from 'lucide-react';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { Badge, Button, Card, cx, type BadgeTone } from '../../../core/ui/index.js';
+import { isLocalOrder } from '../hooks/order-draft.js';
 
 export const ORDER_STATUS: Record<Order['status'], { label: string; tone: BadgeTone }> = {
   ENVIADO: { label: 'En cola de cocina', tone: 'neutral' },
@@ -38,7 +39,10 @@ export function OrderList({
   return (
     <ul className="flex flex-col gap-3">
       {orders.map((o) => {
-        const status = ORDER_STATUS[o.status];
+        // Enviado sin conexión: solo existe en el celular hasta que el servidor lo acepte
+        const status = isLocalOrder(o)
+          ? { label: 'Sin enviar', tone: 'warning' as BadgeTone }
+          : ORDER_STATUS[o.status];
         return (
           <li key={o.id}>
             <Card variant="outlined" className="flex flex-col gap-3">
@@ -47,7 +51,7 @@ export function OrderList({
                   Ronda {o.roundNumber}
                   <span className="font-normal text-secondary tabular">
                     {' '}
-                    · {o.folio ?? o.tempFolio} · {formatTime(o.sentAt, regional)}
+                    · {o.folio ?? o.tempFolio ?? 'sin folio'} · {formatTime(o.sentAt, regional)}
                   </span>
                 </h4>
                 <Badge tone={status.tone}>{status.label}</Badge>

@@ -11,7 +11,7 @@ import type {
 } from '@mise/shared/contracts/orders';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
-import { runOperation } from '../../../core/offline/index.js';
+import { runOperation, type OperationOutcome } from '../../../core/offline/index.js';
 import { FLOOR_KEY } from './floor-api.js';
 import { pollInterval } from './realtime-sync.js';
 
@@ -52,17 +52,30 @@ function useOrderAction<TVars extends { authorization?: unknown }>(
     body: object;
     label: string;
   },
+  /** Sin conexión: copia local para mostrarla en la mesa como "Sin enviar" (doc 17 §5, arreglo 1) */
+  local?: (vars: TVars) => Order | undefined,
 ) {
   const qc = useQueryClient();
   return useMutation({
     // Sin conexión TanStack pausaría la mutación y la acción no llegaría a la outbox (SC-39)
     networkMode: 'always',
-    mutationFn: (vars: TVars) => {
+    mutationFn: async (vars: TVars): Promise<OperationOutcome<Order>> => {
       const op = build(vars);
       const body = vars.authorization ? { ...op.body, authorization: vars.authorization } : op.body;
-      return runOperation<Order>({ ...op, method: 'POST', body });
+      const outcome = await runOperation<Order>({ ...op, method: 'POST', body });
+      const copy = outcome.status === 'queued' ? local?.(vars) : undefined;
+      if (copy) {
+        qc.setQueryData<Order[]>(ordersKey(occupancyId), (list) => [
+          ...(list ?? []).filter((o) => o.id !== copy.id),
+          copy,
+        ]);
+        return { status: 'queued', data: copy };
+      }
+      return outcome;
     },
-    onSuccess: () => {
+    onSuccess: (outcome) => {
+      // Sin conexión no se vuelve a leer: se perdería la copia local hasta que se envíe
+      if (outcome.status === 'queued' && outcome.data) return;
       void qc.invalidateQueries({ queryKey: ordersKey(occupancyId) });
       void qc.invalidateQueries({ queryKey: billsKey(occupancyId) });
       void qc.invalidateQueries({ queryKey: FLOOR_KEY });
@@ -74,7 +87,12 @@ function useOrderAction<TVars extends { authorization?: unknown }>(
 export function useSendOrder(occupancyId: string) {
   return useOrderAction(
     occupancyId,
-    (v: { body: SendOrderRequest; label: string } & Pick<SendOrderRequest, 'authorization'>) => ({
+    (
+      v: { body: SendOrderRequest; label: string; local?: Order } & Pick<
+        SendOrderRequest,
+        'authorization'
+      >,
+    ) => ({
       type: 'order.send',
       // Depende de la mesa: si abrirla se rechaza, la ronda tampoco se envía (Docs/09 §4.2)
       entityId: occupancyId,
@@ -82,6 +100,7 @@ export function useSendOrder(occupancyId: string) {
       body: v.body,
       label: v.label,
     }),
+    (v) => v.local,
   );
 }
 
