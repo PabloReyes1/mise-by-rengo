@@ -1,6 +1,6 @@
 // Rondas de la mesa con su estado (Docs/05 §5.3): el estado siempre en texto, nunca solo color.
-import type { Order } from '@mise/shared/contracts/orders';
-import { HandPlatter } from 'lucide-react';
+import type { Order, OrderItem } from '@mise/shared/contracts/orders';
+import { HandPlatter, X } from 'lucide-react';
 import { useRegional } from '../../../core/config/index.js';
 import { formatMoney, formatTime } from '../../../core/format/index.js';
 import { Badge, Button, Card, cx, type BadgeTone } from '../../../core/ui/index.js';
@@ -18,9 +18,11 @@ export interface OrderListProps {
   /** Entregar un pedido listo; si no viene, no se muestra el botón */
   onDeliver?: (order: Order) => void;
   delivering?: string | null;
+  /** Cancelar un ítem ya enviado (con motivo; 🔑 si hace falta). Si no viene, no hay botón */
+  onCancelItem?: (item: OrderItem) => void;
 }
 
-export function OrderList({ orders, onDeliver, delivering }: OrderListProps) {
+export function OrderList({ orders, onDeliver, delivering, onCancelItem }: OrderListProps) {
   const regional = useRegional();
   if (orders.length === 0) {
     return <p className="text-base text-secondary">Todavía no hay pedidos en esta mesa.</p>;
@@ -75,6 +77,16 @@ export function OrderList({ orders, onDeliver, delivering }: OrderListProps) {
                       >
                         {formatMoney(i.lineTotal, regional)}
                       </span>
+                      {onCancelItem && !cancelled && (
+                        <button
+                          type="button"
+                          onClick={() => onCancelItem(i)}
+                          aria-label={`Cancelar ${i.quantity} × ${i.productName}`}
+                          className="-my-2 flex size-11 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-surface"
+                        >
+                          <X aria-hidden className="size-5" />
+                        </button>
+                      )}
                     </li>
                   );
                 })}

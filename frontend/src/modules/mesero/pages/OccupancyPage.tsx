@@ -1,6 +1,7 @@
 // Detalle de una mesa abierta (o para llevar): comensales, pedidos, cuentas con su total y
 // acciones de sala (tomar pedido, entregar, trasladar, unir, transferir).
 import type { FloorTable } from '@mise/shared/contracts/floor';
+import type { OrderItem } from '@mise/shared/contracts/orders';
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -27,7 +28,13 @@ import {
   useUpdateGuests,
 } from '../api/floor-api.js';
 import { useAuthorizedAction } from '../api/authorized-action.js';
-import { useDeliverOrder, useOccupancyBills, useOccupancyOrders } from '../api/order-api.js';
+import {
+  useCancelItem,
+  useDeliverOrder,
+  useOccupancyBills,
+  useOccupancyOrders,
+} from '../api/order-api.js';
+import { CancelItemDialog } from '../components/CancelItemDialog.js';
 import { occupancyTitle } from '../components/occupancy-title.js';
 import { OrderList } from '../components/OrderList.js';
 import { actionError, QUEUED_MESSAGE } from '../components/errors.js';
@@ -53,6 +60,8 @@ export function OccupancyPage() {
   const orders = useOccupancyOrders(id);
   const bills = useOccupancyBills(id);
   const deliver = useDeliverOrder(id);
+  const cancelItem = useCancelItem(id);
+  const [cancelling, setCancelling] = useState<OrderItem | null>(null);
   const authorized = useAuthorizedAction();
 
   const move = useMoveOccupancy();
@@ -60,7 +69,12 @@ export function OccupancyPage() {
   const transfer = useTransferOccupancy();
   const guests = useUpdateGuests();
   const error = actionError(
-    move.error ?? merge.error ?? transfer.error ?? guests.error ?? deliver.error,
+    move.error ??
+      merge.error ??
+      transfer.error ??
+      guests.error ??
+      deliver.error ??
+      cancelItem.error,
   );
 
   const back = (
@@ -105,7 +119,7 @@ export function OccupancyPage() {
     setNotice(outcome.status === 'queued' ? QUEUED_MESSAGE : null);
   };
   const reset = () => {
-    for (const m of [move, merge, transfer, guests, deliver]) m.reset();
+    for (const m of [move, merge, transfer, guests, deliver, cancelItem]) m.reset();
     setNotice(null);
   };
   const openDialog = (d: Dialog) => {
@@ -186,9 +200,33 @@ export function OccupancyPage() {
                 { onDone: done },
               );
             }}
+            onCancelItem={
+              isOpen
+                ? (item) => {
+                    reset();
+                    setCancelling(item);
+                  }
+                : undefined
+            }
           />
         )}
       </section>
+      <CancelItemDialog
+        item={cancelling}
+        loading={cancelItem.isPending}
+        onClose={() => setCancelling(null)}
+        onConfirm={({ reasonId, note }) => {
+          const item = cancelling!;
+          const label = `Cancelar ${item.quantity} × ${item.productName}`;
+          authorized.run(cancelItem, { itemId: item.id, label, reasonId, note }, label, {
+            onDone: (outcome) => {
+              setCancelling(null);
+              done(outcome);
+            },
+            onError: () => setCancelling(null),
+          });
+        }}
+      />
 
       <section className="flex flex-col gap-3">
         <h3 className="text-lg font-bold">Cuentas</h3>

@@ -2,7 +2,13 @@
 // Las lecturas van directo a la API; enviar y entregar pasan por la outbox (core/offline).
 import type { Bill } from '@mise/shared/contracts/billing';
 import type { MenuResponse } from '@mise/shared/contracts/catalog';
-import type { DeliverOrderRequest, Order, SendOrderRequest } from '@mise/shared/contracts/orders';
+import type { Reason } from '@mise/shared/contracts/config';
+import type {
+  CancelOrderItemRequest,
+  DeliverOrderRequest,
+  Order,
+  SendOrderRequest,
+} from '@mise/shared/contracts/orders';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../../core/api/index.js';
 import { runOperation } from '../../../core/offline/index.js';
@@ -81,6 +87,29 @@ export function useSendOrder(occupancyId: string) {
 }
 
 /** Marcar entregado (Docs/05 paso 9) */
+/** Motivos de cancelación activos (GET /api/reasons, Docs/08 §2.3) */
+export function useCancelReasons() {
+  return useQuery({
+    queryKey: ['reasons', 'CANCEL_ITEM'],
+    queryFn: () => apiFetch<Reason[]>('/reasons?type=CANCEL_ITEM'),
+    staleTime: 10 * 60_000,
+  });
+}
+
+/** Cancelar un ítem enviado (Docs/05 §6): motivo obligatorio; 🔑 si falta order.cancel_sent */
+export function useCancelItem(occupancyId: string) {
+  return useOrderAction(
+    occupancyId,
+    (v: { itemId: string; label: string; authorization?: unknown } & CancelOrderItemRequest) => ({
+      type: 'order_item.cancel',
+      entityId: v.itemId,
+      path: `/order-items/${v.itemId}/cancel`,
+      body: { reasonId: v.reasonId, ...(v.note ? { note: v.note } : {}) },
+      label: v.label,
+    }),
+  );
+}
+
 export function useDeliverOrder(occupancyId: string) {
   return useOrderAction(
     occupancyId,
