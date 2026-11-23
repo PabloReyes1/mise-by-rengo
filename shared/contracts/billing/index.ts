@@ -2,7 +2,7 @@
 // Descuentos, pre-cuenta, cobro y reapertura llegan en H3.
 import { z } from 'zod';
 import { authorizationSchema } from '../auth/index.js';
-import { idSchema, moneySchema, versionSchema } from '../common/index.js';
+import { idSchema, isoDateTimeSchema, moneySchema, versionSchema } from '../common/index.js';
 import { billStatusSchema } from '../floor/index.js';
 import { orderItemSchema } from '../orders/index.js';
 
@@ -99,3 +99,72 @@ export const precheckResponseSchema = z.object({
   reprint: z.boolean(),
 });
 export type PrecheckResponse = z.infer<typeof precheckResponseSchema>;
+
+// ---------------------------------------------------------------------------
+// Cobro (Docs/05 pasos 11 y 12, Docs/08 §2.7). H3 #19, reasignado a Deniscito (doc 17 §3.1).
+// ---------------------------------------------------------------------------
+
+export const PAYMENT_KINDS = ['CASH', 'CARD', 'TRANSFER', 'OTHER'] as const;
+
+// GET /api/payment-methods (autenticado): métodos activos para cobrar
+export const paymentMethodSchema = z.object({
+  id: idSchema,
+  name: z.string(),
+  kind: z.enum(PAYMENT_KINDS),
+  givesChange: z.boolean(),
+  requiresReference: z.boolean(),
+});
+export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
+
+// POST /api/bills/:id/pay (payment.register)
+export const payBillRequestSchema = z.object({
+  /** Propina elegida (sugerida y editable, S-10); 0 si no hay */
+  tipAmount: moneySchema,
+  payments: z
+    .array(
+      z.object({
+        /** ULID del dispositivo: repetir el cobro con los mismos ids no lo duplica */
+        id: idSchema,
+        methodId: idSchema,
+        /** Lo que se aplica a la cuenta */
+        amount: moneySchema,
+        /** Lo que entregó el cliente (efectivo): el cambio es tendered − amount */
+        tendered: moneySchema.optional(),
+        reference: z.string().trim().max(60).optional(),
+      }),
+    )
+    .min(1)
+    .max(10),
+  /** Caja que cobra; si no viene (mesero), el efectivo va a la caja principal (PA-052) */
+  cashRegisterId: idSchema.optional(),
+  /** NIT o "CF" para el recibo (no es factura, PA-002) */
+  customerNit: z.string().trim().max(20).optional(),
+  customerTaxName: z.string().trim().max(120).optional(),
+  version: versionSchema,
+  authorization: authorizationSchema.optional(),
+});
+export type PayBillRequest = z.infer<typeof payBillRequestSchema>;
+
+export const receiptPaymentSchema = z.object({
+  id: idSchema,
+  methodName: z.string(),
+  kind: z.enum(PAYMENT_KINDS),
+  amount: moneySchema,
+  tendered: moneySchema.nullable(),
+  change: moneySchema,
+  reference: z.string().nullable(),
+});
+
+/** Lo que vuelve al cobrar: la cuenta pagada y lo necesario para el recibo (Docs/11 §4.3). */
+export const receiptSchema = z.object({
+  bill: billSchema,
+  items: z.array(orderItemSchema),
+  payments: z.array(receiptPaymentSchema),
+  totalPaid: moneySchema,
+  change: moneySchema,
+  paidAt: isoDateTimeSchema,
+  receivedByName: z.string(),
+  /** true si con este cobro se cerró la mesa (todas sus cuentas pagadas, Docs/05 paso 12) */
+  occupancyClosed: z.boolean(),
+});
+export type Receipt = z.infer<typeof receiptSchema>;

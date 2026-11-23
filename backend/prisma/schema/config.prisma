@@ -126,3 +126,17 @@ model Reason {
   @@index([type])
   @@map("reasons")
 }
+
+/// Métodos de pago (Docs/07 §4.5, RF-027). Solo el efectivo da cambio. Se editan en admin (H3 #21).
+model PaymentMethod {
+  id                String  @id @db.Uuid
+  name              String
+  /// CASH, CARD, TRANSFER, OTHER
+  kind              String
+  givesChange       Boolean @default(false) @map("gives_change")
+  requiresReference Boolean @default(false) @map("requires_reference")
+  active            Boolean @default(true)
+  sort              Int     @default(0)
+
+  @@map("payment_methods")
+}

@@ -5,6 +5,9 @@ import {
   moveBillItemsRequestSchema,
   moveBillItemsResponseSchema,
   occupancyBillsResponseSchema,
+  payBillRequestSchema,
+  paymentMethodSchema,
+  receiptSchema,
   precheckRequestSchema,
   precheckResponseSchema,
   splitOrderItemRequestSchema,
@@ -28,6 +31,7 @@ import {
   splitOrderItem,
   updateBill,
 } from './billing.service.js';
+import { getReceipt, listPaymentMethods, payBill } from './payment.service.js';
 
 const params = z.object({ id: idSchema });
 
@@ -122,6 +126,38 @@ export const billingRoutes: FastifyPluginCallbackZod = (app, _options, done) => 
       });
       return result;
     },
+  );
+
+  // Cobro (Docs/05 pasos 11 y 12, H3 #19)
+  app.get(
+    '/api/payment-methods',
+    { preHandler: [authenticate], schema: { response: { 200: z.array(paymentMethodSchema) } } },
+    async () => listPaymentMethods(prisma),
+  );
+  app.post(
+    '/api/bills/:id/pay',
+    {
+      preHandler: [authenticate, authorize('payment.register'), tableAuthorization],
+      schema: { params, body: payBillRequestSchema, response: { 200: receiptSchema } },
+    },
+    async (req) => {
+      const b = await branch(req);
+      const r = await payBill(prisma, b, req.params.id, req.body, actor(req));
+      if (r.created) {
+        announce(app, b, EV.billPaid, ['branch', 'cash'], { occupancyId: r.occupancyId });
+        if (r.receipt.occupancyClosed)
+          announce(app, b, EV.occupancyClosed, ['branch'], { id: r.occupancyId });
+      }
+      return r.receipt;
+    },
+  );
+  app.get(
+    '/api/bills/:id/receipt',
+    {
+      preHandler: [authenticate, authorize('bill.reprint'), tableAuthorization],
+      schema: { params, response: { 200: receiptSchema } },
+    },
+    async (req) => getReceipt(prisma, await branch(req), req.params.id, actor(req)),
   );
 
   // Pre-cuenta (Docs/05 paso 10). Reimprimir pide bill.reprint o 🔑

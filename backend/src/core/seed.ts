@@ -71,6 +71,9 @@ export async function seedClient(prisma: PrismaClient, options: SeedOptions): Pr
       },
     });
 
+    await tx.paymentMethod.createMany({
+      data: t.paymentMethods.map((m, sort) => ({ id: newDbId(), ...m, sort })),
+    });
     for (const r of t.cashRegisters) {
       await tx.cashRegister.create({ data: { id: newDbId(), branchId, ...r } });
     }

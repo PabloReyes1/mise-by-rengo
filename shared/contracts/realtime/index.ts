@@ -45,6 +45,7 @@ export const REALTIME_EVENTS = {
   orderDelivered: 'order.delivered',
   orderItemCancelled: 'order.item_cancelled',
   billUpdated: 'bill.updated',
+  billPaid: 'bill.paid',
   menuProductStatus: 'menu.product_status',
   menuChanged: 'menu.changed',
   /** El lastSeq era muy viejo: recargar todo el estado */

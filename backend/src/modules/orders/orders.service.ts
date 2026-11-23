@@ -10,6 +10,7 @@ import type {
 } from '@mise/shared/contracts/orders';
 import { canOrderTransition, type OrderStatus } from '@mise/shared/domain/orders';
 import { AppError } from '../../core/errors.js';
+import { nextFolio } from '../../core/folio.js';
 import { newDbId, toApiId, toDbId } from '../../core/ids.js';
 import { Prisma, type PrismaClient } from '../../generated/prisma/client.js';
 import { recordAudit } from '../audit/index.js';
@@ -230,22 +231,6 @@ function buildItem(item: ItemInput, products: Map<string, ProductRow>) {
 }
 
 // ─── Folio ───────────────────────────────────────────────────────────────────
-
-/** Siguiente folio definitivo de la sucursal (Docs/09 §5): "C-000123", o "000123" sin prefijo. */
-async function nextFolio(tx: Tx, branchId: string, docType: 'ORDER' | 'BILL'): Promise<string> {
-  const [row] = await tx.$queryRaw<{ last_value: number }[]>`
-    INSERT INTO folio_sequences (branch_id, doc_type, last_value)
-    VALUES (${branchId}::uuid, ${docType}, 1)
-    ON CONFLICT (branch_id, doc_type)
-    DO UPDATE SET last_value = folio_sequences.last_value + 1
-    RETURNING last_value`;
-  const branch = await tx.branch.findUniqueOrThrow({
-    where: { id: branchId },
-    select: { folioPrefix: true },
-  });
-  const number = String(row!.last_value).padStart(6, '0');
-  return branch.folioPrefix ? `${branch.folioPrefix}-${number}` : number;
-}
 
 // ─── Enviar ronda ────────────────────────────────────────────────────────────
 

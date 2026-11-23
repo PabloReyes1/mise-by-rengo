@@ -22,7 +22,7 @@ type Tx = Prisma.TransactionClient;
 type BillRow = Prisma.BillGetPayload<object>;
 const money = (d: Prisma.Decimal) => d.toFixed(2);
 
-function toBill(b: BillRow): Bill {
+export function toBill(b: BillRow): Bill {
   return {
     id: toApiId(b.id),
     occupancyId: toApiId(b.occupancyId),
@@ -40,7 +40,12 @@ function toBill(b: BillRow): Bill {
 }
 
 /** Ocupación abierta de la sucursal que el actor puede operar. */
-async function operableOccupancy(db: PrismaClient | Tx, branchId: string, id: string, a: Actor) {
+export async function operableOccupancy(
+  db: PrismaClient | Tx,
+  branchId: string,
+  id: string,
+  a: Actor,
+) {
   const occupancy = await db.occupancy.findUnique({ where: { id } });
   if (!occupancy || occupancy.branchId !== branchId) {
     throw new AppError('NOT_FOUND', 'La mesa no existe');
@@ -219,14 +224,14 @@ export async function moveBillItems(
   });
 }
 
-const itemInclude = {
+export const itemInclude = {
   modifiers: { orderBy: { id: 'asc' } },
   components: { orderBy: { id: 'asc' } },
 } satisfies Prisma.OrderItemInclude;
 type ItemRow = Prisma.OrderItemGetPayload<{ include: typeof itemInclude }>;
 
 // Igual que en orders: no se importa de allá porque orders ya usa billing (recomputeBills)
-function toItem(i: ItemRow): OrderItem {
+export function toItem(i: ItemRow): OrderItem {
   return {
     id: toApiId(i.id),
     orderId: toApiId(i.orderId),

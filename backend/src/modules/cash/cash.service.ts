@@ -27,9 +27,13 @@ export interface Actor {
 
 type ShiftRow = Prisma.ShiftGetPayload<{ include: { movements: true } }>;
 
-/** Efectivo cobrado en el turno. Los pagos llegan con el cobro (#19): hoy siempre 0. */
-function cashSales(_db: Db, _shiftId: string): Promise<Prisma.Decimal> {
-  return Promise.resolve(new D(0));
+/** Efectivo cobrado en el turno: pagos en efectivo con este turno (incluye los luego revertidos, Docs/05 paso 13). */
+async function cashSales(db: Db, shiftId: string): Promise<Prisma.Decimal> {
+  const { _sum } = await db.payment.aggregate({
+    where: { shiftId, status: { in: ['APLICADO', 'REVERTIDO'] } },
+    _sum: { amount: true },
+  });
+  return _sum.amount ?? new D(0);
 }
 
 async function userNames(db: Db, ids: string[]): Promise<Map<string, string>> {
