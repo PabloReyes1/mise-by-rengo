@@ -4,6 +4,7 @@ import type { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { authRoutes } from './auth.routes.js';
 import { assertDeviceActive } from './auth.service.js';
+import { usersRoutes } from './users.routes.js';
 
 export { authorize } from './authorize.js';
 export { createPairingCode } from './auth.service.js';
@@ -12,6 +13,8 @@ const plugin: FastifyPluginCallback = (app, _options, done) => {
   // core/auth revisa en cada petición que el dispositivo no esté revocado (RF-035)
   app.decorate('deviceGuard', (deviceId: string) => assertDeviceActive(app.prisma, deviceId));
   void app.register(authRoutes);
+  // Administración de usuarios y roles (H3 #21)
+  void app.register(usersRoutes);
   done();
 };
 

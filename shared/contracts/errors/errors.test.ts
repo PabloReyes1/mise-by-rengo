@@ -15,8 +15,8 @@ describe('códigos de error (doc 08 §1)', () => {
     expect(httpStatusFor('INTERNAL_ERROR')).toBe(500);
   });
 
-  it('incluye los 29 códigos de la tabla del doc 08, sin repetidos', () => {
-    expect(ERROR_CODES).toHaveLength(29);
+  it('incluye los 31 códigos de la tabla del doc 08, sin repetidos', () => {
+    expect(ERROR_CODES).toHaveLength(31);
     expect(new Set(ERROR_CODES).size).toBe(ERROR_CODES.length);
   });
 });

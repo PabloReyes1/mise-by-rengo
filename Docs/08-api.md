@@ -30,7 +30,7 @@
 | 402 | `LICENSE_SUSPENDED`, `LICENSE_READ_ONLY` |
 | 403 | `FORBIDDEN`, `AUTHORIZATION_REQUIRED` (pide 🔑), `MODULE_DISABLED`, `BRANCH_FORBIDDEN`, `DEVICE_REVOKED` |
 | 404 | `NOT_FOUND` |
-| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED` |
+| 409 | `STALE_VERSION`, `TABLE_OCCUPIED`, `SHIFT_ALREADY_OPEN`, `BILL_PAID`, `ITEM_ALREADY_ASSIGNED`, `PRODUCT_SOLD_OUT`, `CONFLICT_REGISTERED`, `REOPEN_NOT_ALLOWED`, `SPLIT_NOT_ALLOWED`, `USERNAME_TAKEN`, `LAST_ADMIN` (no puede quedar sin nadie activo que administre usuarios) |
 | 423 | `ACCOUNT_LOCKED` |
 | 426 | `UPGRADE_REQUIRED` |
 | 429 | `RATE_LIMITED`, `AI_QUOTA_EXCEEDED` |
@@ -79,12 +79,20 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | POST/PUT | `/api/reasons[/:id]` | Crear y editar motivos (admin H3) | `config.payments` |
 | GET/POST/PUT | `/api/payment-methods` | `config.payments` |
 | GET/POST/PUT | `/api/users`, `/api/users/:id`, `POST /api/users/:id/pin` | `config.users` |
-| GET/POST/PUT | `/api/roles`, `/api/roles/:id` | `config.roles` |
+| GET/POST/PUT | `/api/roles`, `/api/roles/:id` | `config.roles` (`GET` también con `config.users`, para asignar roles) |
 | GET | `/api/permissions` (catálogo) | `config.roles` |
 | GET/POST/PUT | `/api/devices`, `/api/printers`, `/api/devices/:id/printer-routes` | `config.devices` |
 | GET | `/api/license` | `config.restaurant` |
 | GET | `/api/config/logo?v=<settingsVersion>` | Público; WebP con caché de un año (SC-19) |
 | GET | `/api/bootstrap?since=<settingsVersion>` | Paquete para offline: configuración, menú (sin imágenes), mesas, roles, métodos, motivos, plantillas | Autenticado |
+
+**Usuarios (H3 #21, 2026-11-23, SC-61):**
+- `GET /api/users` → `[{ id, fullName, username, email, active, hasPin, locked, roleIds, branchIds, lastLoginAt }]` (activos e inactivos). Nunca trae contraseña ni PIN.
+- `POST /api/users` `{ id, fullName, username, email?, password, pin?, roleIds, branchIds }` → 201 (200 si el `id` ya existía: idempotente). `username` se guarda en minúsculas (3–40 letras, números, `.`, `_`, `-`); contraseña ≥ 10; PIN de 4 a 6 dígitos. Usuario repetido → 409 `USERNAME_TAKEN`.
+- `PUT /api/users/:id` `{ fullName, email?, active, roleIds, branchIds, password?, unlock? }`: sin `password` no se cambia; cambiar la contraseña o `unlock: true` quita el bloqueo por intentos. Desactivar o cambiar la contraseña cierra sus sesiones. No puedes desactivarte a ti mismo (400). Si nadie activo quedaría con `config.users` → 409 `LAST_ADMIN`.
+- `POST /api/users/:id/pin` `{ pin }` pone o cambia el PIN; `{ pin: null }` lo quita.
+- `GET /api/roles` → `[{ id, name, description, isSystem, permissions, maxDiscountPct, maxDiscountAmount, userCount }]`.
+- Todo cambio queda en auditoría (`user.create`, `user.update`, `user.pin_set`, `user.pin_removed`) sin secretos.
 
 ### 2.4 Menú
 | Método | Ruta | Descripción | Permiso |

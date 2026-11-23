@@ -8,6 +8,7 @@ const SECTIONS = [
   { to: '/admin/menu', label: 'Menú', permission: 'config.menu' },
   { to: '/admin/mesas', label: 'Mesas', permission: 'config.tables' },
   { to: '/admin/dispositivos', label: 'Dispositivos', permission: 'config.devices' },
+  { to: '/admin/usuarios', label: 'Usuarios', permission: 'config.users' },
 ];
 
 export function AdminLayout() {
