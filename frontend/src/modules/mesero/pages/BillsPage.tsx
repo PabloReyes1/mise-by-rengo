@@ -6,9 +6,9 @@ import type { OrderItem } from '@mise/shared/contracts/orders';
 import { ArrowLeft, ArrowRightLeft, Percent, Plus, Printer, Scissors, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
-import { usePublicConfig, useRegional } from '../../../core/config/index.js';
+import { usePublicConfig, useRegional, useTicketPrinter } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney } from '../../../core/format/index.js';
-import { precuentaDocument, printWithDialog, reciboDocument } from '../../../core/print/index.js';
+import { precuentaDocument, reciboDocument } from '../../../core/print/index.js';
 import {
   Badge,
   Button,
@@ -64,6 +64,8 @@ export function BillsPage() {
   const bills = useOccupancyBills(id);
   const orders = useOccupancyOrders(id);
   const regional = useRegional();
+  const printReceipt = useTicketPrinter('RECIBO');
+  const printPrecheckDoc = useTicketPrinter('PRECUENTA');
   const config = usePublicConfig();
   const authorized = useAuthorizedAction();
   const create = useCreateBill(id);
@@ -157,7 +159,7 @@ export function BillsPage() {
           if (o.status === 'applied') {
             const r = o.data;
             const cashPay = r.payments.find((p) => p.tendered);
-            void printWithDialog(
+            void printReceipt(
               reciboDocument({
                 restaurant: config.data?.tradeName ?? '',
                 folio: r.bill.folio ?? '',
@@ -214,7 +216,7 @@ export function BillsPage() {
       reprint: boolean;
       offline?: boolean;
     }) =>
-      void printWithDialog(
+      void printPrecheckDoc(
         precuentaDocument({
           restaurant: config.data?.tradeName ?? '',
           where: title,

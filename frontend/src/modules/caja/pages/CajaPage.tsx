@@ -8,9 +8,9 @@ import { ArrowDownToLine, ArrowUpFromLine, Calculator, LockOpen, Printer } from 
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { ApiError } from '../../../core/api/index.js';
-import { usePublicConfig, useRegional } from '../../../core/config/index.js';
+import { usePublicConfig, useRegional, useTicketPrinter } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney, formatTime, toMoney } from '../../../core/format/index.js';
-import { movimientoDocument, printWithDialog } from '../../../core/print/index.js';
+import { movimientoDocument } from '../../../core/print/index.js';
 import { authorizationRequired, useAuthorizationPrompt } from '../../../core/session/index.js';
 import { Badge, Button, Card, Modal, Select, TextInput } from '../../../core/ui/index.js';
 import { CloseShiftDialog } from '../components/CloseShiftDialog.js';
@@ -32,9 +32,10 @@ import {
 function usePrintMovement(registerName: string) {
   const regional = useRegional();
   const config = usePublicConfig();
+  const print = useTicketPrinter('MOVIMIENTO');
   return (m: CashMovement, reprint: boolean) => {
     if (m.type !== 'RETIRO' && m.type !== 'DEPOSITO') return;
-    void printWithDialog(
+    void print(
       movimientoDocument({
         restaurant: config.data?.tradeName ?? '',
         register: registerName,

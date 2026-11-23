@@ -76,7 +76,7 @@ export function precuentaDocument(p: PrecuentaInput): PrintDocument {
         : []),
       { kind: 'pair', left: 'TOTAL', right: p.total, bold: true, size: 'tall' },
       ...tipLines,
-      { kind: 'text', text: p.footer ?? '¡Gracias por su visita!', align: 'center' },
+      ...(p.footer ? [{ kind: 'text', text: p.footer, align: 'center' } as PrintLine] : []),
       { kind: 'rule', char: '=' },
     ],
   };

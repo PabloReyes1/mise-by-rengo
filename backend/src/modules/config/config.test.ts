@@ -219,6 +219,22 @@ describe('sucursales y plantillas de ticket', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ docType: 'RECIBO', footer: '¡Vuelva pronto!' });
   });
+
+  it('el mesero lee las plantillas para imprimir, pero no las edita (H3 #21)', async () => {
+    await createUser('ana', 'Mesero', { password: 'clave-mesero-1' });
+    const ana = await loginAs('ana', 'clave-mesero-1');
+    const url = `/api/branches/${branchId}/ticket-templates`;
+    const list = await app.inject({ method: 'GET', url, headers: ana });
+    expect(list.statusCode).toBe(200);
+    expect(list.json()).toHaveLength(5);
+    const edit = await app.inject({
+      method: 'PUT',
+      url: `${url}/RECIBO`,
+      headers: ana,
+      payload: { footer: 'x' },
+    });
+    expect(edit.json().error.code).toBe('AUTHORIZATION_REQUIRED');
+  });
 });
 
 describe('GET /api/reasons (motivos para el mesero)', () => {

@@ -11,7 +11,7 @@
 ## 1. Principios
 1. **Imprime el dispositivo que origina el documento**, por su ruta directa configurada (ADR-003). Si no tiene ruta directa, delega al hub de impresión vía servidor (solo con internet).
 2. El documento se genera **en el navegador**: ESC/POS con `@point-of-sale/receipt-printer-encoder`, o XML ePOS para impresoras Epson por red.
-3. Encabezado, pie, logo, ancho de papel y opciones son **configuración** (`ticket_templates`), nunca texto fijo.
+3. Encabezado, pie, logo, ancho de papel y opciones son **configuración** (`ticket_templates`), nunca texto fijo. **Implementado (H3 #21, 2026-11-23, SC-66):** se editan en Configuración › Tickets con vista previa; cada impreso se imprime con `useTicketPrinter(docType)` (`core/config`), que aplica `withTemplate` (`core/print/template.ts`): el encabezado arriba de todo, el pie antes de la última raya, el logo arriba en gris si `showLogo`, y el papel de la plantilla. Si la plantilla todavía no llegó (sin conexión la primera vez) se imprime sin encabezado ni pie en 80 mm.
 4. Cada impresión se registra (tipo, documento, dispositivo, impresora, resultado) y se guarda en `print_jobs` local para reimprimir sin servidor.
 5. Caracteres: página de códigos configurable por impresora (por defecto CP858/CP850 para ñ, á, é, í, ó, ú, ü, ¿, ¡). El encoder translitera lo que la impresora no soporte.
 

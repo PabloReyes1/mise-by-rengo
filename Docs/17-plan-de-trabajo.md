@@ -75,6 +75,7 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 | Fecha | Tarea | Hito | Dueño | La hizo | Motivo |
 |---|---|---|---|---|---|
+| 2026-11-23 | #21 Administración (parte 6, cierra #21): plantillas de ticket. Pantalla Configuración › Tickets con vista previa; todos los impresos (comanda, pre-cuenta, recibo, corte, movimientos) usan encabezado, pie, logo y papel de su plantilla (`core/print`, `core/config`); `TextArea` nuevo en `core/ui` | H3 | Deniscito (`config`, `admin`, `core/print`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 5): lista de dispositivos de la sucursal, renombrar y revocar (no el propio). Impresoras y rutas: no se hacen (ADR-003 actualizado, diálogo del sistema) | H3 | Deniscito (`auth`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 4): cajas (`cash`, de Pablito): crear, editar fondo y conteo, mover la principal y desactivar; pantalla Configuración › Cajas | H3 | Deniscito (`admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |
 | 2026-11-23 | #21 Administración (parte 3): métodos de pago (`billing`, de Pablito) y motivos (`config`, de Deniscito): crear, editar, desactivar y ordenar; pantallas Configuración › Métodos de pago y Motivos | H3 | Deniscito (`config`, `admin`) | Pablito | Acuerdo de avanzar sin esperar al otro (regla 1) |

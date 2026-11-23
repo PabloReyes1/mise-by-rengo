@@ -5,9 +5,9 @@ import type { CashRegister, ShiftReport } from '@mise/shared/contracts/cash';
 import { fromCents, toCents } from '@mise/shared/domain/billing';
 import { useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
-import { usePublicConfig, useRegional } from '../../../core/config/index.js';
+import { usePublicConfig, useRegional, useTicketPrinter } from '../../../core/config/index.js';
 import { formatDateTime, formatMoney, toMoney } from '../../../core/format/index.js';
-import { corteDocument, printWithDialog } from '../../../core/print/index.js';
+import { corteDocument, type PrintDocument } from '../../../core/print/index.js';
 import { Button, Modal, NumberInput, TextInput } from '../../../core/ui/index.js';
 import { useCloseShift } from '../api/cash-api.js';
 
@@ -30,10 +30,11 @@ export function printCorte(
   report: ShiftReport,
   restaurant: string,
   regional: ReturnType<typeof useRegional>,
+  print: (doc: PrintDocument) => Promise<void>,
   reprint = false,
 ) {
   const m = (v: string) => formatMoney(v, regional);
-  void printWithDialog(
+  void print(
     corteDocument({
       restaurant,
       register: report.cashRegisterName,
@@ -87,6 +88,7 @@ export function CloseShiftDialog({
 
 function CloseForm({ start, onDone }: { start: ShiftReport; onDone: () => void }) {
   const regional = useRegional();
+  const printCorteDoc = useTicketPrinter('CORTE');
   const config = usePublicConfig();
   const close = useCloseShift();
   const [byDenomination, setByDenomination] = useState(true);
@@ -126,7 +128,7 @@ function CloseForm({ start, onDone }: { start: ShiftReport; onDone: () => void }
           },
           {
             onSuccess: (report) => {
-              printCorte(report, config.data?.tradeName ?? '', regional);
+              printCorte(report, config.data?.tradeName ?? '', regional, printCorteDoc);
               onDone();
             },
           },

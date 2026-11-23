@@ -73,7 +73,8 @@ Si la acción requiere un permiso que el usuario no tiene, el servidor responde 
 | GET/PUT | `/api/config/settings` | `config.restaurant` |
 | POST | `/api/config/logo` (multipart) | `config.restaurant` |
 | GET/POST/PUT | `/api/branches`, `/api/branches/:id` | `config.restaurant` |
-| GET/PUT | `/api/branches/:id/ticket-templates/:docType` | `config.restaurant` |
+| GET | `/api/branches/:id/ticket-templates` | Las 5 plantillas de la sucursal `[{ docType, header, footer, showLogo, paperWidth }]`: cualquier sesión, porque el mesero y la caja imprimen con ellas (H3 #21, SC-66) | Sesión |
+| PUT | `/api/branches/:id/ticket-templates/:docType` | Editar una plantilla | `config.restaurant` |
 | GET/POST/PUT | `/api/service-periods` | `config.restaurant` |
 | GET | `/api/reasons?type=` | Motivos activos `[{ id, type, name, sort }]` para elegir al cancelar un ítem, reabrir, etc. (2026-11-23) | Sesión |
 | GET | `/api/reasons?all=true[&type=]` | Todos los motivos, también los inactivos (`active`), para administrarlos (H3 #21) | `config.payments`; con solo `config.discounts`, solo los de `DISCOUNT` |

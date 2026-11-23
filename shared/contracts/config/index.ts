@@ -113,6 +113,7 @@ export const updateBranchSchema = createBranchSchema.partial();
 // /api/branches/:id/ticket-templates/:docType (config.restaurant)
 export const DOC_TYPES = ['COMANDA', 'PRECUENTA', 'RECIBO', 'CORTE', 'MOVIMIENTO'] as const;
 export const docTypeSchema = z.enum(DOC_TYPES);
+export type DocType = z.infer<typeof docTypeSchema>;
 export const ticketTemplateSchema = z.object({
   docType: docTypeSchema,
   header: z.string().max(500),

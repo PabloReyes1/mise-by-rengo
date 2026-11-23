@@ -11,6 +11,7 @@ import {
   RestaurantPage,
   RolesPage,
   TablesPage,
+  TicketsPage,
   UsersPage,
 } from '../modules/admin/index.js';
 import { LoginPage, PairDevicePage } from '../modules/auth/index.js';
@@ -56,6 +57,7 @@ const areaChildren: Record<string, RouteObject[]> = {
         { path: 'menu', element: <MenuPage /> },
         { path: 'mesas', element: <TablesPage /> },
         { path: 'cajas', element: <CashRegistersPage /> },
+        { path: 'tickets', element: <TicketsPage /> },
         { path: 'metodos-pago', element: <PaymentMethodsPage /> },
         { path: 'motivos', element: <ReasonsPage /> },
         { path: 'dispositivos', element: <DevicesPage /> },

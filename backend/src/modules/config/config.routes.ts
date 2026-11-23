@@ -180,10 +180,12 @@ export function configRoutes(license: ReturnType<typeof licenseReader>): Fastify
       (req) => updateBranch(prisma, req.params.id, req.body, actor(req)),
     );
 
+    // Cualquier sesión las lee: el mesero y la caja imprimen con ellas (H3 #21); editarlas pide
+    // config.restaurant
     app.get(
       '/api/branches/:id/ticket-templates',
       {
-        preHandler: restaurant,
+        preHandler: [authenticate],
         schema: {
           params: z.object({ id: idSchema }),
           response: { 200: z.array(ticketTemplateSchema) },

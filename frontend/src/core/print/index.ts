@@ -21,6 +21,7 @@ export { corteDocument, type CorteInput } from './documents/corte.js';
 export { movimientoDocument, type MovimientoInput } from './documents/movimiento.js';
 export { reciboDocument, type ReciboInput } from './documents/recibo.js';
 export { testPage } from './documents/test-page.js';
+export { PLAIN_TICKET, withTemplate, type TicketStyle } from './template.js';
 export {
   columnsFor,
   layoutRows,

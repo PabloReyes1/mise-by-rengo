@@ -12,11 +12,13 @@ export {
   Field,
   Select,
   Switch,
+  TextArea,
   TextInput,
   type BadgeTone,
   type FieldProps,
   type SelectProps,
   type SwitchProps,
+  type TextAreaProps,
   type TextInputProps,
 } from './Field.js';
 export { applyKey, type KeypadKey, type KeypadOptions } from './keypad.js';

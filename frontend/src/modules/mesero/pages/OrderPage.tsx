@@ -5,7 +5,7 @@ import { newId } from '@mise/shared/domain/ids';
 import { ArrowLeft, CircleAlert, Minus, Plus, Send, ShoppingBasket } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import { useRegional } from '../../../core/config/index.js';
+import { useRegional, useTicketPrinter } from '../../../core/config/index.js';
 import { formatMoney } from '../../../core/format/index.js';
 import { useSession } from '../../../core/session/index.js';
 import { Button, cx, Modal, Select } from '../../../core/ui/index.js';
@@ -33,6 +33,7 @@ export function OrderPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const regional = useRegional();
+  const printComanda = useTicketPrinter('COMANDA');
   const occupancy = useOccupancy(id);
   const floor = useFloor();
   const menu = useMenu();
@@ -112,6 +113,7 @@ export function OrderPage() {
               occupancy: occupancy.data,
               table: comandaTable(occupancy.data, floor.data?.zones ?? []),
               regional,
+              print: printComanda,
             };
             if (outcome.status === 'applied') printOrderComanda(outcome.data, ctx);
             else printDraftComanda(draft, (orders.data?.length ?? 0) + 1, ctx);

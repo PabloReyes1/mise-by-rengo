@@ -66,7 +66,7 @@ export function reciboDocument(r: ReciboInput): PrintDocument {
       { kind: 'rule' },
       { kind: 'text', text: 'Precios incluyen impuestos.', align: 'center' },
       { kind: 'text', text: r.legend, align: 'center' },
-      { kind: 'text', text: r.footer ?? '¡Gracias por su visita!', align: 'center' },
+      ...(r.footer ? [{ kind: 'text', text: r.footer, align: 'center' } as PrintLine] : []),
       { kind: 'rule', char: '=' },
     ],
   };
