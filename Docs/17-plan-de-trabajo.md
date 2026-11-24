@@ -197,6 +197,8 @@ Tareas que hizo la otra persona para no quedar bloqueada (regla 1). El dueño de
 
 **Integración H3:** PR-001 completo, PR-010 a PR-012, PR-014, PR-016 a PR-019, PR-102, PR-107. **Al cerrar H3:** revisar los supuestos SC con "Revisar en H3" (doc 16 §2b).
 
+> ✅ **H3 aprobado por Deniscito (2026-11-23)** tras la demo, con tres arreglos ya hechos: menú de Administración lateral y plegable (doc 18 §5.4b), cobro en efectivo escribiendo lo recibido sin botones de billetes, tarjeta/transferencia sin pasar de lo que falta (PR-011) y foto al crear un producto. Los supuestos SC con "Revisar en H3" (doc 16 §2b) quedan por revisar con RENGO; no bloquean H4. **Sigue H4.**
+
 ### H4 — Sin internet y reportes (4 semanas)
 
 | Persona 1 (Pablito) | Persona 2 (Deniscito) |

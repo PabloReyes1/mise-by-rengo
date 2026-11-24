@@ -1,7 +1,7 @@
 // Editor de un producto (RF-011, RF-013 a RF-016): datos, modificadores, foto y combo.
 import type { ComboGroup, MenuResponse, Product } from '@mise/shared/contracts/catalog';
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ApiError } from '../../../core/api/index.js';
 import {
   Button,
@@ -67,6 +67,15 @@ export function ProductEditor({
   const [price, setPrice] = useState(product?.price ?? '');
   const save = useSaveProduct();
   const image = useUploadProductImage();
+  // Producto nuevo: la foto se elige antes de crear y se sube en cuanto existe el id. Si la subida
+  // falla, el editor queda sobre el producto ya creado (no se duplica al reintentar).
+  const [created, setCreated] = useState<Product | null>(null);
+  const current = product ?? created;
+  const [pending, setPending] = useState<{ file: File; url: string } | null>(null);
+  useEffect(() => {
+    if (pending) return () => URL.revokeObjectURL(pending.url);
+  }, [pending]);
+  const imageUrl = pending?.url ?? current?.imageUrl ?? null;
   const set = <K extends keyof ProductDraft>(k: K, v: ProductDraft[K]) =>
     setDraft({ ...draft, [k]: v });
   const money = toMoney(price);
@@ -92,10 +101,24 @@ export function ProductEditor({
           if (!valid) return;
           save.mutate(
             {
-              id: product?.id,
+              id: current?.id,
               draft: { ...draft, name: draft.name.trim(), sku: draft.sku.trim(), price: money },
             },
-            { onSuccess: onClose },
+            {
+              onSuccess: (saved) => {
+                if (!pending) return onClose();
+                image.mutate(
+                  { id: saved.id, file: pending.file },
+                  {
+                    onSuccess: () => {
+                      setPending(null);
+                      onClose();
+                    },
+                    onError: () => setCreated(saved),
+                  },
+                );
+              },
+            },
           );
         }}
       >
@@ -205,43 +228,51 @@ export function ProductEditor({
           </p>
         )}
         <div className="flex justify-end">
-          <Button type="submit" size="lg" disabled={!valid} loading={save.isPending}>
-            {product ? 'Guardar producto' : 'Crear producto'}
+          <Button
+            type="submit"
+            size="lg"
+            disabled={!valid}
+            loading={save.isPending || (pending !== null && image.isPending)}
+          >
+            {current ? 'Guardar producto' : 'Crear producto'}
           </Button>
         </div>
       </form>
 
-      {product && (
-        <section className="flex flex-col gap-3 border-t border-accent pt-6">
-          <h3 className="text-base font-bold">Foto</h3>
-          <ImagePicker
-            label={`Foto de ${product.name}`}
-            name={product.sku}
-            busy={image.isPending}
-            onImage={(file) => image.mutate({ id: product.id, file })}
-            preview={
-              product.imageUrl ? (
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  width={96}
-                  height={96}
-                  className="size-24 rounded-md border border-accent object-cover"
-                />
-              ) : (
-                <span className="flex size-24 items-center justify-center rounded-md border border-dashed border-secondary text-sm text-secondary">
-                  Sin foto
-                </span>
-              )
-            }
-          />
-          {errorText(image.error) && (
-            <p role="alert" className="text-sm">
-              {errorText(image.error)}
-            </p>
-          )}
-        </section>
-      )}
+      <section className="flex flex-col gap-3 border-t border-accent pt-6">
+        <h3 className="text-base font-bold">Foto</h3>
+        {!current && <p className="text-sm text-secondary">Se sube al crear el producto.</p>}
+        <ImagePicker
+          label={`Foto de ${draft.name.trim() || 'el producto'}`}
+          name={draft.sku.trim() || 'producto'}
+          busy={image.isPending}
+          onImage={(file) =>
+            current
+              ? image.mutate({ id: current.id, file })
+              : setPending({ file, url: URL.createObjectURL(file) })
+          }
+          preview={
+            imageUrl ? (
+              <img
+                src={imageUrl}
+                alt={draft.name}
+                width={96}
+                height={96}
+                className="size-24 rounded-md border border-accent object-cover"
+              />
+            ) : (
+              <span className="flex size-24 items-center justify-center rounded-md border border-dashed border-secondary text-sm text-secondary">
+                Sin foto
+              </span>
+            )
+          }
+        />
+        {errorText(image.error) && (
+          <p role="alert" className="text-sm">
+            {errorText(image.error)}
+          </p>
+        )}
+      </section>
 
       {product?.isCombo && <ComboEditor menu={menu} product={product} />}
     </div>

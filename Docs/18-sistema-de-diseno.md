@@ -102,6 +102,9 @@ Los colores de estado son **configurables por cliente** (RF-109); estos son los 
 ### 5.4 Reportes y gráficas
 Series en este orden: `primary`, `secondary`, `accent`, `surface` con borde `primary`. Los colores funcionales solo para significado (meta cumplida, alerta de margen). Para más de 4 series se usan tonos de opacidad de `primary`/`secondary`, sin colores nuevos.
 
+### 5.4b Navegación de Administración (RENGO, 2026-11-23)
+Menú **lateral** a la izquierda. Contraído es un riel de íconos (64 px, cada ícono con su nombre como `title` y `aria-label`); el botón "Menú" lo **expande** por encima del contenido (256 px, con nombres, sombra `shadow-overlay` y fondo velado que lo cierra al tocar). **Al elegir una opción se contrae**; también con Esc o al cambiar de ruta. La sección activa va en `primary` con texto blanco. Igual en tablet y celular.
+
 ### 5.5 Tickets impresos
 Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc 11).
 
@@ -126,7 +129,7 @@ Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc
 
 1. **Campos numéricos:** se usan `NumberInput` o `NumberStepper` de `core/ui` (nunca `<input type="number">` con `Number(e.target.value)`). El campo guarda texto mientras se escribe, se puede borrar entero y escribir otro valor, y solo entrega el número cuando es válido; al salir del campo vacío o fuera de rango vuelve al último valor válido. Antes, convertir en cada tecla dejaba un 0 pegado que no se podía borrar (2026-11-23).
 2. **Contadores** (comensales, cantidad): `NumberStepper`, con − y + de 56 px **en el mismo lugar** donde se muestra el número (sin un botón "Cambiar" que abra otra ventana) y el número también se puede escribir.
-3. **Imágenes** (fotos de productos, logo, cualquier imagen nueva): siempre con `ImagePicker` de `core/ui`. **Toda imagen se comprime antes de subirla** (`compressImage`: lado mayor ≤ 1200 px, WebP) y el servidor la vuelve a procesar (WebP, 800 px, ≤ 150 KB, ADR-009). **No obliga a buscar un archivo:** se puede pegar del portapapeles (Ctrl+V o el botón "Pegar imagen"), arrastrar y soltar, o elegir un archivo (RENGO, 2026-11-23).
+3. **Imágenes** (fotos de productos, logo, cualquier imagen nueva): siempre con `ImagePicker` de `core/ui`. **Toda imagen se comprime antes de subirla** (`compressImage`: lado mayor ≤ 1200 px, WebP) y el servidor la vuelve a procesar (WebP, 800 px, ≤ 150 KB, ADR-009). **No obliga a buscar un archivo:** se puede pegar del portapapeles (Ctrl+V o el botón "Pegar imagen"), arrastrar y soltar, o elegir un archivo (RENGO, 2026-11-23). **También al crear:** en un producto nuevo la foto se elige antes de guardarlo y se sube en cuanto el producto existe; si la subida falla, el editor queda sobre el producto ya creado para reintentar sin duplicarlo.
 
 ## 7. Preguntas de este documento
 | ID | Estado | Respuesta |
