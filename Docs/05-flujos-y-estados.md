@@ -122,7 +122,7 @@ flowchart TD
 | Aspecto | Detalle |
 |---|---|
 | Actor | Cajero o mesero con `payment.register` (en la plantilla los dos cobran, S-06). El efectivo que cobra el mesero va al **turno abierto de la caja principal** de la sucursal (PA-052); el mesero entrega ese efectivo al cajero y el reporte RPT-034 muestra cuánto debe entregar cada mesero. Si la caja principal no tiene turno abierto, el mesero no puede cobrar en efectivo (sí con otros métodos) |
-| Pantalla | Cobro: total, propina (editable), descuentos, lista de pagos, teclado numérico; en efectivo el cajero **escribe lo recibido** (sin botones de billetes, RENGO 2026-11-23) y se muestra el cambio |
+| Pantalla | Cobro: total, propina (editable), descuentos, lista de pagos, teclado numérico; en efectivo el cajero **escribe lo recibido** (sin botones de billetes, RENGO 2026-11-23) y se muestra el cambio. Un pago que **no da cambio** (tarjeta, transferencia) **no puede pasar de lo que falta por cobrar**: el campo "Monto" marca el error con el máximo permitido y no deja cobrar (PR-011) |
 | Estados | Cuenta → `PAGADA`; Pagos → `APLICADO` |
 | Reglas | Ver [§4 Reglas de cálculo](#4-reglas-de-cálculo-de-cuenta). Solo efectivo genera cambio. Tarjeta y transferencia piden referencia si así se configuró. NIT/CF opcional (se imprime en el recibo; único punto de extensión FEL en el MVP). Se imprime el recibo. Pagos en efectivo se asocian al turno abierto de la caja. |
 | Errores | Pagos insuficientes; método inactivo; turno cerrado; cuenta modificada por otro dispositivo (`409 STALE_VERSION`). |

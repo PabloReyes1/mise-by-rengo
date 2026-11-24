@@ -117,9 +117,26 @@ function PaymentForm({
     const a = toMoney(r.amount);
     return t && a && toCents(t) >= toCents(a) ? fromCents(toCents(t) - toCents(a)) : null;
   };
-  const problems = list.flatMap((r) => {
+  /** Tarjeta, transferencia…: no dan cambio, así que no pueden pasar de lo que falta (PR-011). */
+  const overpaidBy = (i: number): string | null => {
+    const r = list[i]!;
+    const m = methodOf(r.methodId);
+    const a = toMoney(r.amount);
+    if (!m || m.givesChange || !a) return null;
+    const others = list.reduce(
+      (s, o, j) => (j === i ? s : s + toCents(toMoney(o.amount) ?? '0.00')),
+      0,
+    );
+    const max = Math.max(0, toCents(due) - others);
+    return toCents(a) > max
+      ? `${m.name} no da cambio: máximo ${formatMoney(fromCents(max), regional)}`
+      : null;
+  };
+  const problems = list.flatMap((r, i) => {
     const m = methodOf(r.methodId);
     if (!toMoney(r.amount) || toCents(toMoney(r.amount)!) <= 0) return ['Revisa los montos'];
+    const over = overpaidBy(i);
+    if (over) return [over];
     if (m?.requiresReference && !r.reference.trim()) return [`${m.name} pide referencia`];
     if (m?.givesChange && r.tendered && !changeOf(r)) return ['El efectivo recibido no alcanza'];
     return [];
@@ -199,6 +216,7 @@ function PaymentForm({
               label="Monto"
               inputMode="decimal"
               value={r.amount}
+              error={overpaidBy(i) ?? undefined}
               onChange={(e) => update(i, { amount: e.target.value })}
             />
             {m?.givesChange && (
@@ -286,7 +304,7 @@ function PaymentForm({
       </div>
 
       {(problems[0] ?? error) && (
-        <p role="alert" className="text-base">
+        <p role="alert" className="border-l-4 border-error pl-3 text-base font-semibold">
           {problems[0] ?? error}
         </p>
       )}
