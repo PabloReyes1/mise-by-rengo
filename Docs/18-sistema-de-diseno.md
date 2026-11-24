@@ -102,6 +102,9 @@ Los colores de estado son **configurables por cliente** (RF-109); estos son los 
 ### 5.4 Reportes y gráficas
 Series en este orden: `primary`, `secondary`, `accent`, `surface` con borde `primary`. Los colores funcionales solo para significado (meta cumplida, alerta de margen). Para más de 4 series se usan tonos de opacidad de `primary`/`secondary`, sin colores nuevos.
 
+### 5.4b Navegación de Administración (RENGO, 2026-11-23)
+Menú **lateral** a la izquierda. Contraído es un riel de íconos (64 px, cada ícono con su nombre como `title` y `aria-label`); el botón "Menú" lo **expande** por encima del contenido (256 px, con nombres, sombra `shadow-overlay` y fondo velado que lo cierra al tocar). **Al elegir una opción se contrae**; también con Esc o al cambiar de ruta. La sección activa va en `primary` con texto blanco. Igual en tablet y celular.
+
 ### 5.5 Tickets impresos
 Las impresoras térmicas son monocromas: la paleta no aplica a los impresos (doc 11).
 
