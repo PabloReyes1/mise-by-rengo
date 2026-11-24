@@ -1,5 +1,6 @@
 // Cobrar una cuenta (Docs/05 paso 11, H3 #19). Reasignado a Deniscito (doc 17 §3.1).
-// Propina sugerida y editable (S-10), pagos mixtos, billetes rápidos y cambio (solo efectivo),
+// Propina sugerida y editable (S-10), pagos mixtos y cambio (solo efectivo; el cajero
+// escribe lo recibido, sin botones de billetes: RENGO 2026-11-23),
 // referencia en tarjeta/transferencia, NIT o CF. Lo cobrado tiene que sumar exactamente el total.
 import type { Bill, PaymentMethod } from '@mise/shared/contracts/billing';
 import { sumMoney, toCents, fromCents } from '@mise/shared/domain/billing';
@@ -31,8 +32,6 @@ export interface PaymentResult {
   customerNit: string;
   customerTaxName: string;
 }
-
-const QUICK_BILLS = ['50.00', '100.00', '200.00'];
 
 export function PaymentDialog({
   bill,
@@ -205,22 +204,11 @@ function PaymentForm({
             {m?.givesChange && (
               <>
                 <TextInput
-                  label="Recibido"
+                  label="Efectivo recibido"
                   inputMode="decimal"
                   value={r.tendered}
                   onChange={(e) => update(i, { tendered: e.target.value })}
                 />
-                <div className="flex flex-wrap gap-2">
-                  {[toMoney(r.amount) ?? '0.00', ...QUICK_BILLS].map((b, k) => (
-                    <Button
-                      key={b + k}
-                      variant="outline"
-                      onClick={() => update(i, { tendered: b })}
-                    >
-                      {k === 0 ? 'Exacto' : formatMoney(b, regional)}
-                    </Button>
-                  ))}
-                </div>
                 {change && (
                   <p className="text-lg font-bold">
                     Cambio: <span className="tabular">{formatMoney(change, regional)}</span>
